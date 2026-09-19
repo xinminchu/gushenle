@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>谷峰律动美股看板</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header { text-align: center; padding: 20px 0; border-bottom: 1px solid #1e293b; margin-bottom: 20px; }
+        h1 { color: #38bdf8; font-size: 24px; margin-bottom: 8px; }
+        .subtitle { color: #94a3b8; font-size: 14px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+        .card { background-color: #1e293b; border-radius: 12px; padding: 16px; border: 1px solid #334155; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .ticker { font-size: 20px; font-weight: bold; color: #f8fafc; }
+        .status { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
+        .status-主升律动 { background-color: #166534; color: #4ade80; }
+        .status-蓄势准备 { background-color: #854d0e; color: #fef08a; }
+        .status-观察区 { background-color: #334155; color: #cbd5e1; }
+        .status-调整阶段 { background-color: #991b1b; color: #fca5a5; }
+        .price-row { display: flex; justify-content: space-between; margin-bottom: 12px; }
+        .price { font-size: 24px; font-weight: bold; }
+        .change { font-size: 14px; font-weight: bold; align-self: flex-end; }
+        .up { color: #4ade80; }
+        .down { color: #f87171; }
+        .metrics { font-size: 13px; color: #94a3b8; border-top: 1px dashed #334155; padding-top: 10px; }
+        .metric-item { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .loading { text-align: center; padding: 40px; color: #94a3b8; }
+        .btn { display: block; width: 100%; padding: 12px; background: #0284c7; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 20px; }
+        .btn:hover { background: #0369a1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>谷峰律动美股看板</h1>
+            <div class="subtitle">实时抓取与算法分析</div>
+        </header>
+
+        <button class="btn" onclick="fetchData()">刷新数据</button>
+        <div id="content" style="margin-top: 20px;">
+            <div class="loading">数据加载中，请稍候...</div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchData() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="loading">数据加载中，请稍候...</div>';
+            
+            try {
+                // 部署到 Vercel 后，使用相对路径请求 API
+                const response = await fetch('/api/v1/rhythm_stocks');
+                const result = await response.json();
+                
+                if (result.code === 200 && result.data.length > 0) {
+                    let html = '<div class="grid">';
+                    result.data.forEach(item => {
+                        const isUp = item.change_pct >= 0;
+                        html += `
+                            <div class="card">
+                                <div class="card-header">
+                                    <span class="ticker">${item.ticker}</span>
+                                    <span class="status status-${item.status}">${item.status} (${item.rhythm_score}分)</span>
+                                </div>
+                                <div class="price-row">
+                                    <span class="price">$${item.close}</span>
+                                    <span class="change ${isUp ? 'up' : 'down'}">${isUp ? '+' : ''}${item.change_pct}%</span>
+                                </div>
+                                <div class="metrics">
+                                    <div class="metric-item"><span>MA20:</span><span>$${item.ma20}</span></div>
+                                    <div class="metric-item"><span>MA60:</span><span>$${item.ma60}</span></div>
+                                    <div class="metric-item"><span>RSI(14):</span><span>${item.rsi}</span></div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    content.innerHTML = html;
+                } else {
+                    content.innerHTML = '<div class="loading">暂无有效数据</div>';
+                }
+            } catch (error) {
+                content.innerHTML = `<div class="loading" style="color: #f87171;">数据加载失败: ${error.message}</div>`;
+            }
+        }
+
+        // 页面加载时自动请求数据
+        fetchData();
+    </script>
+</body>
+</html>
