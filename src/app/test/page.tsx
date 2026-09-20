@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import ClipperGame from '@/components/games/Clipper';
+import ClipperGame from '@/components/games/ClipperGame';
 import { LanguageProvider, useLanguage } from '@/context/LanguageContext';
 
 function TestContent() {
