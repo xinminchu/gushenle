@@ -2,6 +2,10 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 
+interface ClipperGameProps {
+  onFinish?: () => void;
+}
+
 interface Leek {
   id: number;
   x: number;
@@ -24,7 +28,7 @@ const LEEK_TEXTS = [
   '满仓杠杆', '频繁交易', '恐慌抛售', '盲目抄底'
 ];
 
-export default function ClipperGame() {
+export default function ClipperGame({ onFinish }: ClipperGameProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   
@@ -37,13 +41,14 @@ export default function ClipperGame() {
   const trailRef = useRef<TrailPoint[]>([]);
   const isMouseDownRef = useRef(false);
 
-  // 倒计时
+  // 倒计时管理
   useEffect(() => {
     if (!gameActive) return;
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           setGameActive(false);
+          if (onFinish) onFinish(); // 触发测试页面或外部的回调函数
           clearInterval(timer);
           return 0;
         }
@@ -51,30 +56,30 @@ export default function ClipperGame() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [gameActive]);
+  }, [gameActive, onFinish]);
 
-  // 生成韭菜实体
+  // 随机生成韭菜实体
   const spawnLeek = (canvasWidth: number, canvasHeight: number) => {
     const speedMultiplier = speedMode === 'slow' ? 0.8 : speedMode === 'fast' ? 2.2 : 1.4;
     const side = Math.floor(Math.random() * 4); // 0:下 1:上 2:左 3:右
     let x = 0, y = 0, vx = 0, vy = 0;
 
-    if (side === 0) { // 从下方飘升
+    if (side === 0) { // 下方飘升
       x = Math.random() * (canvasWidth - 80) + 40;
       y = canvasHeight + 20;
       vx = (Math.random() - 0.5) * 2;
       vy = -(Math.random() * 2 + 2) * speedMultiplier;
-    } else if (side === 1) { // 从上方落下
+    } else if (side === 1) { // 上方落下
       x = Math.random() * (canvasWidth - 80) + 40;
       y = -20;
       vx = (Math.random() - 0.5) * 2;
       vy = (Math.random() * 2 + 2) * speedMultiplier;
-    } else if (side === 2) { // 从左侧滑出
+    } else if (side === 2) { // 左侧滑出
       x = -20;
       y = Math.random() * (canvasHeight - 80) + 40;
       vx = (Math.random() * 2 + 2) * speedMultiplier;
       vy = (Math.random() - 0.5) * 2;
-    } else { // 从右侧滑出
+    } else { // 右侧滑出
       x = canvasWidth + 20;
       y = Math.random() * (canvasHeight - 80) + 40;
       vx = -(Math.random() * 2 + 2) * speedMultiplier;
@@ -110,17 +115,16 @@ export default function ClipperGame() {
       // 1. 清空画布
       ctx.clearRect(0, 0, width, height);
 
-      // 随机生成韭菜 (保持场上有 4~6 个)
+      // 维持场上 4~6 个韭菜气泡
       if (gameActive && leeksRef.current.length < 5 && Math.random() < 0.05) {
         spawnLeek(width, height);
       }
 
-      // 2. 更新并绘制韭菜实体
+      // 2. 更新并绘制韭菜
       leeksRef.current.forEach((leek, index) => {
         leek.x += leek.vx;
         leek.y += leek.vy;
 
-        // 绘制韭菜气泡外框
         ctx.save();
         ctx.translate(leek.x, leek.y);
 
@@ -140,13 +144,13 @@ export default function ClipperGame() {
         ctx.textBaseline = 'middle';
         ctx.fillText(leek.text, 5, 0);
 
-        // K线小红绿柱
+        // K线红绿柱指示
         ctx.fillStyle = leek.isKLineUp ? '#ef4444' : '#22c55e';
         ctx.fillRect(48, -10, 4, 20);
 
         ctx.restore();
 
-        // 边缘检测清理
+        // 超出屏幕边缘清除
         if (
           leek.x < -60 || leek.x > width + 60 ||
           leek.y < -60 || leek.y > height + 60
@@ -155,7 +159,7 @@ export default function ClipperGame() {
         }
       });
 
-      // 3. 绘制并消退切割轨迹线 (关键修复：超过 150ms 的点自动清除)
+      // 3. 绘制并消退切割轨迹线 (超过 150ms 自动消退，解决线段残留)
       trailRef.current = trailRef.current.filter((p) => now - p.time < 150);
 
       if (trailRef.current.length > 1) {
@@ -167,7 +171,7 @@ export default function ClipperGame() {
           ctx.lineTo(trailRef.current[i].x, trailRef.current[i].y);
         }
 
-        ctx.strokeStyle = '#38bdf8'; // 青蓝色飞刀亮光
+        ctx.strokeStyle = '#38bdf8'; // 飞刀青蓝荧光
         ctx.lineWidth = 4;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -177,14 +181,13 @@ export default function ClipperGame() {
         ctx.restore();
       }
 
-      // 4. 切割碰撞检测
+      // 4. 切割碰撞判定
       if (trailRef.current.length >= 2 && gameActive) {
-        const p1 = trailRef.current[trailRef.current.length - 2];
         const p2 = trailRef.current[trailRef.current.length - 1];
 
         leeksRef.current.forEach((leek, idx) => {
           const dist = Math.hypot(leek.x - p2.x, leek.y - p2.y);
-          if (dist < 40) { // 碰撞命中
+          if (dist < 40) { // 命中切碎
             leeksRef.current.splice(idx, 1);
             setScore((s) => s + 1);
           }
@@ -199,14 +202,14 @@ export default function ClipperGame() {
     return () => cancelAnimationFrame(animationId);
   }, [gameActive, speedMode]);
 
-  // 动态调整 Canvas 尺寸（防止超宽溢出）
+  // 动态计算尺寸，防止移动端超宽溢出
   useEffect(() => {
     const handleResize = () => {
       if (containerRef.current && canvasRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
-        const size = Math.min(rect.width - 16, 380); // 严格限制最大宽度
+        const size = Math.min(rect.width - 16, 380);
         canvasRef.current.width = size;
-        canvasRef.current.height = size * 1.1; // 保持比例
+        canvasRef.current.height = size * 1.1;
       }
     };
 
@@ -215,7 +218,7 @@ export default function ClipperGame() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // 划动/触摸事件处理
+  // 手势/指针划动处理
   const addPoint = (x: number, y: number) => {
     if (!canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
@@ -248,7 +251,7 @@ export default function ClipperGame() {
 
   return (
     <div ref={containerRef} className="w-full flex flex-col items-center select-none touch-none">
-      {/* 顶部数据控制栏：适配移动端换行与微调 */}
+      {/* 顶部控制与指示 */}
       <div className="w-full bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 mb-3 flex flex-col gap-2">
         <div className="flex items-center justify-between text-xs px-1">
           <span className="text-emerald-400 font-medium">🌱 已割韭菜: {score}</span>
@@ -275,7 +278,7 @@ export default function ClipperGame() {
         </div>
       </div>
 
-      {/* 画布容器：响应式容器防止溢出 */}
+      {/* 画布自适应容器 */}
       <div className="w-full flex justify-center items-center bg-slate-950 rounded-2xl p-2 border border-slate-800 shadow-inner relative overflow-hidden">
         <canvas
           ref={canvasRef}
@@ -286,7 +289,7 @@ export default function ClipperGame() {
           className="bg-slate-900 rounded-xl cursor-crosshair touch-none max-w-full"
         />
 
-        {/* 游戏结束覆盖层 */}
+        {/* 结算弹窗 */}
         {!gameActive && (
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
             <div className="text-3xl mb-2">🧘‍♂️</div>
