@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import ClipperGame from '@/components/games/Clipper';
-import PeakTroughCard from '@/components/PeakTroughCard';
+import PeakTroughCard from '@/components/cards/PeakTroughCard';
 import { LanguageProvider, useLanguage } from '@/context/LanguageContext';
 
 function MainContent() {
