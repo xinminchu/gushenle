@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "NODE_OPTIONS='--max-old-space-size=1536' next build --no-lint",
-    "start": "next start",
-    "lint": "next lint"
-  },
+  "dev": "next dev",
+  "build": "NODE_OPTIONS='--max-old-space-size=1024' next build",
+  "start": "next start",
+  "lint": "next lint"
+},
   "dependencies": {
     "@google/genai": "^2.23.0",
     "@supabase/supabase-js": "^2.116.0",
