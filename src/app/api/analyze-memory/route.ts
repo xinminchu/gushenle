@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,11 +10,6 @@ export async function POST(req: NextRequest) {
     if (!rawText) {
       return NextResponse.json({ error: '未接收到文本内容' }, { status: 400 });
     }
-
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: { responseMimeType: 'application/json' },
-    });
 
     const prompt = `
       你是一个极简且严谨的投资决策结构化提取助手。
@@ -30,8 +25,15 @@ export async function POST(req: NextRequest) {
       "${rawText}"
     `;
 
-    const result = await model.generateContent(prompt);
-    const parsedData = JSON.parse(result.response.text());
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const parsedData = JSON.parse(response.text || '{}');
 
     return NextResponse.json({ success: true, data: parsedData });
   } catch (error: any) {
