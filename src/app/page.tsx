@@ -1,103 +1,54 @@
 'use client';
 
-import { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import Link from 'next/link';
 import ClipperGame from '@/components/games/Clipper';
 import { LanguageProvider, useLanguage } from '@/context/LanguageContext';
 
-function TestContent() {
-  const { lang, toggleLanguage, t } = useLanguage();
-  const [supabaseStatus, setSupabaseStatus] = useState<string>('未测试');
-  const [geminiStatus, setGeminiStatus] = useState<string>('未测试');
-  const [loading, setLoading] = useState(false);
-
-  const runTests = async () => {
-    setLoading(true);
-    setSupabaseStatus('测试中...');
-    setGeminiStatus('测试中...');
-
-    try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-      if (!supabaseUrl || !supabaseAnonKey) {
-        setSupabaseStatus('❌ .env.local missing parameters');
-      } else {
-        const supabase = createClient(supabaseUrl, supabaseAnonKey);
-        const { data, error } = await supabase.from('test').select('*').limit(1);
-        if (error) {
-          setSupabaseStatus(`❌ ${error.message}`);
-        } else {
-          setSupabaseStatus(`🟢 Connected! (${data?.[0]?.name || 'Success'})`);
-        }
-      }
-    } catch (err: any) {
-      setSupabaseStatus(`❌ ${err.message}`);
-    }
-
-    try {
-      const res = await fetch('/api/test-gemini');
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setGeminiStatus(`🟢 Reply: "${data.reply}"`);
-      } else {
-        setGeminiStatus(`❌ ${data.error || 'Error'}`);
-      }
-    } catch (err: any) {
-      setGeminiStatus(`❌ ${err.message}`);
-    }
-
-    setLoading(false);
-  };
+function MainContent() {
+  const { lang, toggleLanguage } = useLanguage();
 
   return (
-    <main className="p-8 max-w-xl mx-auto font-sans">
-      <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-start p-4 sm:p-8">
+      {/* 顶部 Header：标题、测试入口与语言切换 */}
+      <header className="w-full max-w-xl flex items-center justify-between mb-6 pt-2 pb-4 border-b border-slate-800/80">
         <div>
-          <h1 className="text-2xl font-bold">{t('title')}</h1>
-          <p className="text-sm text-slate-500">{t('subtitle')}</p>
-        </div>
-        {/* 🌐 中英文切换按钮 */}
-        <button
-          onClick={toggleLanguage}
-          className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-        >
-          🌐 {lang === 'zh' ? 'English' : '中文'}
-        </button>
-      </div>
-
-      <button
-        onClick={runTests}
-        disabled={loading}
-        className="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition mb-8 w-full"
-      >
-        {loading ? t('testing') : t('testConnection')}
-      </button>
-
-      <div className="space-y-4 mb-10">
-        <div className="p-4 border rounded-xl bg-gray-50 dark:bg-gray-800">
-          <h2 className="font-semibold text-lg mb-1">{t('supabaseDb')}</h2>
-          <p className="text-sm font-mono">{supabaseStatus}</p>
+          <h1 className="text-xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
+            股神乐 <span className="text-xs font-normal text-slate-400">(Gushenle)</span>
+          </h1>
+          <p className="text-xs text-slate-400 mt-0.5">理性投资与情绪调节助手</p>
         </div>
 
-        <div className="p-4 border rounded-xl bg-gray-50 dark:bg-gray-800">
-          <h2 className="font-semibold text-lg mb-1">{t('geminiApi')}</h2>
-          <p className="text-sm font-mono">{geminiStatus}</p>
-        </div>
-      </div>
+        <div className="flex items-center gap-3">
+          {/* 轻量级测试页面入口链接 */}
+          <Link
+            href="/test"
+            className="text-xs text-slate-400 hover:text-emerald-400 underline underline-offset-4 transition"
+          >
+            {lang === 'zh' ? '系统诊断/测试' : 'System Diagnostic'}
+          </Link>
 
-      <div className="border-t pt-8">
-        <h2 className="text-xl font-bold mb-4">{t('gameTitle')}</h2>
-        <ClipperGame onFinish={() => alert(lang === 'zh' ? '冷静期结束，理性决策已启动！' : 'Cool-down finished. Rationality restored!')} />
-      </div>
-    </main>
+          {/* 语言切换按钮 */}
+          <button
+            onClick={toggleLanguage}
+            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-md transition border border-slate-700"
+          >
+            {lang === 'zh' ? 'English' : '中文'}
+          </button>
+        </div>
+      </header>
+
+      {/* 主体部分：游戏区域 */}
+      <main className="w-full max-w-xl flex flex-col items-center">
+        <ClipperGame />
+      </main>
+    </div>
   );
 }
 
-export default function TestPage() {
+export default function Home() {
   return (
     <LanguageProvider>
-      <TestContent />
+      <MainContent />
     </LanguageProvider>
   );
 }
