@@ -1,102 +1,135 @@
-'use client';
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>历史 K 线盲盒</title>
+  <style>
+    body {
+      margin: 0; background: #0b0f19; color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh;
+    }
+    .card {
+      background: #1e293b; padding: 20px; border-radius: 12px;
+      width: 340px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    canvas { background: #0f172a; border-radius: 8px; margin: 15px 0; }
+    .btn-group { display: flex; gap: 10px; justify-content: center; }
+    button {
+      flex: 1; padding: 12px; font-size: 16px; font-weight: bold; border: none;
+      border-radius: 8px; cursor: pointer; transition: 0.2s;
+    }
+    .btn-up { background: #22c55e; color: white; }
+    .btn-down { background: #ef4444; color: white; }
+    .btn-next { background: #3b82f6; color: white; width: 100%; margin-top: 10px; }
+    .result { margin-top: 12px; font-weight: bold; min-height: 24px; }
+  </style>
+</head>
+<body>
 
-import React, { useState } from 'react';
-import { X, TrendingUp, TrendingDown, HelpCircle, RefreshCw } from 'lucide-react';
+  <div class="card">
+    <h3 style="margin:0 0 5px; color:#f59e0b;">历史 K 线盲盒</h3>
+    <p style="font-size:12px; color:#94a3b8; margin:0;">看图盲猜后续走势，测试投资定力！</p>
 
-interface KLineBoxGameProps {
-  onClose: () => void;
-}
+    <canvas id="canvas" width="300" height="180"></canvas>
 
-export default function KLineBoxGame({ onClose }: KLineBoxGameProps) {
-  const [revealed, setRevealed] = useState(false);
-  const [guess, setGuess] = useState<'up' | 'down' | null>(null);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-
-  // 盲盒数据
-  const currentCase = {
-    symbol: 'NVDA (2023.10)',
-    pattern: '蓄势回调末期，动能分化',
-    actualOutcome: 'up',
-    desc: '在经过两周横盘震荡后，由于 AI 芯片强劲需求，后市开启了强劲主升浪[cite: 1]。',
-  };
-
-  const handleGuess = (choice: 'up' | 'down') => {
-    setGuess(choice);
-    setIsCorrect(choice === currentCase.actualOutcome);
-    setRevealed(true);
-  };
-
-  return (
-    <div className="fixed inset-0 z-[10000] bg-slate-950 flex flex-col justify-between p-4 overflow-hidden touch-none">
-      <div className="flex justify-between items-center bg-slate-900/90 border border-slate-800 p-3 rounded-xl mt-2">
-        <h3 className="text-xs font-bold text-slate-100 flex items-center gap-1">
-          <HelpCircle className="w-4 h-4 text-emerald-400" /> 历史 K 线盲盒[cite: 1]
-        </h3>
-        <button onClick={onClose} className="p-1.5 bg-slate-800 rounded-lg text-slate-400 hover:text-white">
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      <div className="my-auto space-y-4">
-        {/* K 线图形展现卡片 */}
-        <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl text-center space-y-3">
-          <p className="text-xs text-slate-400">匿名标的形态：<span className="text-slate-200 font-bold">{currentCase.pattern}</span></p>
-          
-          {/* 模拟盲盒 K 线走向视觉 */}
-          <div className="h-32 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center p-4">
-            <div className="flex items-end gap-2 h-20">
-              <div className="w-3 bg-emerald-500 h-10 rounded-t"></div>
-              <div className="w-3 bg-rose-500 h-14 rounded-t"></div>
-              <div className="w-3 bg-emerald-500 h-8 rounded-t"></div>
-              <div className="w-3 bg-slate-700 h-12 rounded-t animate-pulse"></div>
-              <div className="text-xl ml-2 font-bold text-amber-400">❓</div>
-            </div>
-          </div>
-
-          {!revealed ? (
-            <p className="text-xs text-slate-300">凭定力猜测：接下来 5 个交易日将如何走？[cite: 1]</p>
-          ) : (
-            <div className="space-y-2 pt-2 border-t border-slate-800">
-              <span className={`text-sm font-bold ${isCorrect ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {isCorrect ? '🎉 猜对了！定力极佳！' : '😅 猜错了！盲目冲动啦！'}
-              </span>
-              <p className="text-xs text-slate-400">{currentCase.symbol}：{currentCase.desc}</p>
-            </div>
-          )}
-        </div>
-
-        {/* 猜测按钮 */}
-        {!revealed ? (
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => handleGuess('up')}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-1.5 text-xs shadow-lg active:scale-95 transition-all"
-            >
-              <TrendingUp className="w-4 h-4" /> 突破上涨
-            </button>
-            <button
-              onClick={() => handleGuess('down')}
-              className="bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-1.5 text-xs shadow-lg active:scale-95 transition-all"
-            >
-              <TrendingDown className="w-4 h-4" /> 下跌回调
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => {
-              setRevealed(false);
-              setGuess(null);
-            }}
-            className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-3 rounded-xl flex items-center justify-center gap-1.5"
-          >
-            <RefreshCw className="w-4 h-4" /> 抽取下一张盲盒
-          </button>
-        )}
-      </div>
-
-      <div className="text-center text-[10px] text-slate-500 pb-2">
-        💡 真实历史数据模拟，帮助建立对 K 线走势的理性感知[cite: 1]
-      </div>
+    <div class="btn-group" id="btnGroup">
+      <button class="btn-up" onclick="guess(true)">📈 看涨</button>
+      <button class="btn-down" onclick="guess(false)">📉 看跌</button>
     </div>
-  );
+
+    <button class="btn-next" id="nextBtn" style="display:none;" onclick="loadNewCase()">下一局</button>
+    <div class="result" id="result"></div>
+  </div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const resultEl = document.getElementById('result');
+const btnGroup = document.getElementById('btnGroup');
+const nextBtn = document.getElementById('nextBtn');
+
+let klines = [];
+let isAnswered = false;
+
+function generateData() {
+  klines = [];
+  let price = 100;
+  for (let i = 0; i < 20; i++) {
+    let change = (Math.random() - 0.48) * 5;
+    let open = price;
+    let close = price + change;
+    let high = Math.max(open, close) + Math.random() * 2;
+    let low = Math.min(open, close) - Math.random() * 2;
+    klines.push({ open, close, high, low });
+    price = close;
+  }
 }
+
+function drawChart(showAll = false) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const count = showAll ? klines.length : 15; // 盲盒默认只显示前 15 根 K 线
+  const barWidth = 12;
+  const gap = 6;
+
+  for (let i = 0; i < count; i++) {
+    let k = klines[i];
+    let x = 15 + i * (barWidth + gap);
+    let isUp = k.close >= k.open;
+
+    // 缩放计算 Y 轴
+    let yOpen = 150 - (k.open - 80) * 2;
+    let yClose = 150 - (k.close - 80) * 2;
+    let yHigh = 150 - (k.high - 80) * 2;
+    let yLow = 150 - (k.low - 80) * 2;
+
+    ctx.strokeStyle = isUp ? '#22c55e' : '#ef4444';
+    ctx.fillStyle = isUp ? '#22c55e' : '#ef4444';
+
+    // 影线
+    ctx.beginPath();
+    ctx.moveTo(x + barWidth / 2, yHigh);
+    ctx.lineTo(x + barWidth / 2, yLow);
+    ctx.stroke();
+
+    // 实体
+    ctx.fillRect(x, Math.min(yOpen, yClose), barWidth, Math.abs(yClose - yOpen) || 2);
+  }
+}
+
+function guess(userGuessUp) {
+  if (isAnswered) return;
+  isAnswered = true;
+
+  // 判断后续第 16-20 根的整体趋势
+  let isActualUp = klines[19].close >= klines[14].close;
+  
+  drawChart(true); // 揭晓剩余 K 线
+
+  if (userGuessUp === isActualUp) {
+    resultEl.innerText = '🎯 猜对了！心理定力极佳！';
+    resultEl.style.color = '#22c55e';
+  } else {
+    resultEl.innerText = '❌ 猜错了！市场走势出乎意料。';
+    resultEl.style.color = '#ef4444';
+  }
+
+  btnGroup.style.display = 'none';
+  nextBtn.style.display = 'block';
+}
+
+function loadNewCase() {
+  isAnswered = false;
+  resultEl.innerText = '';
+  btnGroup.style.display = 'flex';
+  nextBtn.style.display = 'none';
+  generateData();
+  drawChart(false);
+}
+
+loadNewCase();
+</script>
+</body>
+</html>

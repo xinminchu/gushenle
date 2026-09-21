@@ -1,69 +1,92 @@
-'use client';
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>美股巨头大乱斗</title>
+  <style>
+    body {
+      margin: 0; background: #0b0f19; color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh;
+    }
+    .grid {
+      display: grid; grid-template-columns: repeat(4, 75px); gap: 10px;
+      background: #1e293b; padding: 15px; border-radius: 12px;
+    }
+    .cell {
+      width: 75px; height: 75px; background: #334155; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: bold; cursor: pointer; user-select: none;
+      transition: all 0.2s; text-align: center;
+    }
+    .cell.selected { border: 2px solid #38bdf8; background: #475569; }
+    .fact-box {
+      margin-top: 15px; width: 310px; min-height: 50px; background: #10172a;
+      border: 1px solid #334155; padding: 10px; border-radius: 8px;
+      font-size: 13px; color: #cbd5e1; text-align: center;
+    }
+  </style>
+</head>
+<body>
 
-import React, { useState } from 'react';
-import { X, Sparkles, RefreshCw } from 'lucide-react';
+  <h3 style="margin-bottom:10px; color:#4ade80;">美股巨头 4x4 矩阵消除</h3>
+  <div class="grid" id="grid"></div>
+  <div class="fact-box" id="factBox">点击两个相同的巨头图标进行消除，查看巨头冷知识！</div>
 
-interface BigTechGameProps {
-  onClose: () => void;
+<script>
+const techList = [
+  { name: 'AAPL\n苹果', fact: '💡 苹果公司最早的标志是牛顿坐在苹果树下的图案。' },
+  { name: 'NVDA\n英伟达', fact: '💡 英伟达最初的名字源于 "Invidia" (拉丁语: 嫉妒)。' },
+  { name: 'TSLA\n特斯拉', fact: '💡 特斯拉最初并非由马斯克创立，他是在 A 轮融资时加入的。' },
+  { name: 'MSFT\n微软', fact: '💡 微软成立之初的名字叫 "Micro-Soft" (带有连字符)。' }
+];
+
+// 构建 4x4 矩阵数据 (8组成对卡片)
+let cards = [];
+techList.forEach(item => {
+  cards.push({ ...item }, { ...item });
+  cards.push({ ...item }, { ...item });
+});
+cards.sort(() => Math.random() - 0.5); // 随机打乱
+
+const gridEl = document.getElementById('grid');
+const factBox = document.getElementById('factBox');
+let selectedIndex = -1;
+
+function render() {
+  gridEl.innerHTML = '';
+  cards.forEach((item, index) => {
+    const div = document.createElement('div');
+    div.className = 'cell' + (selectedIndex === index ? ' selected' : '');
+    div.style.visibility = item.matched ? 'hidden' : 'visible';
+    div.innerText = item.name;
+    div.onclick = () => handleClick(index);
+    gridEl.appendChild(div);
+  });
 }
 
-export default function BigTechGame({ onClose }: BigTechGameProps) {
-  const [score, setScore] = useState(0);
-  const [fact, setFact] = useState('点击相同的巨头图标进行消除！');
+function handleClick(index) {
+  if (cards[index].matched || index === selectedIndex) return;
 
-  const techList = [
-    { name: 'NVDA', icon: '🟢', fact: '英伟达最初成立于一家 Denny\'s 餐厅内[cite: 1]。' },
-    { name: 'AAPL', icon: '🍎', fact: '苹果公司最初的 LOGO 包含牛顿在苹果树下的画像[cite: 1]。' },
-    { name: 'MSFT', icon: '💻', fact: '微软 1985 年推出的 Windows 1.0 售价仅 99 美元[cite: 1]。' },
-    { name: 'TSLA', icon: '⚡', fact: '特斯拉以发明家尼古拉·特斯拉的名字命名[cite: 1]。' },
-  ];
-
-  const handleTileClick = (tech: typeof techList[0]) => {
-    setScore((prev) => prev + 10);
-    setFact(tech.fact);
-  };
-
-  return (
-    <div className="fixed inset-0 z-[10000] bg-slate-950 flex flex-col justify-between p-4 overflow-hidden touch-none">
-      <div className="flex justify-between items-center bg-slate-900/90 border border-slate-800 p-3 rounded-xl mt-2">
-        <div className="text-xs">
-          <span className="text-slate-400">消除积分: </span>
-          <span className="text-emerald-400 font-bold text-sm ml-1">{score}</span>
-        </div>
-        <button onClick={onClose} className="p-1.5 bg-slate-800 rounded-lg text-slate-400 hover:text-white">
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* 巨头 4x4 矩阵 */}
-      <div className="my-auto space-y-4">
-        <div className="bg-slate-900/80 border border-slate-800 p-3 rounded-xl text-center">
-          <p className="text-xs text-amber-400 font-medium flex items-center justify-center gap-1">
-            <Sparkles className="w-3.5 h-3.5" /> 巨头冷知识
-          </p>
-          <p className="text-xs text-slate-300 mt-1">{fact}</p>
-        </div>
-
-        <div className="grid grid-cols-4 gap-2.5">
-          {Array.from({ length: 16 }).map((_, idx) => {
-            const item = techList[idx % techList.length];
-            return (
-              <button
-                key={idx}
-                onClick={() => handleTileClick(item)}
-                className="bg-slate-800/90 border border-slate-700/80 hover:border-emerald-500 rounded-xl py-4 flex flex-col items-center justify-center active:scale-95 transition-transform"
-              >
-                <span className="text-xl">{item.icon}</span>
-                <span className="text-[10px] font-bold text-slate-300 mt-1">{item.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="text-center text-[10px] text-slate-500 pb-2">
-        💡 美股巨头大乱斗：点击连消，解锁冷知识[cite: 1]
-      </div>
-    </div>
-  );
+  if (selectedIndex === -1) {
+    selectedIndex = index;
+  } else {
+    // 检测是否匹配
+    if (cards[selectedIndex].name === cards[index].name) {
+      cards[selectedIndex].matched = true;
+      cards[index].matched = true;
+      factBox.innerText = cards[index].fact;
+      selectedIndex = -1;
+    } else {
+      selectedIndex = index;
+    }
+  }
+  render();
 }
+
+render();
+</script>
+</body>
+</html>
