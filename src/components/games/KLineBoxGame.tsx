@@ -6,40 +6,41 @@ const htmlContent = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
     body {
       margin: 0; background: #0b0f19; color: #fff;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      min-height: 100vh;
+      height: 100vh; overflow: hidden; touch-action: manipulation;
     }
     .card {
-      background: #1e293b; padding: 20px; border-radius: 12px;
-      width: 340px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      background: #1e293b; padding: 20px; border-radius: 16px;
+      width: 330px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     }
-    canvas { background: #0f172a; border-radius: 8px; margin: 15px 0; }
+    canvas { background: #0f172a; border-radius: 10px; margin: 15px 0; }
     .btn-group { display: flex; gap: 10px; justify-content: center; }
     button {
-      flex: 1; padding: 12px; font-size: 16px; font-weight: bold; border: none;
-      border-radius: 8px; cursor: pointer; transition: 0.2s;
+      flex: 1; padding: 12px; font-size: 15px; font-weight: bold; border: none;
+      border-radius: 10px; cursor: pointer; transition: 0.15s;
     }
     .btn-up { background: #22c55e; color: white; }
     .btn-down { background: #ef4444; color: white; }
-    .btn-next { background: #3b82f6; color: white; width: 100%; margin-top: 10px; }
-    .result { margin-top: 12px; font-weight: bold; min-height: 24px; }
+    .btn-next { background: #3b82f6; color: white; width: 100%; margin-top: 10px; display: none; }
+    .result { margin-top: 10px; font-weight: bold; min-height: 24px; font-size: 15px; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h3 style="margin:0 0 5px; color:#f59e0b;">历史 K 线盲盒</h3>
-    <p style="font-size:12px; color:#94a3b8; margin:0;">看图盲猜后续走势，测试投资定力！</p>
-    <canvas id="canvas" width="300" height="180"></canvas>
+    <div style="font-size: 18px; font-weight: bold; color:#f59e0b;">历史 K 线盲盒</div>
+    <div style="font-size:12px; color:#94a3b8; margin-top:3px;">盲猜第 20 根 K 线涨跌，测试定力</div>
+    <canvas id="canvas" width="290" height="170"></canvas>
     <div class="btn-group" id="btnGroup">
       <button class="btn-up" onclick="guess(true)">📈 看涨</button>
       <button class="btn-down" onclick="guess(false)">📉 看跌</button>
     </div>
-    <button class="btn-next" id="nextBtn" style="display:none;" onclick="loadNewCase()">下一局</button>
+    <button class="btn-next" id="nextBtn" onclick="loadNewCase()">再试一局 🔄</button>
     <div class="result" id="result"></div>
   </div>
 
@@ -50,8 +51,7 @@ const htmlContent = `<!DOCTYPE html>
     const btnGroup = document.getElementById('btnGroup');
     const nextBtn = document.getElementById('nextBtn');
 
-    let klines = [];
-    let isAnswered = false;
+    let klines = [], isAnswered = false;
 
     function generateData() {
       klines = [];
@@ -69,19 +69,18 @@ const htmlContent = `<!DOCTYPE html>
 
     function drawChart(showAll = false) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const count = showAll ? klines.length : 15;
-      const barWidth = 12;
-      const gap = 6;
+      const count = showAll ? 20 : 15;
+      const barWidth = 10, gap = 4;
 
       for (let i = 0; i < count; i++) {
         let k = klines[i];
-        let x = 15 + i * (barWidth + gap);
+        let x = 10 + i * (barWidth + gap);
         let isUp = k.close >= k.open;
 
-        let yOpen = 150 - (k.open - 80) * 2;
-        let yClose = 150 - (k.close - 80) * 2;
-        let yHigh = 150 - (k.high - 80) * 2;
-        let yLow = 150 - (k.low - 80) * 2;
+        let yOpen = 140 - (k.open - 80) * 1.8;
+        let yClose = 140 - (k.close - 80) * 1.8;
+        let yHigh = 140 - (k.high - 80) * 1.8;
+        let yLow = 140 - (k.low - 80) * 1.8;
 
         ctx.strokeStyle = isUp ? '#22c55e' : '#ef4444';
         ctx.fillStyle = isUp ? '#22c55e' : '#ef4444';
@@ -103,10 +102,10 @@ const htmlContent = `<!DOCTYPE html>
       drawChart(true);
 
       if (userGuessUp === isActualUp) {
-        resultEl.innerText = '🎯 猜对了！心理定力极佳！';
+        resultEl.innerText = '🎯 猜对了！交易直觉极佳！';
         resultEl.style.color = '#22c55e';
       } else {
-        resultEl.innerText = '❌ 猜错了！市场走势出乎意料。';
+        resultEl.innerText = '❌ 猜错了！走势反转出乎意料。';
         resultEl.style.color = '#ef4444';
       }
 
@@ -132,7 +131,7 @@ export default function KLineBoxGame() {
   return (
     <iframe
       srcDoc={htmlContent}
-      className="w-full h-[450px] border-0 rounded-xl"
+      className="w-full h-[430px] border-0 rounded-2xl overflow-hidden"
       title="KLine Box Game"
     />
   );
