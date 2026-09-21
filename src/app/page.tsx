@@ -29,3 +29,20 @@ export default function Home() {
     </main>
   );
 }
+
+import RhythmDashboard from '@/components/RhythmDashboard';
+
+export default function HomePage() {
+  return (
+    <div className="container mx-auto py-8">
+      <h1 className="text-3xl font-bold mb-6">我的工作台</h1>
+      
+      {/* 嵌入谷峰律动看板 */}
+      <section className="mb-8">
+        <RhythmDashboard />
+      </section>
+
+      {/* 首页的其他板块 */}
+    </div>
+  );
+}
