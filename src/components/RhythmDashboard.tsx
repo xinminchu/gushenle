@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import RhythmChart from './RhythmChart';
 import type { RhythmResponse } from '@/lib/rhythm';
 import { statusForScore } from '@/lib/rhythm';
+import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 
 const SYMBOLS = ['AAPL', 'NVDA', 'TSLA', 'MSFT'];
 const RANGES = ['1W', '1M', '3M', '1Y'];
@@ -14,6 +15,11 @@ export default function RhythmDashboard() {
   const [range, setRange] = useState('1M');
   const [data, setData] = useState<RhythmResponse | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // 收盘后自动刷新：页面开着过夜，第二天自动拉取最新收盘价
+  const autoTick = useMarketAutoRefresh(
+    data && data.series.length > 0 ? data.series[data.series.length - 1].date : undefined,
+  );
 
   // 监听 symbol 与 range 变化，实时请求 API
   useEffect(() => {
@@ -34,7 +40,7 @@ export default function RhythmDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [symbol, range]);
+  }, [symbol, range, autoTick]);
 
   return (
     <div className="w-full space-y-6">
@@ -128,7 +134,11 @@ export default function RhythmDashboard() {
                 />
               </div>
               <div className="mt-1.5 text-right text-[10px] text-slate-600">
-                更新数据点: {data.series.length} 天
+                更新数据点: {data.series.length} 天 · 数据更新于{' '}
+                {new Date(data.updatedAt).toLocaleTimeString('zh-CN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
               </div>
             </div>
           </div>

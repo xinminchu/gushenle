@@ -4,6 +4,7 @@ import React, { useState, useEffect} from 'react';
 import { ShieldAlert, Smile, Flame, Loader2} from 'lucide-react';
 import type { RhythmResponse} from '@/lib/rhythm';
 import { statusForScore, scoreGradient} from '@/lib/rhythm';
+import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 
 /** 持仓配置：分数来自实时接口，thesis 是用户自己的投资逻辑备注 */
 const HOLDINGS = [
@@ -22,6 +23,7 @@ price: number;
 changePct: number;
 overHeat: boolean;
 simulated: boolean;
+dataDate: string;
 }
 
 export default function TodayTab() {
@@ -29,6 +31,11 @@ const [cards, setCards] = useState<MomentumCard[] | null>(null);
 const [loadError, setLoadError] = useState<string | null>(null);
 const [showZenModal, setShowZenModal] = useState(false);
 const [selectedStock, setSelectedStock] = useState<MomentumCard | null>(null);
+
+// 收盘后自动刷新：页面开着过夜，第二天自动拉取最新收盘价
+const autoTick = useMarketAutoRefresh(
+cards && cards.length > 0 ? cards[0].dataDate : undefined,
+);
 
 // 从 /api/rhythm 拉取真实动能分数（rhythmPos 即 0-100 动能打分）
 useEffect(() => {
@@ -49,6 +56,7 @@ price: data.price,
 changePct: data.changePct,
 overHeat: score >= 80,
 simulated: data.source === 'simulated',
+dataDate: data.series.length > 0 ? data.series[data.series.length - 1].date : '',
 } as MomentumCard;
 }),
 );
@@ -61,7 +69,7 @@ load();
 return () => {
 cancelled = true;
 };
-}, []);
+}, [autoTick]);
 
 const handleStockClick = (stock: MomentumCard) => {
 if (stock.overHeat) {
@@ -87,7 +95,7 @@ return (
 <section className="space-y-3">
 <div className="flex justify-between items-center">
 <h2 className="text-base font-semibold text-slate-200">谷峰律动动能看板</h2>
-<span className="text-xs text-slate-500">0-100 动能打分 · Yahoo 实时</span>
+<span className="text-xs text-slate-500">0-100 动能打分 · 每日收盘更新</span>
 </div>
 
 {loadError? (
