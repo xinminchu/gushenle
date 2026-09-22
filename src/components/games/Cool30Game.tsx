@@ -64,9 +64,21 @@ const htmlContent = `<!DOCTYPE html>
 
     const rows = 4, cols = 5;
     const brickW = 58, brickH = 22, padding = 8, offsetTop = 30, offsetLeft = 11;
-    let bricks = [];
+    const ROW_COLORS = ['#ef4444', '#f59e0b', '#eab308', '#22c55e']; // 红→橙→黄→绿：从冲动到冷静
+    const WORDS20 = ['追高','梭哈','FOMO','杠杆','抄底','满仓','听消息','情绪化','All in','踏空','死扛','频繁交易','追涨','杀跌','借钱','内幕','短线','暴富','焦虑','从众'];
+    let bricks = [], brickWords = [], floaters = [];
+
+    function shuffled(a) {
+      const r = a.slice();
+      for (let i = r.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const t = r[i]; r[i] = r[j]; r[j] = t;
+      }
+      return r;
+    }
 
     function initBricks() {
+      brickWords = shuffled(WORDS20);
       bricks = [];
       for (let r = 0; r < rows; r++) {
         bricks[r] = [];
@@ -76,7 +88,7 @@ const htmlContent = `<!DOCTYPE html>
 
     function movePaddle(clientX) {
       const rect = canvas.getBoundingClientRect();
-      paddle.x = clientX - rect.left - paddle.w / 2;
+      paddle.x = Math.max(0, Math.min(canvas.width - paddle.w, clientX - rect.left - paddle.w / 2));
     }
 
     canvas.addEventListener('mousemove', (e) => movePaddle(e.clientX));
@@ -84,6 +96,10 @@ const htmlContent = `<!DOCTYPE html>
       e.preventDefault();
       movePaddle(e.touches[0].clientX);
     }, { passive: false });
+
+    function resetBall() {
+      ball.x = 170; ball.y = 400; ball.vx = 3.5; ball.vy = -3.5;
+    }
 
     function startTimer() {
       clearInterval(timer);
@@ -101,8 +117,8 @@ const htmlContent = `<!DOCTYPE html>
     }
 
     function resetGame() {
-      score = 0; timeLeft = 30; gameOver = false;
-      ball.x = 170; ball.y = 400; ball.vx = 3.5; ball.vy = -3.5;
+      score = 0; timeLeft = 30; gameOver = false; floaters = [];
+      resetBall();
       scoreText.innerText = "消除障碍: 0";
       timeText.innerText = "剩余时间: 30s";
       initBricks();
@@ -114,57 +130,101 @@ const htmlContent = `<!DOCTYPE html>
       if (gameOver) return;
       ball.x += ball.vx; ball.y += ball.vy;
 
-      if (ball.x - ball.r < 0 || ball.x + ball.r > canvas.width) ball.vx *= -1;
-      if (ball.y - ball.r < 0) ball.vy *= -1;
+      // 左右墙、顶墙：标准反弹（含位置修正防卡墙）
+      if (ball.x - ball.r < 0) { ball.x = ball.r; ball.vx = Math.abs(ball.vx); }
+      else if (ball.x + ball.r > canvas.width) { ball.x = canvas.width - ball.r; ball.vx = -Math.abs(ball.vx); }
+      if (ball.y - ball.r < 0) { ball.y = ball.r; ball.vy = Math.abs(ball.vy); }
 
-      if (ball.y + ball.r > canvas.height) {
-        ball.x = 170; ball.y = 400; ball.vx = 3.5; ball.vy = -3.5;
+      // 掉出底边：重置到挡板上方
+      if (ball.y - ball.r > canvas.height) {
+        resetBall();
+        return;
       }
 
-      if (ball.y + ball.r >= paddle.y && ball.x >= paddle.x && ball.x <= paddle.x + paddle.w) {
-        ball.vy = -Math.abs(ball.vy);
+      // 挡板碰撞：仅当球正在下落、球底部落在挡板顶面附近、横向重叠时才反弹
+      if (ball.vy > 0 &&
+          ball.y + ball.r >= paddle.y && ball.y + ball.r <= paddle.y + paddle.h + 8 &&
+          ball.x >= paddle.x - ball.r && ball.x <= paddle.x + paddle.w + ball.r) {
+        ball.y = paddle.y - ball.r - 1; // 防粘连
+        const speed = Math.hypot(ball.vx, ball.vy);
+        const rel = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+        const c = Math.max(-1, Math.min(1, rel));
+        ball.vx = c * 6; // 中间衰减、边缘加大，最多 ±6
+        ball.vy = -Math.sqrt(Math.max(speed * speed - ball.vx * ball.vx, 4)); // 保持球速，vy 至少为 2
       }
 
+      // 砖块碰撞：按 x/y 轴侵入量，侵入小的轴翻转对应速度分量
+      outer:
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-          let b = bricks[r][c];
-          if (b.status === 1) {
-            let bx = offsetLeft + c * (brickW + padding);
-            let by = offsetTop + r * (brickH + padding);
-            b.x = bx; b.y = by;
-
-            if (ball.x > bx && ball.x < bx + brickW && ball.y > by && ball.y < by + brickH) {
+          const b = bricks[r][c];
+          if (b.status !== 1) continue;
+          const bx = offsetLeft + c * (brickW + padding);
+          const by = offsetTop + r * (brickH + padding);
+          b.x = bx; b.y = by;
+          const overlapX = Math.min(ball.x + ball.r, bx + brickW) - Math.max(ball.x - ball.r, bx);
+          const overlapY = Math.min(ball.y + ball.r, by + brickH) - Math.max(ball.y - ball.r, by);
+          if (overlapX > 0 && overlapY > 0) {
+            if (overlapX < overlapY) {
+              ball.vx *= -1;
+              ball.x += (ball.x < bx + brickW / 2 ? -overlapX : overlapX);
+            } else {
               ball.vy *= -1;
-              b.status = 0;
-              score++;
-              scoreText.innerText = \`消除障碍: \${score}\`;
+              ball.y += (ball.y < by + brickH / 2 ? -overlapY : overlapY);
             }
+            b.status = 0;
+            score++;
+            floaters.push({ x: bx + brickW / 2, y: by, born: Date.now() });
+            scoreText.innerText = \`消除障碍: \${score}\`;
+            break outer; // 一帧只处理一块，避免乱跳
           }
         }
       }
+      // 砖块清空自动补满（词重新打乱）
       if (bricks.every(row => row.every(b => b.status === 0))) initBricks();
     }
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 挡板
       ctx.fillStyle = '#38bdf8';
       ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
 
+      // 球
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
       ctx.fillStyle = '#ffffff';
       ctx.fill();
 
+      // 砖块：按行渐变色 + 冲动词
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           if (bricks[r][c].status === 1) {
-            let bx = offsetLeft + c * (brickW + padding);
-            let by = offsetTop + r * (brickH + padding);
-            ctx.fillStyle = '#f59e0b';
+            const bx = offsetLeft + c * (brickW + padding);
+            const by = offsetTop + r * (brickH + padding);
+            ctx.fillStyle = ROW_COLORS[r];
             ctx.fillRect(bx, by, brickW, brickH);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '11px sans-serif';
+            ctx.fillText(brickWords[r * cols + c], bx + brickW / 2, by + brickH / 2 + 1);
           }
         }
       }
+
+      // "+1 斩心魔" 飘字
+      const now = Date.now();
+      floaters = floaters.filter(f => now - f.born < 600);
+      floaters.forEach(f => {
+        const t = (now - f.born) / 600;
+        ctx.globalAlpha = 1 - t;
+        ctx.fillStyle = '#4ade80';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText('+1 斩心魔', f.x, f.y - t * 30);
+      });
+      ctx.globalAlpha = 1;
     }
 
     function loop() {

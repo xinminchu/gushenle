@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Play, Flame, X } from 'lucide-react';
-import ClipperGame from '../games/ClipperGame';
-import Cool30Game from '../games/Cool30Game';
-import BigTechGame from '../games/BigTechGame';
-import KLineBoxGame from '../games/KLineBoxGame';
+
+// 游戏按需加载：点开哪个才下载哪个，不拖慢首页
+const ClipperGame = dynamic(() => import('../games/ClipperGame'), { ssr: false });
+const Cool30Game = dynamic(() => import('../games/Cool30Game'), { ssr: false });
+const BigTechGame = dynamic(() => import('../games/BigTechGame'), { ssr: false });
+const KLineBoxGame = dynamic(() => import('../games/KLineBoxGame'), { ssr: false });
 
 export default function FunTab() {
   const [activeGame, setActiveGame] = useState<string | null>(null);
