@@ -4,7 +4,7 @@
  * 设计原则：
  * ① 主判断锚定：诊断结论永远基于近 3 个月（66 个交易日），不随展示区间变化，
  *    保证用户看到的判断建议是一致的；
- * ② 展示区间（1天…2年…全部）只控制走势图与分位位置条，是"多空对照"，不下结论；
+ * ② 展示区间（1周…2年…全部）只控制走势图与分位位置条，是"多空对照"，不下结论；
  * ③ 分数 = 位置分×0.5 + 趋势分×0.3 + 速度分×0.2，谷峰用 5%/95% 分位数，抗离群点；
  * ④ 阈值按波动率自适应：高波股用 85/15、稳健股用 80/20，档位由 trailing 66 天
  *    波动率决定（慢变量，不跳变）；权重与阈值集中在本文件顶部，可随时调整。
@@ -33,10 +33,6 @@ export interface RangeDef {
 }
 
 export const RANGE_DEFS: RangeDef[] = [
-  { id: '1D', label: '1天', points: 1, minPoints: 1 },
-  { id: '2D', label: '2天', points: 2, minPoints: 2 },
-  { id: '3D', label: '3天', points: 3, minPoints: 3 },
-  { id: '4D', label: '4天', points: 4, minPoints: 4 },
   { id: '1W', label: '1周', points: 5, minPoints: 5 },
   { id: '2W', label: '2周', points: 10, minPoints: 10 },
   { id: '3W', label: '3周', points: 15, minPoints: 15 },
@@ -356,3 +352,4 @@ export function scoreGradient(score: number, hot = 80, cold = 20): string {
   if (score >= cold) return 'from-slate-400 to-slate-500';
   return 'from-indigo-400 to-purple-500';
 }
+

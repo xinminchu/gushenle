@@ -88,7 +88,7 @@ function TestContent() {
 
       <div className="border-t pt-8">
         <h2 className="text-xl font-bold mb-4">{t('gameTitle')}</h2>
-        <ClipperGame onFinish={() => alert(lang === 'zh' ? '冷静期结束，理性决策已启动！' : 'Cool-down finished. Rationality restored!')} />
+        <ClipperGame />
       </div>
     </main>
   );

@@ -1,7 +1,7 @@
 // src/components/RhythmDashboard.tsx
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Flame, ShieldAlert, Settings2, X, Plus, RotateCcw, TrendingUp } from 'lucide-react';
 import RhythmChart, { type ChartType } from './RhythmChart';
 import AccuracyPanel from './AccuracyPanel';
@@ -10,6 +10,7 @@ import { RANGE_DEFS, RANGE_MAP, ANCHOR_RANGE_ID, scoreGradient } from '@/lib/rhy
 import { getRhythm, invalidateRhythm } from '@/lib/market';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 import { useWatchlist } from './WatchlistContext';
+import { saveOperation, todayStr, type OpAction } from '@/lib/operations';
 
 const ANCHOR_LABEL = RANGE_MAP[ANCHOR_RANGE_ID]?.label ?? '3月';
 
@@ -33,6 +34,21 @@ export default function RhythmDashboard() {
   const [data, setData] = useState<RhythmResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showZenModal, setShowZenModal] = useState(false);
+  // 「记一笔」操作记录弹窗
+  const [showOpModal, setShowOpModal] = useState(false);
+  const [opAction, setOpAction] = useState<OpAction>('sell');
+  const [opPrice, setOpPrice] = useState('');
+  const [opQty, setOpQty] = useState('');
+  const [opSaved, setOpSaved] = useState(false);
+  // 区间横滑条的滚动位置：切区间/切股票重渲染时保持，不回到最左
+  const rangeBarRef = useRef<HTMLDivElement | null>(null);
+  const rangeScrollPos = useRef(0);
+  useLayoutEffect(() => {
+    const el = rangeBarRef.current;
+    if (el && el.scrollLeft !== rangeScrollPos.current) {
+      el.scrollLeft = rangeScrollPos.current;
+    }
+  });
   const [managing, setManaging] = useState(false);
   const [newSymbol, setNewSymbol] = useState('');
   const [newName, setNewName] = useState('');
@@ -301,6 +317,18 @@ export default function RhythmDashboard() {
               {overHeat && (
                 <div className="mt-2 text-[10px] text-amber-400/70">点击卡片查看冷静清单</div>
               )}
+              <button
+                onClick={() => {
+                  setOpAction(judgment.statusKey === 'oversoldBottom' ? 'buy' : 'sell');
+                  setOpPrice(data.price ? data.price.toFixed(2) : '');
+                  setOpQty('');
+                  setOpSaved(false);
+                  setShowOpModal(true);
+                }}
+                className="mt-3 w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 font-medium transition-colors"
+              >
+                ✍️ 记一笔操作
+              </button>
             </div>
           </div>
 
@@ -317,7 +345,13 @@ export default function RhythmDashboard() {
                 {data.changePct}% / 近{rangeLabel}
               </span>
             </div>
-            <div className="flex gap-1.5 overflow-x-auto pb-1 mb-3 -mx-1 px-1">
+            <div
+              ref={rangeBarRef}
+              onScroll={(e) => {
+                rangeScrollPos.current = e.currentTarget.scrollLeft;
+              }}
+              className="flex gap-1.5 overflow-x-auto pb-1 mb-3 -mx-1 px-1"
+            >
               {RANGE_DEFS.filter((d) => data.availableRanges.includes(d.id)).map((d) => (
                 <button
                   key={d.id}
@@ -440,6 +474,103 @@ export default function RhythmDashboard() {
           </div>
         </div>
       )}
+
+      {/* 记一笔：把"看到建议→动手操作"记录下来，复盘自动算 */}
+      {showOpModal && data && judgment && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl">
+            <h3 className="text-sm font-bold text-slate-100">
+              记一笔 · {symbol} {nameOf(symbol) ? ` ${nameOf(symbol)}` : ''}
+            </h3>
+            <div className="text-[11px] text-slate-500 bg-slate-900/60 rounded-lg px-3 py-2">
+              当时建议：{judgment.status}（{judgment.score}分）· {judgment.advice}
+            </div>
+            {opSaved ? (
+              <div className="text-center py-4 text-sm text-emerald-400 font-medium">
+                ✓ 已记入操作记忆，去记忆页看复盘
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-2">
+                  {(['buy', 'sell'] as OpAction[]).map((a) => (
+                    <button
+                      key={a}
+                      onClick={() => setOpAction(a)}
+                      className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
+                        opAction === a
+                          ? a === 'buy'
+                            ? 'bg-rose-600 text-white'
+                            : 'bg-emerald-600 text-white'
+                          : 'bg-slate-700 text-slate-300'
+                      }`}
+                    >
+                      {a === 'buy' ? '买入' : '卖出'}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-[11px] text-slate-500 mb-1">价格 *</div>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={opPrice}
+                      onChange={(e) => setOpPrice(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-slate-500 mb-1">数量（可选）</div>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={opQty}
+                      onChange={(e) => setOpQty(e.target.value)}
+                      placeholder="股数"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowOpModal(false)}
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2.5 rounded-xl text-xs font-medium"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={() => {
+                      const price = parseFloat(opPrice);
+                      if (!(price > 0)) {
+                        alert('请填写成交价格');
+                        return;
+                      }
+                      const qty = opQty ? parseInt(opQty, 10) : undefined;
+                      saveOperation({
+                        symbol,
+                        name: nameOf(symbol) || undefined,
+                        action: opAction,
+                        price,
+                        qty: qty && qty > 0 ? qty : undefined,
+                        date: todayStr(),
+                        source: 'one-tap',
+                        adviceSnapshot: `${judgment.status}：${judgment.advice}`,
+                        adviceScore: judgment.score,
+                      });
+                      setOpSaved(true);
+                      setTimeout(() => setShowOpModal(false), 1400);
+                    }}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-medium"
+                  >
+                    保存
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

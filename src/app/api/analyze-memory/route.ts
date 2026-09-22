@@ -18,6 +18,9 @@ export async function POST(req: NextRequest) {
       输出 JSON 格式，必须包含以下字段：
       - symbol: 股票代码 (例如 NVDA, AAPL, TSLA)，若未明确提及则返回 "UNKNOWN"
       - action: 交易动作 (例如: "BUY", "SELL", "REDUCE_33%", "WATCH")
+      - price: 成交价格数字（例如 235.5），若未提及则返回 null
+      - qty: 成交数量数字（例如 100），若未提及则返回 null
+      - opDate: 操作日期 YYYY-MM-DD；用户说"今天"用今天，"昨天"用昨天，明确日期直接用；若无法判断则返回 null
       - thesis: 操作背后的买入逻辑或交易理由
       - emotion: 用户的心理或情绪状态 (例如: "冷静", "冲动", "谨慎", "乐观")
 
