@@ -34,13 +34,10 @@ export interface RangeDef {
 
 export const RANGE_DEFS: RangeDef[] = [
   { id: '1W', label: '1周', points: 5, minPoints: 5 },
-  { id: '2W', label: '2周', points: 10, minPoints: 10 },
   { id: '3W', label: '3周', points: 15, minPoints: 15 },
   { id: '1M', label: '1月', points: 22, minPoints: 22 },
-  { id: '2M', label: '2月', points: 44, minPoints: 44 },
   { id: '3M', label: '3月', points: 66, minPoints: 66 },
   { id: '1Y', label: '1年', points: 252, minPoints: 200 },
-  { id: '2Y', label: '2年', points: 504, minPoints: 400 },
   { id: 'ALL', label: '全部', points: 99999, minPoints: 1 },
 ];
 

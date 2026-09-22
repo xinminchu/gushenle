@@ -6,6 +6,7 @@ import { useWatchlist } from '@/components/WatchlistContext';
 import { loadPositions, savePositions, holdingDays, sectorOf, type Position } from '@/lib/positions';
 import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
 import type { RhythmResponse } from '@/lib/rhythm';
+import { useColorScheme, upText, downText } from '@/lib/colorScheme';
 
 /**
  * 持仓页：账户视角——我持有多少、成本、盈亏。
@@ -37,6 +38,8 @@ function positionAdvice(statusKey: string | undefined, pnlPct: number | null): s
   }
 }
 export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: string) => void }) {
+  // 涨跌配色跟随今日页的全局选择
+  const { scheme } = useColorScheme();
   const { items: watchlist, nameOf } = useWatchlist();
   const [positions, setPositions] = useState<Position[]>([]);
   const [quotes, setQuotes] = useState<Record<string, RhythmResponse | null>>({});
@@ -159,14 +162,21 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
 
   // 板块分布（按市值）
   const sectorValue: Record<string, number> = {};
+  const sectorSymbols: Record<string, string[]> = {};
   positions.forEach((p) => {
     const q = quotes[p.symbol];
     if (!q) return;
     const s = sectorOf(p.symbol);
     sectorValue[s] = (sectorValue[s] ?? 0) + p.shares * q.price;
+    (sectorSymbols[s] ??= []).push(p.symbol);
   });
   const sectorRows = Object.entries(sectorValue)
-    .map(([s, v]) => ({ sector: s, value: v, pct: totalValue > 0 ? (v / totalValue) * 100 : 0 }))
+    .map(([s, v]) => ({
+      sector: s,
+      value: v,
+      pct: totalValue > 0 ? (v / totalValue) * 100 : 0,
+      symbols: sectorSymbols[s] ?? [],
+    }))
     .sort((a, b) => b.value - a.value);
 
   // 画像小结（只摆事实）
@@ -246,7 +256,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
           <div className="mt-1 flex items-baseline justify-between">
             <span className="text-xs text-slate-400">总盈亏</span>
             <span
-              className={`text-sm font-bold ${totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}
+              className={`text-sm font-bold ${totalPnl >= 0 ? upText(scheme) : downText(scheme)}`}
             >
               {totalPnl >= 0 ? '+' : ''}$
               {totalPnl.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}{' '}
@@ -257,7 +267,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
           <div className="mt-1 flex items-baseline justify-between">
             <span className="text-xs text-slate-400">今日盈亏</span>
             <span
-              className={`text-sm font-bold ${totalDayPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}
+              className={`text-sm font-bold ${totalDayPnl >= 0 ? upText(scheme) : downText(scheme)}`}
             >
               {totalDayPnl >= 0 ? '+' : ''}$
               {totalDayPnl.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}{' '}
@@ -271,17 +281,25 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
       {/* 板块分布 + 画像小结 */}
       {positions.length > 0 && sectorRows.length > 0 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
-          <div className="text-xs font-semibold text-slate-200">板块分布</div>
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-semibold text-slate-200">板块分布</div>
+            <div className="text-[10px] text-slate-600">左：板块 · 右：市值占比</div>
+          </div>
           {sectorRows.map((r) => (
-            <div key={r.sector} className="flex items-center gap-2 text-xs">
-              <span className="text-slate-400 w-16 shrink-0">{r.sector}</span>
-              <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-blue-500/70"
-                  style={{ width: `${Math.min(100, r.pct)}%` }}
-                />
+            <div key={r.sector} className="text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 w-16 shrink-0">{r.sector}</span>
+                <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-blue-500/70"
+                    style={{ width: `${Math.min(100, r.pct)}%` }}
+                  />
+                </div>
+                <span className="text-slate-300 w-12 text-right">{r.pct.toFixed(0)}%</span>
               </div>
-              <span className="text-slate-300 w-12 text-right">{r.pct.toFixed(0)}%</span>
+              <div className="pl-[4.5rem] pt-0.5 text-[10px] text-slate-600">
+                {r.symbols.join(' · ')}
+              </div>
             </div>
           ))}
           <div className="pt-1 text-[11px] text-slate-500 leading-relaxed">
@@ -300,6 +318,11 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
       )}
 
       {/* 持仓列表（可拖动手柄排序，顺序自动保存） */}
+      {positions.length > 0 && (
+        <div className="text-[10px] text-slate-600 px-1 -mb-1">
+          左列：股票 / 股数·成本　右列：现价 / 盈亏
+        </div>
+      )}
       <div className="space-y-3">
         {positions.map((p, idx) => {
           const q = quotes[p.symbol];
@@ -358,7 +381,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                     <>
                       <div className="text-slate-200 font-semibold text-sm">${price.toFixed(2)}</div>
                       {dayChg != null && (
-                        <div className={`text-[11px] ${dayChg >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        <div className={`text-[11px] ${dayChg >= 0 ? upText(scheme) : downText(scheme)}`}>
                           {dayChg >= 0 ? '+' : ''}
                           {dayChg}% 今日
                         </div>
@@ -395,7 +418,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                   })()}
                 </span>
                 {pnl != null && pnlPct != null ? (
-                  <span className={`font-semibold ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  <span className={`font-semibold ${pnl >= 0 ? upText(scheme) : downText(scheme)}`}>
                     {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ({pnl >= 0 ? '+' : ''}
                     {pnlPct.toFixed(2)}%)
                   </span>

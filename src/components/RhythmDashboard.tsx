@@ -11,6 +11,7 @@ import { getRhythm, invalidateRhythm } from '@/lib/market';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 import { useWatchlist } from './WatchlistContext';
 import { saveOperation, todayStr, type OpAction } from '@/lib/operations';
+import { useColorScheme, schemeLabel, upText, downText } from '@/lib/colorScheme';
 
 const ANCHOR_LABEL = RANGE_MAP[ANCHOR_RANGE_ID]?.label ?? '3月';
 
@@ -28,6 +29,10 @@ export default function RhythmDashboard() {
 
   const [symbol, setSymbol] = useState('AAPL');
   const [range, setRange] = useState(ANCHOR_RANGE_ID);
+  // 涨跌配色：默认绿涨红跌（美股习惯），页面上可一键切换，全站统一
+  const { scheme, toggle: toggleScheme } = useColorScheme();
+  // 高波/稳健说明的展开状态
+  const [showTierInfo, setShowTierInfo] = useState(false);
   // 图表类型：3M 及以内默认 K线，长区间默认收盘线；用户手动切换后记住选择（切区间时重置）
   const [chartTypeOverride, setChartTypeOverride] = useState<ChartType | null>(null);
   const [showRangeHL, setShowRangeHL] = useState(true);
@@ -254,7 +259,23 @@ export default function RhythmDashboard() {
                   {judgment.thresholds.cold}
                 </span>
               )}
+              {judgment && (
+                <button
+                  onClick={() => setShowTierInfo((v) => !v)}
+                  className="ml-1 w-4 h-4 shrink-0 rounded-full border border-slate-600 text-slate-500 text-[9px] leading-none flex items-center justify-center hover:text-slate-300 hover:border-slate-400"
+                  aria-label="波动档位说明"
+                >
+                  i
+                </button>
+              )}
             </h2>
+            {showTierInfo && judgment && (
+              <div className="mb-3 text-[11px] text-slate-400 leading-relaxed bg-slate-800/60 border border-slate-700/60 rounded-lg px-3 py-2">
+                {judgment.thresholds.tier === 'high'
+                  ? '高波模式：这只股票最近波动大（日均涨跌超 3%），"涨太猛了 / 跌过头了"的门槛收得更紧（85/15 分），免得信号泛滥。'
+                  : '稳健模式：这只股票最近波动温和，"涨太猛了 / 跌过头了"用常规门槛（80/20 分）。'}
+              </div>
+            )}
             <div
               className={`p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 ${
                 overHeat ? 'cursor-pointer hover:border-amber-500/40' : ''
@@ -336,14 +357,23 @@ export default function RhythmDashboard() {
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-semibold text-slate-200">价格走势</h2>
-              <span
-                className={`text-xs font-medium ${
-                  data.changePct >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                }`}
-              >
-                {data.changePct >= 0 ? '+' : ''}
-                {data.changePct}% / 近{rangeLabel}
-              </span>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-xs font-medium ${
+                    data.changePct >= 0 ? upText(scheme) : downText(scheme)
+                  }`}
+                >
+                  {data.changePct >= 0 ? '+' : ''}
+                  {data.changePct}% / 近{rangeLabel}
+                </span>
+                <button
+                  onClick={toggleScheme}
+                  className="text-[10px] px-2 py-0.5 rounded-full border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500"
+                  aria-label="切换涨跌配色"
+                >
+                  {schemeLabel(scheme)} ⇄
+                </button>
+              </div>
             </div>
             <div
               ref={rangeBarRef}
@@ -402,6 +432,7 @@ export default function RhythmDashboard() {
               height={240}
               chartType={chartType}
               showRangeHL={showRangeHL}
+              scheme={scheme}
             />
 
             {/* 分位位置条：现价在所选区间分位中的位置 */}

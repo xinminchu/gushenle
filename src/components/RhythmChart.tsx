@@ -9,6 +9,8 @@ import {
   createChart,
 } from 'lightweight-charts';
 import type { RhythmPoint } from '@/lib/rhythm';
+import type { ColorScheme } from '@/lib/colorScheme';
+import { upHex, downHex } from '@/lib/colorScheme';
 
 export type ChartType = 'candle' | 'line';
 
@@ -19,11 +21,9 @@ interface RhythmChartProps {
   chartType: ChartType;
   /** 是否用虚线标出所选区间的最高 / 最低 */
   showRangeHL: boolean;
+  /** 涨跌配色：cn=红涨绿跌，us=绿涨红跌 */
+  scheme: ColorScheme;
 }
-
-/** 红涨绿跌（国内习惯） */
-const UP = '#f43f5e';
-const DOWN = '#22c55e';
 
 /**
  * 谷峰律动价格走势图（lightweight-charts）
@@ -35,8 +35,11 @@ export default function RhythmChart({
   height = 220,
   chartType,
   showRangeHL,
+  scheme,
 }: RhythmChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const UP = upHex(scheme);
+  const DOWN = downHex(scheme);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -102,11 +105,15 @@ export default function RhythmChart({
         });
       }
     } else {
+      // 收盘线颜色跟随区间净涨跌 + 当前配色方案
+      const first = series[0]?.close ?? 0;
+      const last = series[series.length - 1]?.close ?? 0;
+      const line = last >= first ? UP : DOWN;
       const area = chart.addSeries(AreaSeries, {
-        lineColor: '#10b981',
+        lineColor: line,
         lineWidth: 2,
-        topColor: 'rgba(16, 185, 129, 0.35)',
-        bottomColor: 'rgba(16, 185, 129, 0.02)',
+        topColor: `${line}59`,
+        bottomColor: `${line}05`,
         priceLineVisible: true,
         lastValueVisible: true,
       });
@@ -144,7 +151,7 @@ export default function RhythmChart({
       ro.disconnect();
       chart.remove();
     };
-  }, [series, height, chartType, showRangeHL]);
+  }, [series, height, chartType, showRangeHL, scheme]);
 
   if (series.length === 0) {
     return (
