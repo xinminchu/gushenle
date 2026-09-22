@@ -2,22 +2,16 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Flame, ShieldAlert, Settings2, X, Plus, RotateCcw } from 'lucide-react';
+import { Flame, ShieldAlert, Settings2, X, Plus, RotateCcw, TrendingUp } from 'lucide-react';
 import RhythmChart from './RhythmChart';
+import AccuracyPanel from './AccuracyPanel';
 import type { RhythmResponse } from '@/lib/rhythm';
-import { statusForScore, scoreGradient } from '@/lib/rhythm';
+import { RANGE_DEFS, RANGE_MAP, ANCHOR_RANGE_ID, scoreGradient } from '@/lib/rhythm';
 import { getRhythm, invalidateRhythm } from '@/lib/market';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 import { useWatchlist } from './WatchlistContext';
 
-const RANGES = ['1W', '1M', '3M', '1Y'];
-const RANGE_UNIT: Record<string, string> = { '1W': '周', '1M': '月', '3M': '季', '1Y': '年' };
-const RANGE_LABEL: Record<string, string> = {
-  '1W': '近 1 周',
-  '1M': '近 1 月',
-  '3M': '近 3 月',
-  '1Y': '近 1 年',
-};
+const ANCHOR_LABEL = RANGE_MAP[ANCHOR_RANGE_ID]?.label ?? '3月';
 
 export default function RhythmDashboard() {
   const {
@@ -32,7 +26,7 @@ export default function RhythmDashboard() {
   } = useWatchlist();
 
   const [symbol, setSymbol] = useState('AAPL');
-  const [range, setRange] = useState('1M');
+  const [range, setRange] = useState(ANCHOR_RANGE_ID);
   const [data, setData] = useState<RhythmResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showZenModal, setShowZenModal] = useState(false);
@@ -85,7 +79,17 @@ export default function RhythmDashboard() {
     };
   }, [symbol, range, autoTick]);
 
-  const overHeat = !!data && data.rhythmPos >= 80;
+  // 若当前区间对该标的不可用（如上市不足），切回主判断区间
+  useEffect(() => {
+    if (data && data.availableRanges.length > 0 && !data.availableRanges.includes(range)) {
+      setRange(ANCHOR_RANGE_ID);
+    }
+  }, [data, range]);
+
+  const judgment = data?.judgment ?? null;
+  const overHeat = !!judgment?.overheated;
+  const strongHigh = !!judgment && judgment.score >= 80 && !judgment.overheated;
+  const rangeLabel = RANGE_MAP[range]?.label ?? range;
 
   const handleAdd = () => {
     const r = addItem(newSymbol, newName);
@@ -205,14 +209,14 @@ export default function RhythmDashboard() {
           <div className="h-44 animate-pulse bg-slate-900 border border-slate-800 rounded-xl" />
           <div className="h-72 animate-pulse bg-slate-900 border border-slate-800 rounded-xl" />
         </div>
-      ) : data ? (
+      ) : data && judgment ? (
         <>
-          {/* ① 律动诊断（先看到的核心信号） */}
+          {/* ① 律动诊断：主判断永远锚定近 3 月，不随展示区间变化 */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <h2 className="text-base font-semibold mb-3 text-slate-200 flex items-center">
               律动诊断
               <span className="ml-2 text-[10px] font-normal px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                按{RANGE_LABEL[range] ?? range}计算
+                主判断 · 近{ANCHOR_LABEL}
               </span>
             </h2>
             <div
@@ -232,6 +236,11 @@ export default function RhythmDashboard() {
                       <Flame className="w-3 h-3" /> 过热
                     </span>
                   )}
+                  {strongHigh && (
+                    <span className="bg-sky-500/15 text-sky-400 border border-sky-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                      <TrendingUp className="w-3 h-3" /> 强势
+                    </span>
+                  )}
                   {data.source === 'simulated' && (
                     <span className="text-[10px] text-slate-500">演示数据</span>
                   )}
@@ -242,9 +251,9 @@ export default function RhythmDashboard() {
                       overHeat ? 'text-amber-400' : 'text-emerald-400'
                     }`}
                   >
-                    {data.rhythmPos}
+                    {judgment.score}
                   </div>
-                  <div className="text-[10px] text-slate-400">{statusForScore(data.rhythmPos)}</div>
+                  <div className="text-[10px] text-slate-400">{judgment.status}</div>
                 </div>
               </div>
 
@@ -252,85 +261,91 @@ export default function RhythmDashboard() {
                 <span className="text-sm font-semibold text-slate-200 shrink-0">
                   ${data.price.toFixed(2)}
                 </span>
-                <span
-                  className={`text-xs shrink-0 ${
-                    data.changePct >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                  }`}
-                >
-                  {data.changePct >= 0 ? '+' : ''}
-                  {data.changePct}%/{RANGE_UNIT[range] ?? range}
-                </span>
                 <div className="flex-1 h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full bg-gradient-to-r ${scoreGradient(
-                      data.rhythmPos,
+                      judgment.score,
                     )} transition-all duration-700`}
-                    style={{ width: `${data.rhythmPos}%` }}
+                    style={{ width: `${judgment.score}%` }}
                   />
                 </div>
               </div>
 
-              <div className="mt-3 text-xs text-slate-400 leading-relaxed">
-                {data.rhythmPos < 20 && '价格贴近区间谷底，情绪偏冷，适合回顾买入逻辑。'}
-                {data.rhythmPos >= 20 &&
-                  data.rhythmPos <= 80 &&
-                  '价格在谷峰之间律动，按既定节奏持有即可。'}
-                {data.rhythmPos > 80 && '价格逼近区间峰顶，情绪偏热，警惕追高冲动。'}
+              <div className="mt-2 text-[10px] text-slate-500">
+                位置 {judgment.pos} · 趋势 {judgment.trend} · 速度 {judgment.vel}
               </div>
+
+              <div className="mt-2 text-xs text-slate-400 leading-relaxed">{judgment.advice}</div>
               {overHeat && (
                 <div className="mt-2 text-[10px] text-amber-400/70">点击卡片查看冷静清单</div>
               )}
             </div>
           </div>
 
-          {/* ② 价格走势图 */}
+          {/* ② 价格走势图：区间只控制展示，是多空对照，不下结论 */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-semibold text-slate-200">价格走势</h2>
-              <div className="flex bg-slate-800 rounded-lg p-1 text-xs">
-                {RANGES.map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => setRange(r)}
-                    className={`px-2.5 py-1 rounded transition-colors ${
-                      range === r ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
+              <span
+                className={`text-xs font-medium ${
+                  data.changePct >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                }`}
+              >
+                {data.changePct >= 0 ? '+' : ''}
+                {data.changePct}% / 近{rangeLabel}
+              </span>
+            </div>
+            <div className="flex gap-1.5 overflow-x-auto pb-1 mb-3 -mx-1 px-1">
+              {RANGE_DEFS.filter((d) => data.availableRanges.includes(d.id)).map((d) => (
+                <button
+                  key={d.id}
+                  onClick={() => setRange(d.id)}
+                  className={`shrink-0 px-2.5 py-1 rounded-lg text-xs transition-colors ${
+                    range === d.id
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
             </div>
 
             <RhythmChart series={data.series} height={240} />
 
-            {/* 谷峰位置条：当前价在波谷-波峰区间中的位置 */}
+            {/* 分位位置条：现价在所选区间分位中的位置 */}
             <div className="mt-4">
               <div className="flex justify-between text-xs text-slate-400 mb-1.5">
                 <span>
-                  谷底 <strong className="text-emerald-400">${data.valley.price}</strong>
-                  <span className="text-slate-500"> {data.valley.date}</span>
+                  分位低点 <strong className="text-emerald-400">${data.low}</strong>
                 </span>
                 <span>
-                  峰顶 <strong className="text-rose-400">${data.peak.price}</strong>
-                  <span className="text-slate-500"> {data.peak.date}</span>
+                  分位高点 <strong className="text-rose-400">${data.high}</strong>
                 </span>
               </div>
               <div className="relative h-2 rounded-full bg-gradient-to-r from-emerald-500 via-sky-500 to-rose-500">
-                <div
-                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-slate-900 shadow"
-                  style={{ left: `calc(${Math.min(100, Math.max(0, data.rhythmPos))}% - 8px)` }}
-                />
+                {data.slicePos != null && (
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-slate-900 shadow"
+                    style={{ left: `calc(${data.slicePos}% - 8px)` }}
+                  />
+                )}
               </div>
-              <div className="mt-1.5 text-right text-[10px] text-slate-600">
-                更新数据点: {data.series.length} 天 · 数据更新于{' '}
-                {new Date(data.updatedAt).toLocaleTimeString('zh-CN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+              <div className="mt-1.5 flex justify-between text-[10px] text-slate-600">
+                <span>近{rangeLabel}分位位置{data.slicePos == null && '（点数不足）'}</span>
+                <span>
+                  数据点: {data.series.length} 天 · 数据更新于{' '}
+                  {new Date(data.updatedAt).toLocaleTimeString('zh-CN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
               </div>
             </div>
           </div>
+
+          {/* ③ 判断复盘：历史信号 vs 次日真实结果 */}
+          <AccuracyPanel symbol={symbol} />
         </>
       ) : (
         <div className="h-64 flex items-center justify-center bg-slate-900 border border-slate-800 rounded-xl text-slate-400">
@@ -338,8 +353,8 @@ export default function RhythmDashboard() {
         </div>
       )}
 
-      {/* 沉思乐：过热时点击诊断卡弹出的冷静拦截 */}
-      {showZenModal && data && (
+      {/* 沉思乐：真正冲高过热时点击诊断卡弹出的冷静拦截 */}
+      {showZenModal && data && judgment && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-800 border border-amber-500/40 rounded-2xl p-6 max-w-sm w-full space-y-4 text-center shadow-2xl">
             <div className="w-12 h-12 bg-amber-500/20 border border-amber-500/40 rounded-full flex items-center justify-center mx-auto text-amber-400">
@@ -347,8 +362,8 @@ export default function RhythmDashboard() {
             </div>
             <h3 className="text-lg font-bold text-slate-100">过热风险提示</h3>
             <p className="text-sm text-slate-300">
-              <span className="font-semibold text-amber-400">{symbol}</span>{' '}
-              律动得分达到 <span className="font-bold">{data.rhythmPos}</span>
+              <span className="font-semibold text-amber-400">{symbol}</span> 律动得分达到{' '}
+              <span className="font-bold">{judgment.score}</span>
               ，市场情绪处于高位。
             </p>
             <div className="bg-slate-900/60 p-3 rounded-lg text-xs text-slate-400 text-left space-y-1">

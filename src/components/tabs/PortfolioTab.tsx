@@ -5,7 +5,7 @@ import { Plus, X, RefreshCw, Briefcase } from 'lucide-react';
 import { useWatchlist } from '@/components/WatchlistContext';
 import { loadPositions, savePositions, type Position } from '@/lib/positions';
 import { getRhythm, invalidateRhythm, dayChangePct, type RhythmResponse } from '@/lib/market';
-import { statusForScore } from '@/lib/rhythm';
+import type { RhythmResponse } from '@/lib/rhythm';
 
 /**
  * 持仓页：账户视角——我持有多少、成本、盈亏。
@@ -199,8 +199,8 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
               </div>
               {q && (
                 <div className="mt-2 text-[10px] text-slate-500">
-                  律动分 <span className="font-bold text-slate-300">{q.rhythmPos}</span> ·{' '}
-                  {statusForScore(q.rhythmPos)} → 点击去今日看诊断
+                  律动分 <span className="font-bold text-slate-300">{q.judgment.score}</span> ·{' '}
+                  {q.judgment.status} → 点击去今日看诊断
                 </div>
               )}
             </div>
