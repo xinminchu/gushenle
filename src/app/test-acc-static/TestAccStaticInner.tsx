@@ -2,13 +2,13 @@
 
 import { Check, X, History } from 'lucide-react';
 
-/** 二分测试6：复盘面板的 UI 结构，但用硬编码数据，不 fetch，不经过加载动画 */
+/** 二分测试6b：复盘面板的 UI 结构，用完整真实数据硬编码（从线上 API 复制），不 fetch */
 const HARDCODED = {
   available: true,
   stats: {
     total: 173,
-    accuracy: 64.2,
-    sampleDays: 250,
+    accuracy: 63,
+    sampleDays: 366,
     baseline: { chase: 63.1, bounce: 71.9 },
     statuses: {
       hotStrong: { label: '高位稳着涨', total: 118, accuracy: 66.1, baseline: 63.1, edge: 3 },
@@ -20,8 +20,14 @@ const HARDCODED = {
   recent: [
     { date: '2026-09-18', score: 91, status: '高位稳着涨', statusKey: 'hotStrong', tier: 'stable', nextReturn: 0.85, hit: false },
     { date: '2026-09-17', score: 95, status: '高位稳着涨', statusKey: 'hotStrong', tier: 'stable', nextReturn: -0.26, hit: true },
+    { date: '2026-09-16', score: 97, status: '涨太猛了', statusKey: 'overheated', tier: 'stable', nextReturn: 1.38, hit: false },
+    { date: '2026-09-15', score: 95, status: '高位稳着涨', statusKey: 'hotStrong', tier: 'stable', nextReturn: 0.32, hit: true },
+    { date: '2026-09-14', score: 96, status: '高位稳着涨', statusKey: 'hotStrong', tier: 'stable', nextReturn: -0.52, hit: true },
+    { date: '2026-09-11', score: 90, status: '高位稳着涨', statusKey: 'hotStrong', tier: 'stable', nextReturn: 0.24, hit: true },
+    { date: '2026-09-03', score: 82, status: '高位稳着涨', statusKey: 'hotStrong', tier: 'stable', nextReturn: -2.51, hit: true },
+    { date: '2026-07-30', score: 96, status: '高位稳着涨', statusKey: 'hotStrong', tier: 'stable', nextReturn: -7.35, hit: true },
   ],
-  rule: '四状态分别验证',
+  rule: '四状态分别验证：涨太猛了/高位稳着涨/还在往下跌（别追、别抄底语义）次日涨幅<+0.5%算命中；跌过头了（赌反弹语义）次日涨幅>-0.5%算命中；中间分数不记信号。基线为同期全部交易日的天然命中率。',
 };
 
 function fmtPct(v: number | null): string {
