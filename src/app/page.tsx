@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 // 相对路径导入组件
 import BottomNav from '../components/BottomNav';
-import TodayTab from '../components/tabs/TodayTab';
 import PortfolioTab from '../components/tabs/PortfolioTab';
 import MemoryTab from '../components/tabs/MemoryTab';
 import CommunityTab from '../components/tabs/CommunityTab';
@@ -26,13 +25,10 @@ export default function Home() {
       <div className="w-full">
         {activeTab === 'today' && (
           <div className="space-y-6">
-            {/* 嵌入谷峰律动看板 */}
+            {/* 谷峰律动看板：走势图 + 律动诊断 */}
             <section className="p-4 md:p-6">
               <RhythmDashboard />
             </section>
-            
-            {/* 原有的 TodayTab 内容 */}
-            <TodayTab />
           </div>
         )}
         {activeTab === 'portfolio' && <PortfolioTab />}

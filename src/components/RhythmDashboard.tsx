@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Flame } from 'lucide-react';
+import { Flame, ShieldAlert } from 'lucide-react';
 import RhythmChart from './RhythmChart';
 import type { RhythmResponse } from '@/lib/rhythm';
 import { statusForScore, scoreGradient } from '@/lib/rhythm';
@@ -29,6 +29,7 @@ export default function RhythmDashboard() {
   const [range, setRange] = useState('1M');
   const [data, setData] = useState<RhythmResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showZenModal, setShowZenModal] = useState(false);
 
   // 收盘后自动刷新：页面开着过夜，第二天自动拉取最新收盘价
   const autoTick = useMarketAutoRefresh(
@@ -165,7 +166,14 @@ export default function RhythmDashboard() {
                 按{RANGE_LABEL[range] ?? range}区间计算
               </span>
             </h2>
-            <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
+            <div
+              className={`p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 ${
+                data.rhythmPos >= 80 ? 'cursor-pointer hover:border-amber-500/40' : ''
+              }`}
+              onClick={() => {
+                if (data.rhythmPos >= 80) setShowZenModal(true);
+              }}
+            >
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -228,6 +236,36 @@ export default function RhythmDashboard() {
       ) : (
         <div className="h-64 flex items-center justify-center bg-slate-900 border border-slate-800 rounded-xl text-slate-400">
           数据加载失败，请稍后重试
+        </div>
+      )}
+
+      {/* 沉思乐：过热时点击诊断卡弹出的冷静拦截 */}
+      {showZenModal && data && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-amber-500/40 rounded-2xl p-6 max-w-sm w-full space-y-4 text-center shadow-2xl">
+            <div className="w-12 h-12 bg-amber-500/20 border border-amber-500/40 rounded-full flex items-center justify-center mx-auto text-amber-400">
+              <ShieldAlert className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-100">过热风险提示</h3>
+            <p className="text-sm text-slate-300">
+              <span className="font-semibold text-amber-400">{symbol}</span>{' '}
+              律动得分达到 <span className="font-bold">{data.rhythmPos}</span>
+              ，市场情绪处于高位。
+            </p>
+            <div className="bg-slate-900/60 p-3 rounded-lg text-xs text-slate-400 text-left space-y-1">
+              <p className="font-medium text-slate-300">反例检查清单：</p>
+              <p>• 是否因为害怕错过（FOMO）而想追加仓位？</p>
+              <p>• 是否符合最初设定的买入逻辑？</p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setShowZenModal(false)}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2.5 rounded-xl text-xs font-medium"
+              >
+                深呼吸，保持冷静
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
