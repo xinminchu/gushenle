@@ -1,94 +1,244 @@
+// src/components/tabs/MemoryTab.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { Mic, Square, Sparkles, CheckCircle2, XCircle, Send } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Mic, Square, Sparkles, CheckCircle2, XCircle, Send, Trash2, History,
+} from 'lucide-react';
+import {
+  loadOperations,
+  saveOperation,
+  deleteOperation,
+  normalizeAction,
+  ACTION_LABEL,
+  verdictFor,
+  todayStr,
+  type OperationRecord,
+  type OpAction,
+} from '@/lib/operations';
+import { applyOperationToPositions } from '@/lib/positions';
+
+interface Review { r5: number | null; r20: number | null }
 
 export default function MemoryTab() {
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [parsedResult, setParsedResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [ops, setOps] = useState<OperationRecord[]>([]);
+  const [reviews, setReviews] = useState<Record<string, Review>>({});
+  // 解析后可微调的字段
+  const [priceEdit, setPriceEdit] = useState('');
+  const [qtyEdit, setQtyEdit] = useState('');
+  const [dateEdit, setDateEdit] = useState('');
+  const [actionEdit, setActionEdit] = useState<OpAction>('sell');
+  // 同步到持仓：展开的记录 id + 股数
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [syncQty, setSyncQty] = useState('');
 
-  // 1. 调用真实的后端 Gemini API 进行解析
+  const recogRef = useRef<any>(null);
+  const speechTextRef = useRef('');
+
+  useEffect(() => {
+    setOps(loadOperations());
+  }, []);
+
+  // 每条操作记录拉一次 forward-return（+5/+20 天）
+  useEffect(() => {
+    ops.forEach((op) => {
+      if (reviews[op.id] !== undefined) return;
+      setReviews((prev) => ({ ...prev, [op.id]: { r5: null, r20: null } })); // 占位防重复
+      fetch(`/api/forward-return?symbol=${encodeURIComponent(op.symbol)}&date=${op.date}`)
+        .then((r) => r.json())
+        .then((j) => {
+          setReviews((prev) => ({ ...prev, [op.id]: { r5: j.r5 ?? null, r20: j.r20 ?? null } }));
+        })
+        .catch(() => {});
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ops]);
+
+  const speechSupported =
+    typeof window !== 'undefined' &&
+    ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
   const handleAnalyze = async (textToAnalyze: string) => {
     if (!textToAnalyze.trim()) return;
     setLoading(true);
     setParsedResult(null);
-
     try {
       const res = await fetch('/api/analyze-memory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rawText: textToAnalyze }),
       });
-
       const json = await res.json();
       if (json.success) {
-        setParsedResult(json.data);
+        const d = json.data;
+        setParsedResult(d);
+        setPriceEdit(d.price != null ? String(d.price) : '');
+        setQtyEdit(d.qty != null ? String(d.qty) : '');
+        setDateEdit(d.opDate || todayStr());
+        setActionEdit(normalizeAction(d.action) ?? 'sell');
       } else {
         alert('解析失败：' + (json.error || '未知错误'));
       }
     } catch (err) {
       console.error(err);
-      alert('请求失败，请检查网络或 API Key');
+      alert('请求失败，请检查网络');
     } finally {
       setLoading(false);
     }
   };
 
-  // 模拟语音录制（也可直接使用输入框文本测试）
   const handleToggleRecord = () => {
     if (isRecording) {
+      try { recogRef.current?.stop(); } catch {}
       setIsRecording(false);
-      if (inputText) {
-        handleAnalyze(inputText);
-      } else {
-        alert('请先输入或说出一段交易想法');
-      }
-    } else {
+      return;
+    }
+    if (!speechSupported) {
+      alert('当前浏览器不支持语音识别，请直接在输入框打字');
+      return;
+    }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recog = new SR();
+    recog.lang = 'zh-CN';
+    recog.interimResults = true;
+    recog.maxAlternatives = 1;
+    speechTextRef.current = '';
+    recog.onresult = (e: any) => {
+      let text = '';
+      for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
+      speechTextRef.current = text;
+      setInputText(text);
+    };
+    recog.onend = () => {
+      setIsRecording(false);
+      const t = speechTextRef.current.trim();
+      if (t) handleAnalyze(t);
+    };
+    recog.onerror = () => setIsRecording(false);
+    recogRef.current = recog;
+    try {
+      recog.start();
       setIsRecording(true);
+    } catch {
+      setIsRecording(false);
     }
   };
 
-  // 2. 取消/清除解析结果
-  const handleCancel = () => {
+  const handleSave = () => {
+    if (!parsedResult) return;
+    const symbol = String(parsedResult.symbol || '').toUpperCase();
+    if (!symbol || symbol === 'UNKNOWN') {
+      alert('没识别出股票代码，请说出或输入代码，例如 AAPL');
+      return;
+    }
+    const price = parseFloat(priceEdit);
+    if (!priceEdit || !(price > 0)) {
+      alert('请填写成交价格');
+      return;
+    }
+    const qty = qtyEdit ? parseInt(qtyEdit, 10) : undefined;
+    const rec = saveOperation({
+      symbol,
+      action: actionEdit,
+      price,
+      qty: qty && qty > 0 ? qty : undefined,
+      date: /^\d{4}-\d{2}-\d{2}$/.test(dateEdit) ? dateEdit : todayStr(),
+      source: 'voice',
+      thesis: parsedResult.thesis || undefined,
+      emotion: parsedResult.emotion || undefined,
+    });
+    setOps(loadOperations());
     setParsedResult(null);
     setInputText('');
+    // 新记录立刻拉复盘
+    fetch(`/api/forward-return?symbol=${encodeURIComponent(rec.symbol)}&date=${rec.date}`)
+      .then((r) => r.json())
+      .then((j) => setReviews((prev) => ({ ...prev, [rec.id]: { r5: j.r5 ?? null, r20: j.r20 ?? null } })))
+      .catch(() => {});
   };
+
+  const handleCancel = () => {
+    setParsedResult(null);
+  };
+
+  const handleDelete = (id: string) => {
+    if (!confirm('删除这条操作记录？')) return;
+    deleteOperation(id);
+    setOps(loadOperations());
+    setReviews((prev) => {
+      const n = { ...prev };
+      delete n[id];
+      return n;
+    });
+  };
+
+  const doSync = (op: OperationRecord) => {
+    const qty = parseInt(syncQty, 10);
+    if (!(qty > 0)) {
+      alert('请填写股数');
+      return;
+    }
+    const r = applyOperationToPositions({
+      symbol: op.symbol,
+      action: op.action,
+      price: op.price,
+      qty,
+      date: op.date,
+    });
+    alert(r.msg);
+    if (r.ok) setSyncingId(null);
+  };
+
+  // 汇总：卖飞/卖对/买高/买对（用 20 天，没有就用 5 天）
+  const summary = { missSell: 0, goodSell: 0, highBuy: 0, goodBuy: 0 };
+  ops.forEach((op) => {
+    const rv = reviews[op.id];
+    if (!rv) return;
+    const fwd = rv.r20 ?? rv.r5;
+    const v = verdictFor(op.action, fwd);
+    if (!v) return;
+    if (op.action === 'sell' && !v.good) summary.missSell++;
+    if (op.action === 'sell' && v.good && v.label.startsWith('卖对')) summary.goodSell++;
+    if (op.action === 'buy' && !v.good) summary.highBuy++;
+    if (op.action === 'buy' && v.good && v.label.startsWith('买对')) summary.goodBuy++;
+  });
+  const totalReviewed = summary.missSell + summary.goodSell + summary.highBuy + summary.goodBuy;
 
   return (
     <div className="p-4 space-y-6 pb-24 max-w-md mx-auto">
       <header className="pt-2">
-        <h1 className="text-xl font-bold text-slate-100">回忆乐 Memory Play</h1>
-        <p className="text-xs text-slate-400 mt-0.5">记录 Thesis 与 Lesson，让昨天的自己教会今天的自己[cite: 1]</p>
+        <h1 className="text-xl font-bold text-slate-100">操作记忆</h1>
+        <p className="text-xs text-slate-400 mt-0.5">说一句或点一下记一笔，涨跌复盘自动算</p>
       </header>
 
       {/* 语音与文本输入卡片 */}
-      <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-5 space-y-4">
-        {/* 手动文本输入（方便测试真实 AI 解析） */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
         <div className="space-y-2">
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="输入或语音记录例如：今天 180 块买了苹果 AAPL，看好下周发布会..."
-            className="w-full h-20 bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
+            placeholder="例如：今天 235 卖了 100 股苹果 AAPL，涨太猛了先落袋..."
+            className="w-full h-20 bg-slate-800/60 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
           />
           <button
             onClick={() => handleAnalyze(inputText)}
             disabled={loading || !inputText.trim()}
             className="w-full bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-200 text-xs py-2 rounded-lg font-medium flex items-center justify-center gap-1 transition-colors"
           >
-            <Send className="w-3.5 h-3.5" /> 发送给 AI 结构化解析
+            <Send className="w-3.5 h-3.5" /> 发送给 AI 整理
           </button>
         </div>
 
         <div className="relative flex py-1 items-center">
           <div className="flex-grow border-t border-slate-700"></div>
-          <span className="flex-shrink mx-2 text-[10px] text-slate-500">或通过语音录入</span>
+          <span className="flex-shrink mx-2 text-[10px] text-slate-500">或语音录入</span>
           <div className="flex-grow border-t border-slate-700"></div>
         </div>
 
-        {/* 语音按键 */}
         <div className="text-center space-y-2">
           <button
             onClick={handleToggleRecord}
@@ -101,61 +251,241 @@ export default function MemoryTab() {
             {isRecording ? <Square className="w-6 h-6 fill-current" /> : <Mic className="w-6 h-6" />}
           </button>
           <p className="text-[10px] text-slate-400">
-            {isRecording ? '录音中... 再点击结束并解析' : '按住/点击开始说话'}
+            {isRecording
+              ? '录音中... 再点击结束并自动整理'
+              : speechSupported
+                ? '点击开始说话，结束自动整理'
+                : '当前浏览器不支持语音，请打字输入'}
           </p>
         </div>
       </div>
 
-      {/* 加载状态 */}
       {loading && (
         <div className="flex items-center justify-center space-x-2 text-slate-400 py-6 text-xs">
           <Sparkles className="w-4 h-4 animate-spin text-emerald-400" />
-          <span>Gemini 2.5 Flash 正在结构化解析...</span>
+          <span>AI 正在整理...</span>
         </div>
       )}
 
-      {/* 真实 AI 解析结果与操作按钮 */}
+      {/* AI 整理结果：确认后存入 */}
       {parsedResult && !loading && (
-        <div className="bg-slate-800/90 border border-emerald-500/30 rounded-xl p-4 space-y-3">
+        <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
             <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" /> AI 结构化解析成功
+              <Sparkles className="w-3.5 h-3.5" /> AI 整理结果，确认后存入
             </span>
-            <span className="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded">
-              情绪：{parsedResult.emotion || '未提供'}
-            </span>
+            {parsedResult.emotion && (
+              <span className="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded">
+                情绪：{parsedResult.emotion}
+              </span>
+            )}
+          </div>
+
+          <div className="text-xs text-slate-100 font-medium">
+            {parsedResult.symbol}
+            {parsedResult.thesis && (
+              <p className="text-slate-400 font-normal mt-1 bg-slate-800/60 p-2 rounded border border-slate-800">
+                {parsedResult.thesis}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <div><span className="text-slate-400">标的：</span><span className="font-bold text-slate-100">{parsedResult.symbol}</span></div>
-            <div><span className="text-slate-400">动作：</span><span className="font-bold text-amber-400">{parsedResult.action}</span></div>
+            <div>
+              <div className="text-slate-500 mb-1">方向</div>
+              <div className="flex gap-1">
+                {(['buy', 'sell'] as OpAction[]).map((a) => (
+                  <button
+                    key={a}
+                    onClick={() => setActionEdit(a)}
+                    className={`flex-1 py-1.5 rounded-lg font-medium transition-colors ${
+                      actionEdit === a
+                        ? a === 'buy'
+                          ? 'bg-rose-600 text-white'
+                          : 'bg-emerald-600 text-white'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {ACTION_LABEL[a]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-slate-500 mb-1">日期</div>
+              <input
+                type="date"
+                value={dateEdit}
+                onChange={(e) => setDateEdit(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-100 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <div className="text-slate-500 mb-1">价格 *</div>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={priceEdit}
+                onChange={(e) => setPriceEdit(e.target.value)}
+                placeholder="成交价"
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-100 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <div className="text-slate-500 mb-1">数量（可选）</div>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={qtyEdit}
+                onChange={(e) => setQtyEdit(e.target.value)}
+                placeholder="股数"
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-100 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
           </div>
 
-          <div className="text-xs">
-            <span className="text-slate-400">买卖逻辑 / 理由：</span>
-            <p className="text-slate-200 mt-1 bg-slate-900/50 p-2 rounded border border-slate-800">{parsedResult.thesis || '无明显逻辑'}</p>
-          </div>
-
-          {/* 保存与取消按钮 */}
           <div className="flex gap-2 pt-1">
             <button
               onClick={handleCancel}
               className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-1"
             >
-              <XCircle className="w-3.5 h-3.5" /> 取消 / 重试
+              <XCircle className="w-3.5 h-3.5" /> 取消
             </button>
             <button
-              onClick={() => {
-                alert('成功存入决策记忆库！');
-                handleCancel();
-              }}
+              onClick={handleSave}
               className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-1"
             >
-              <CheckCircle2 className="w-3.5 h-3.5" /> 存入决策库
+              <CheckCircle2 className="w-3.5 h-3.5" /> 存入记忆
             </button>
           </div>
         </div>
       )}
+
+      {/* 汇总 */}
+      {totalReviewed > 0 && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <div className="text-xs font-semibold text-slate-200 mb-2 flex items-center gap-1">
+            <History className="w-3.5 h-3.5 text-slate-400" /> 复盘小结（{totalReviewed} 笔已出结果）
+          </div>
+          <div className="grid grid-cols-4 gap-2 text-center text-xs">
+            <div className="bg-slate-800/60 rounded-lg py-2">
+              <div className="text-base font-bold text-emerald-400">{summary.goodSell}</div>
+              <div className="text-[10px] text-slate-500">卖对了</div>
+            </div>
+            <div className="bg-slate-800/60 rounded-lg py-2">
+              <div className="text-base font-bold text-amber-400">{summary.missSell}</div>
+              <div className="text-[10px] text-slate-500">卖飞了</div>
+            </div>
+            <div className="bg-slate-800/60 rounded-lg py-2">
+              <div className="text-base font-bold text-emerald-400">{summary.goodBuy}</div>
+              <div className="text-[10px] text-slate-500">买对了</div>
+            </div>
+            <div className="bg-slate-800/60 rounded-lg py-2">
+              <div className="text-base font-bold text-rose-400">{summary.highBuy}</div>
+              <div className="text-[10px] text-slate-500">买高了</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 操作记录列表 */}
+      <div className="space-y-2">
+        <div className="text-sm font-semibold text-slate-200">操作记录（{ops.length}）</div>
+        {ops.length === 0 && (
+          <div className="text-xs text-slate-500 bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+            还没有记录。语音说一句，或在今日页点「记一笔」。
+          </div>
+        )}
+        {ops.map((op) => {
+          const rv = reviews[op.id];
+          const fwd = rv ? (rv.r20 ?? rv.r5) : undefined;
+          const winLabel = rv && rv.r20 != null ? '20天' : rv && rv.r5 != null ? '5天' : null;
+          const v = fwd === undefined ? undefined : verdictFor(op.action, fwd);
+          return (
+            <div key={op.id} className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-slate-100">{op.symbol}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                      op.action === 'buy' ? 'bg-rose-500/15 text-rose-400' : 'bg-emerald-500/15 text-emerald-400'
+                    }`}
+                  >
+                    {ACTION_LABEL[op.action]}
+                  </span>
+                  <span className="text-[10px] text-slate-500">{op.date}</span>
+                </div>
+                <button
+                  onClick={() => handleDelete(op.id)}
+                  className="text-slate-600 hover:text-rose-400 transition-colors"
+                  aria-label="删除"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="text-xs text-slate-300">
+                ${op.price.toFixed(2)}
+                {op.qty ? <span className="text-slate-500"> × {op.qty}股</span> : null}
+                {op.adviceSnapshot && (
+                  <span className="text-slate-500"> · 当时建议：{op.adviceSnapshot}</span>
+                )}
+              </div>
+              {op.thesis && <div className="text-[11px] text-slate-500 leading-relaxed">{op.thesis}</div>}
+              <div className="text-[11px] pt-0.5">
+                {v ? (
+                  <span className={v.good ? 'text-emerald-400' : 'text-amber-400'}>
+                    {winLabel}后 {v.label}
+                  </span>
+                ) : (
+                  <span className="text-slate-600">
+                    {rv ? '数据不足，还没法复盘' : '复盘计算中...'}
+                  </span>
+                )}
+                {rv && rv.r5 != null && rv.r20 != null && (
+                  <span className="text-slate-600">（5天 {rv.r5 >= 0 ? '+' : ''}{rv.r5.toFixed(1)}%）</span>
+                )}
+              </div>
+              {/* 同步到持仓：记忆是流水，持仓是余额 */}
+              <div className="pt-1">
+                {syncingId === op.id ? (
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={syncQty}
+                      onChange={(e) => setSyncQty(e.target.value)}
+                      placeholder="股数"
+                      className="w-24 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      onClick={() => doSync(op)}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium"
+                    >
+                      确认同步
+                    </button>
+                    <button
+                      onClick={() => setSyncingId(null)}
+                      className="text-slate-500 hover:text-slate-300 text-[11px] px-2 py-1.5"
+                    >
+                      取消
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setSyncingId(op.id);
+                      setSyncQty(op.qty ? String(op.qty) : '');
+                    }}
+                    className="text-[11px] text-blue-400/90 hover:text-blue-300 border border-blue-500/30 hover:border-blue-500/50 rounded-lg px-2.5 py-1 transition-colors"
+                  >
+                    同步到持仓
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

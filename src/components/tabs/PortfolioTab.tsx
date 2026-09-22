@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Plus, X, RefreshCw, Briefcase, GripVertical } from 'lucide-react';
 import { useWatchlist } from '@/components/WatchlistContext';
-import { loadPositions, savePositions, type Position } from '@/lib/positions';
+import { loadPositions, savePositions, holdingDays, sectorOf, type Position } from '@/lib/positions';
 import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
 import type { RhythmResponse } from '@/lib/rhythm';
 
@@ -11,6 +11,31 @@ import type { RhythmResponse } from '@/lib/rhythm';
  * 持仓页：账户视角——我持有多少、成本、盈亏。
  * 行情走全 app 共享缓存（与今日页同源），诊断只给入口（点行跳今日看），不重复做。
  */
+
+/** 持仓诊断一句话：律动状态 × 浮盈亏 → 大白话，不批评 */
+function positionAdvice(statusKey: string | undefined, pnlPct: number | null): string {
+  const p = pnlPct;
+  switch (statusKey) {
+    case 'overheated':
+      return p != null && p > 0 ? `涨太猛了，浮盈 ${p.toFixed(1)}%，分批落袋？` : '涨太猛了，先冷静，别追';
+    case 'hotStrong':
+      return '高位强势，拿着，止盈位设好';
+    case 'weakLow':
+      return p != null && p < 0
+        ? `还在往下跌，浮亏 ${Math.abs(p).toFixed(1)}%，别急着补`
+        : '还在往下跌，先别加仓';
+    case 'oversoldBottom':
+      return p != null && p < 0
+        ? `跌过头了，浮亏 ${Math.abs(p).toFixed(1)}%，拿住等反弹？`
+        : '跌过头了，拿住等反弹？';
+    case 'risingAccel':
+      return '涨势加速，拿着';
+    case 'bottomUp':
+      return '跌不动了，拿着等方向';
+    default:
+      return '横盘波动，拿着等方向';
+  }
+}
 export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: string) => void }) {
   const { items: watchlist, nameOf } = useWatchlist();
   const [positions, setPositions] = useState<Position[]>([]);
@@ -20,6 +45,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
   const [addSymbol, setAddSymbol] = useState('');
   const [addShares, setAddShares] = useState('');
   const [addCost, setAddCost] = useState('');
+  const [addSince, setAddSince] = useState('');
   const [addError, setAddError] = useState('');
 
   /* ---------- 手动拖放排序（手机可用：拖动手柄 + pointer 事件） ---------- */
@@ -117,15 +143,42 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
   // 汇总（只统计已拿到行情的）
   let totalValue = 0;
   let totalCost = 0;
+  let totalDayPnl = 0;
   positions.forEach((p) => {
     const q = quotes[p.symbol];
     if (q) {
       totalValue += p.shares * q.price;
       totalCost += p.shares * p.avgCost;
+      const dc = dayChangePct(q);
+      if (dc != null) totalDayPnl += p.shares * q.price * (dc / 100);
     }
   });
   const totalPnl = totalValue - totalCost;
   const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+  const totalDayPnlPct = totalValue - totalDayPnl > 0 ? (totalDayPnl / (totalValue - totalDayPnl)) * 100 : 0;
+
+  // 板块分布（按市值）
+  const sectorValue: Record<string, number> = {};
+  positions.forEach((p) => {
+    const q = quotes[p.symbol];
+    if (!q) return;
+    const s = sectorOf(p.symbol);
+    sectorValue[s] = (sectorValue[s] ?? 0) + p.shares * q.price;
+  });
+  const sectorRows = Object.entries(sectorValue)
+    .map(([s, v]) => ({ sector: s, value: v, pct: totalValue > 0 ? (v / totalValue) * 100 : 0 }))
+    .sort((a, b) => b.value - a.value);
+
+  // 画像小结（只摆事实）
+  const maxPos = positions
+    .map((p) => ({ p, v: quotes[p.symbol] ? p.shares * (quotes[p.symbol] as RhythmResponse).price : 0 }))
+    .sort((a, b) => b.v - a.v)[0];
+  const maxPosPct = maxPos && totalValue > 0 ? (maxPos.v / totalValue) * 100 : 0;
+  const holdDaysList = positions
+    .map((p) => holdingDays(p.since))
+    .filter((d): d is number => d != null);
+  const avgHoldDays =
+    holdDaysList.length > 0 ? Math.round(holdDaysList.reduce((a, b) => a + b, 0) / holdDaysList.length) : null;
 
   const handleAdd = () => {
     const shares = Number(addShares);
@@ -146,10 +199,18 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
       setAddError('成本价填一个不小于 0 的数字');
       return;
     }
-    persist([...positions, { symbol: addSymbol, shares, avgCost: cost }]);
+    if (addSince && !/^\d{4}-\d{2}-\d{2}$/.test(addSince)) {
+      setAddError('建仓日期格式不对');
+      return;
+    }
+    persist([
+      ...positions,
+      { symbol: addSymbol, shares, avgCost: cost, since: addSince || undefined },
+    ]);
     setAddSymbol('');
     setAddShares('');
     setAddCost('');
+    setAddSince('');
     setAddError('');
     setShowAdd(false);
   };
@@ -191,6 +252,48 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
               {totalPnl.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}{' '}
               ({totalPnl >= 0 ? '+' : ''}
               {totalPnlPct.toFixed(2)}%)
+            </span>
+          </div>
+          <div className="mt-1 flex items-baseline justify-between">
+            <span className="text-xs text-slate-400">今日盈亏</span>
+            <span
+              className={`text-sm font-bold ${totalDayPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}
+            >
+              {totalDayPnl >= 0 ? '+' : ''}$
+              {totalDayPnl.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}{' '}
+              ({totalDayPnl >= 0 ? '+' : ''}
+              {totalDayPnlPct.toFixed(2)}%)
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* 板块分布 + 画像小结 */}
+      {positions.length > 0 && sectorRows.length > 0 && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+          <div className="text-xs font-semibold text-slate-200">板块分布</div>
+          {sectorRows.map((r) => (
+            <div key={r.sector} className="flex items-center gap-2 text-xs">
+              <span className="text-slate-400 w-16 shrink-0">{r.sector}</span>
+              <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-blue-500/70"
+                  style={{ width: `${Math.min(100, r.pct)}%` }}
+                />
+              </div>
+              <span className="text-slate-300 w-12 text-right">{r.pct.toFixed(0)}%</span>
+            </div>
+          ))}
+          <div className="pt-1 text-[11px] text-slate-500 leading-relaxed">
+            {maxPos && maxPosPct > 0 && (
+              <span>
+                最大持仓 {maxPos.p.symbol} 占 {maxPosPct.toFixed(0)}%
+                {maxPosPct >= 40 ? '（比较集中）' : '；'}
+              </span>
+            )}
+            {avgHoldDays != null && <span>平均持有 {avgHoldDays} 天；</span>}
+            <span>
+              共 {positions.length} 只{holdDaysList.length < positions.length ? '（部分缺建仓日期）' : ''}
             </span>
           </div>
         </div>
@@ -269,6 +372,27 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
               <div className="mt-2 flex items-center justify-between text-xs">
                 <span className="text-slate-400">
                   {p.shares} 股 · 成本 ${p.avgCost.toFixed(2)}
+                  {(() => {
+                    const d = holdingDays(p.since);
+                    return d != null ? (
+                      <span className="text-slate-500"> · 持有 {d} 天</span>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const v = prompt('建仓日期（YYYY-MM-DD），例如 2026-06-01');
+                          if (v && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+                            persist(positions.map((x) => (x.symbol === p.symbol ? { ...x, since: v } : x)));
+                          } else if (v) {
+                            alert('日期格式不对');
+                          }
+                        }}
+                        className="text-blue-400/80 hover:text-blue-300 ml-1 underline underline-offset-2"
+                      >
+                        补建仓日
+                      </button>
+                    );
+                  })()}
                 </span>
                 {pnl != null && pnlPct != null ? (
                   <span className={`font-semibold ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -280,9 +404,14 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                 )}
               </div>
               {q && (
-                <div className="mt-2 text-[10px] text-slate-500">
-                  律动分 <span className="font-bold text-slate-300">{q.judgment.score}</span> ·{' '}
-                  {q.judgment.status} → 点击去今日看诊断
+                <div className="mt-2 space-y-1">
+                  <div className="text-[11px] text-amber-300/90">
+                    💡 {positionAdvice(q.judgment.statusKey, pnlPct)}
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    律动分 <span className="font-bold text-slate-300">{q.judgment.score}</span> ·{' '}
+                    {q.judgment.status} → 点击去今日看诊断
+                  </div>
                 </div>
               )}
             </div>
@@ -355,6 +484,15 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                 className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               />
             </div>
+          </div>
+          <div>
+            <label className="text-[11px] text-slate-400">建仓日期（可选，用于算持有天数）</label>
+            <input
+              type="date"
+              value={addSince}
+              onChange={(e) => setAddSince(e.target.value)}
+              className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+            />
           </div>
           {addError && <div className="text-[11px] text-rose-400">{addError}</div>}
           <div className="flex gap-2">
