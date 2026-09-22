@@ -11,6 +11,7 @@ import FunTab from '../components/tabs/FunTab';
 
 // 导入谷峰律动看板组件
 import RhythmDashboard from '@/components/RhythmDashboard';
+import AppHeader from '@/components/AppHeader';
 
 export default function Home() {
   // 当前激活的页签状态：'today' | 'portfolio' | 'memory' | 'community' | 'fun'
@@ -18,6 +19,9 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 selection:bg-emerald-500/30 relative pb-32">
+      {/* 全页面共用顶栏：所有 tab 顶部都显示 */}
+      <AppHeader />
+
       {/* 动态渲染当前选中的 Tab 页面 */}
       <div className="w-full">
         {activeTab === 'today' && (

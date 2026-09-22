@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect} from 'react';
-import { ShieldAlert, Smile, Flame, Loader2} from 'lucide-react';
+import { ShieldAlert, Flame, Loader2} from 'lucide-react';
 import type { RhythmResponse} from '@/lib/rhythm';
 import { statusForScore, scoreGradient} from '@/lib/rhythm';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
@@ -80,17 +80,6 @@ setShowZenModal(true);
 
 return (
 <div className="p-4 space-y-6 pb-24 max-w-md mx-auto">
-{/* 顶栏 Slogan */}
-<header className="flex justify-between items-center pt-2">
-<div>
-<h1 className="text-2xl font-bold text-slate-100">股神乐 Gushenle</h1>
-<p className="text-xs text-slate-400 mt-0.5">快乐炒股，轻松投资。不赌，不堵。</p>
-</div>
-<div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
-<Smile className="w-3.5 h-3.5" /> 安心享受生活
-</div>
-</header>
-
 {/* 律动乐看板 (Rhythm Play) */}
 <section className="space-y-3">
 <div className="flex justify-between items-center">

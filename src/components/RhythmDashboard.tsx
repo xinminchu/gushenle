@@ -2,13 +2,27 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Flame } from 'lucide-react';
 import RhythmChart from './RhythmChart';
 import type { RhythmResponse } from '@/lib/rhythm';
-import { statusForScore } from '@/lib/rhythm';
+import { statusForScore, scoreGradient } from '@/lib/rhythm';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 
 const SYMBOLS = ['AAPL', 'NVDA', 'TSLA', 'MSFT'];
+const SYMBOL_NAMES: Record<string, string> = {
+  AAPL: '苹果',
+  NVDA: '英伟达',
+  TSLA: '特斯拉',
+  MSFT: '微软',
+};
 const RANGES = ['1W', '1M', '3M', '1Y'];
+const RANGE_UNIT: Record<string, string> = { '1W': '周', '1M': '月', '3M': '季', '1Y': '年' };
+const RANGE_LABEL: Record<string, string> = {
+  '1W': '近 1 周',
+  '1M': '近 1 月',
+  '3M': '近 3 月',
+  '1Y': '近 1 年',
+};
 
 export default function RhythmDashboard() {
   const [symbol, setSymbol] = useState('AAPL');
@@ -143,35 +157,70 @@ export default function RhythmDashboard() {
             </div>
           </div>
 
-          {/* 右侧：律动诊断与信号 */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
-            <div>
-              <h2 className="text-base font-semibold mb-3 text-slate-200">
-                律动诊断
-                <span className="ml-2 text-xs font-normal text-slate-400">
-                  按{range === '1W' ? '近 1 周' : range === '3M' ? '近 3 月' : range === '1Y' ? '近 1 年' : '近 1 月'}区间计算
+          {/* 右侧：律动诊断（动量卡片逻辑：大分数 + 状态 + 价格 + 动量条） */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <h2 className="text-base font-semibold mb-3 text-slate-200">
+              律动诊断
+              <span className="ml-2 text-xs font-normal text-slate-400">
+                按{RANGE_LABEL[range] ?? range}区间计算
+              </span>
+            </h2>
+            <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-100 text-lg">{symbol}</span>
+                    <span className="text-xs text-slate-400">{SYMBOL_NAMES[symbol]}</span>
+                    {data.rhythmPos >= 80 && (
+                      <span className="bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                        <Flame className="w-3 h-3" /> 过热
+                      </span>
+                    )}
+                    {data.source === 'simulated' && (
+                      <span className="text-[10px] text-slate-500">演示数据</span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div
+                    className={`text-3xl font-extrabold ${
+                      data.rhythmPos >= 80 ? 'text-amber-400' : 'text-emerald-400'
+                    }`}
+                  >
+                    {data.rhythmPos}
+                  </div>
+                  <div className="text-[10px] text-slate-400">{statusForScore(data.rhythmPos)}</div>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center gap-3">
+                <span className="text-sm font-semibold text-slate-200 shrink-0">
+                  ${data.price.toFixed(2)}
                 </span>
-              </h2>
-              <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                <div className="text-xs text-slate-400 mb-1">当前信号状态</div>
-                <div
-                  className={`text-lg font-bold ${
-                    data.rhythmPos < 20
-                      ? 'text-emerald-400'
-                      : data.rhythmPos > 80
-                        ? 'text-rose-400'
-                        : 'text-blue-400'
+                <span
+                  className={`text-xs shrink-0 ${
+                    data.changePct >= 0 ? 'text-emerald-400' : 'text-rose-400'
                   }`}
                 >
-                  {statusForScore(data.rhythmPos)}
+                  {data.changePct >= 0 ? '+' : ''}
+                  {data.changePct}%/{RANGE_UNIT[range] ?? range}
+                </span>
+                <div className="flex-1 h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full bg-gradient-to-r ${scoreGradient(
+                      data.rhythmPos,
+                    )} transition-all duration-700`}
+                    style={{ width: `${data.rhythmPos}%` }}
+                  />
                 </div>
-                <div className="mt-2 text-xs text-slate-400 leading-relaxed">
-                  {data.rhythmPos < 20 && '价格贴近区间谷底，情绪偏冷，适合回顾买入逻辑。'}
-                  {data.rhythmPos >= 20 &&
-                    data.rhythmPos <= 80 &&
-                    '价格在谷峰之间律动，按既定节奏持有即可。'}
-                  {data.rhythmPos > 80 && '价格逼近区间峰顶，情绪偏热，警惕追高冲动。'}
-                </div>
+              </div>
+
+              <div className="mt-3 text-xs text-slate-400 leading-relaxed">
+                {data.rhythmPos < 20 && '价格贴近区间谷底，情绪偏冷，适合回顾买入逻辑。'}
+                {data.rhythmPos >= 20 &&
+                  data.rhythmPos <= 80 &&
+                  '价格在谷峰之间律动，按既定节奏持有即可。'}
+                {data.rhythmPos > 80 && '价格逼近区间峰顶，情绪偏热，警惕追高冲动。'}
               </div>
             </div>
           </div>
