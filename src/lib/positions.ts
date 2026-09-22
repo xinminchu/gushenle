@@ -131,3 +131,4 @@ export function applyOperationToPositions(input: SyncInput): { ok: boolean; msg:
   savePositions(positions);
   return { ok: true, msg: `${sym} 减仓 ${input.qty} 股，还剩 ${left} 股` };
 }
+
