@@ -1,20 +1,15 @@
 // src/components/RhythmDashboard.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Flame, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Flame, ShieldAlert, Settings2, X, Plus, RotateCcw } from 'lucide-react';
 import RhythmChart from './RhythmChart';
 import type { RhythmResponse } from '@/lib/rhythm';
 import { statusForScore, scoreGradient } from '@/lib/rhythm';
+import { getRhythm, invalidateRhythm } from '@/lib/market';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
+import { useWatchlist } from './WatchlistContext';
 
-const SYMBOLS = ['AAPL', 'NVDA', 'TSLA', 'MSFT'];
-const SYMBOL_NAMES: Record<string, string> = {
-  AAPL: '苹果',
-  NVDA: '英伟达',
-  TSLA: '特斯拉',
-  MSFT: '微软',
-};
 const RANGES = ['1W', '1M', '3M', '1Y'];
 const RANGE_UNIT: Record<string, string> = { '1W': '周', '1M': '月', '3M': '季', '1Y': '年' };
 const RANGE_LABEL: Record<string, string> = {
@@ -25,33 +20,66 @@ const RANGE_LABEL: Record<string, string> = {
 };
 
 export default function RhythmDashboard() {
+  const {
+    items: watchlist,
+    isDefault,
+    addItem,
+    removeItem,
+    resetToDefault,
+    nameOf,
+    focusSymbol,
+    setFocusSymbol,
+  } = useWatchlist();
+
   const [symbol, setSymbol] = useState('AAPL');
   const [range, setRange] = useState('1M');
   const [data, setData] = useState<RhythmResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showZenModal, setShowZenModal] = useState(false);
+  const [managing, setManaging] = useState(false);
+  const [newSymbol, setNewSymbol] = useState('');
+  const [newName, setNewName] = useState('');
+  const [addError, setAddError] = useState('');
+
+  // 从持仓页跳过来的标的
+  useEffect(() => {
+    if (focusSymbol) {
+      setSymbol(focusSymbol);
+      setFocusSymbol(null);
+    }
+  }, [focusSymbol, setFocusSymbol]);
+
+  // 自选变化后，当前标的若被删则回到第一只
+  useEffect(() => {
+    if (watchlist.length > 0 && !watchlist.some((i) => i.symbol === symbol)) {
+      setSymbol(watchlist[0].symbol);
+    }
+  }, [watchlist, symbol]);
 
   // 收盘后自动刷新：页面开着过夜，第二天自动拉取最新收盘价
   const autoTick = useMarketAutoRefresh(
     data && data.series.length > 0 ? data.series[data.series.length - 1].date : undefined,
   );
+  const prevTick = useRef(autoTick);
 
-  // 监听 symbol 与 range 变化，实时请求 API
+  // 经全 app 共享缓存拉数据：今日 / 持仓同源，同一 symbol+range 只发一次请求
   useEffect(() => {
     let cancelled = false;
-    async function fetchData() {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/rhythm?symbol=${symbol}&range=${range}`);
-        const json = (await res.json()) as RhythmResponse;
-        if (!cancelled) setData(json);
-      } catch (err) {
-        console.error('获取律动数据失败:', err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    if (autoTick !== prevTick.current) {
+      invalidateRhythm(symbol);
+      prevTick.current = autoTick;
     }
-    fetchData();
+    setLoading(true);
+    getRhythm(symbol, range)
+      .then((json) => {
+        if (!cancelled) setData(json);
+      })
+      .catch((err) => {
+        console.error('获取律动数据失败:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -59,25 +87,114 @@ export default function RhythmDashboard() {
 
   const overHeat = !!data && data.rhythmPos >= 80;
 
+  const handleAdd = () => {
+    const r = addItem(newSymbol, newName);
+    if (r === 'ok') {
+      setNewSymbol('');
+      setNewName('');
+      setAddError('');
+    } else if (r === 'exists') {
+      setAddError('这只已在自选里');
+    } else {
+      setAddError('代码格式不对，例如 AAPL');
+    }
+  };
+
   return (
     <div className="w-full space-y-4">
-      {/* 标题 + 标的选择（通栏分段按钮） */}
+      {/* 标题 + 自选管理 + 标的选择 */}
       <div className="space-y-3">
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-100 whitespace-nowrap">
-          今日看板 · 谷峰律动
-        </h1>
-        <div className="grid grid-cols-4 gap-2">
-          {SYMBOLS.map((item) => (
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-100 whitespace-nowrap">
+            今日看板 · 谷峰律动
+          </h1>
+          <button
+            onClick={() => setManaging((v) => !v)}
+            className="text-xs text-slate-400 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-800"
+          >
+            <Settings2 className="w-3.5 h-3.5" />
+            {managing ? '收起' : '管理自选'}
+          </button>
+        </div>
+
+        {managing && (
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-slate-200">自选列表</span>
+              {isDefault && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                  默认推荐
+                </span>
+              )}
+            </div>
+            <div className="space-y-2">
+              {watchlist.map((item) => (
+                <div
+                  key={item.symbol}
+                  className="flex items-center justify-between bg-slate-800/60 rounded-lg px-3 py-2"
+                >
+                  <div>
+                    <span className="text-sm font-semibold text-slate-100">{item.symbol}</span>
+                    <span className="ml-2 text-xs text-slate-400">{item.name}</span>
+                  </div>
+                  <button
+                    onClick={() => removeItem(item.symbol)}
+                    disabled={watchlist.length <= 1}
+                    className="text-slate-500 hover:text-rose-400 disabled:opacity-30 p-1"
+                    aria-label={`删除 ${item.symbol}`}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={newSymbol}
+                onChange={(e) => {
+                  setNewSymbol(e.target.value.toUpperCase());
+                  setAddError('');
+                }}
+                placeholder="代码 如 COIN"
+                className="w-28 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              />
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="名称（选填）"
+                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              />
+              <button
+                onClick={handleAdd}
+                className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-3 py-1.5 text-xs font-medium flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" /> 添加
+              </button>
+            </div>
+            {addError && <div className="text-[11px] text-rose-400">{addError}</div>}
+            {!isDefault && (
+              <button
+                onClick={resetToDefault}
+                className="text-[11px] text-slate-500 hover:text-slate-300 flex items-center gap-1"
+              >
+                <RotateCcw className="w-3 h-3" /> 恢复默认推荐
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="grid grid-cols-3 gap-2">
+          {watchlist.map((item) => (
             <button
-              key={item}
-              onClick={() => setSymbol(item)}
+              key={item.symbol}
+              onClick={() => setSymbol(item.symbol)}
               className={`py-2 rounded-xl text-sm transition-all ${
-                symbol === item
+                symbol === item.symbol
                   ? 'bg-blue-600 text-white font-medium shadow-lg'
                   : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
               }`}
             >
-              {item}
+              {item.symbol}
             </button>
           ))}
         </div>
@@ -109,7 +226,7 @@ export default function RhythmDashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-slate-100 text-lg">{symbol}</span>
-                  <span className="text-xs text-slate-400">{SYMBOL_NAMES[symbol]}</span>
+                  <span className="text-xs text-slate-400">{nameOf(symbol)}</span>
                   {overHeat && (
                     <span className="bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
                       <Flame className="w-3 h-3" /> 过热

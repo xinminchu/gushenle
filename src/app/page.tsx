@@ -11,27 +11,40 @@ import FunTab from '../components/tabs/FunTab';
 // 导入谷峰律动看板组件
 import RhythmDashboard from '@/components/RhythmDashboard';
 import AppHeader from '@/components/AppHeader';
+import { WatchlistProvider, useWatchlist } from '@/components/WatchlistContext';
 
 export default function Home() {
+  return (
+    <WatchlistProvider>
+      <HomeInner />
+    </WatchlistProvider>
+  );
+}
+
+function HomeInner() {
   // 当前激活的页签状态：'today' | 'portfolio' | 'memory' | 'community' | 'fun'
   const [activeTab, setActiveTab] = useState<string>('today');
+  const { setFocusSymbol } = useWatchlist();
+
+  // 持仓页点某只 -> 跳到今日页看它的律动诊断
+  const viewSymbol = (symbol: string) => {
+    setFocusSymbol(symbol);
+    setActiveTab('today');
+  };
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 selection:bg-emerald-500/30 relative pb-32">
       {/* 全页面共用顶栏：所有 tab 顶部都显示 */}
       <AppHeader />
 
-      {/* 动态渲染当前选中的 Tab 页面 */}
+      {/* 动态渲染当前选中的 Tab 页面（全站统一手机宽度：max-w-md 居中，电脑上不拉宽） */}
       <div className="w-full">
         {activeTab === 'today' && (
-          <div className="space-y-6">
-            {/* 谷峰律动看板：走势图 + 律动诊断 */}
-            <section className="p-4 md:p-6">
-              <RhythmDashboard />
-            </section>
-          </div>
+          <section className="p-4 max-w-md mx-auto">
+            <RhythmDashboard />
+          </section>
         )}
-        {activeTab === 'portfolio' && <PortfolioTab />}
+        {activeTab === 'portfolio' && <PortfolioTab onViewSymbol={viewSymbol} />}
         {activeTab === 'memory' && <MemoryTab />}
         {activeTab === 'community' && <CommunityTab />}
         {activeTab === 'fun' && <FunTab />}

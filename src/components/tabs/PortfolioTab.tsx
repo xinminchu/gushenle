@@ -1,111 +1,302 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Search, SlidersHorizontal, TrendingUp, ShieldAlert, Eye } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Plus, X, RefreshCw, Briefcase } from 'lucide-react';
+import { useWatchlist } from '@/components/WatchlistContext';
+import { loadPositions, savePositions, type Position } from '@/lib/positions';
+import { getRhythm, invalidateRhythm, dayChangePct, type RhythmResponse } from '@/lib/market';
+import { statusForScore } from '@/lib/rhythm';
 
-export default function PortfolioTab() {
-  const [scope, setScope] = useState<'holding' | 'sector' | 'custom'>('holding');
-  const [searchQuery, setSearchQuery] = useState('');
+/**
+ * 持仓页：账户视角——我持有多少、成本、盈亏。
+ * 行情走全 app 共享缓存（与今日页同源），诊断只给入口（点行跳今日看），不重复做。
+ */
+export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: string) => void }) {
+  const { items: watchlist, nameOf } = useWatchlist();
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [quotes, setQuotes] = useState<Record<string, RhythmResponse | null>>({});
+  const [refreshing, setRefreshing] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [addSymbol, setAddSymbol] = useState('');
+  const [addShares, setAddShares] = useState('');
+  const [addCost, setAddCost] = useState('');
+  const [addError, setAddError] = useState('');
 
-  // 模拟股票池数据 (捉影乐 + 随心乐)
-  const stocks = [
-    { symbol: 'NVDA', name: '英伟达', score: 88, trend: '抬头上涨', price: '$128.50', change: '+3.4%', isHolding: true },
-    { symbol: 'AAPL', name: '苹果', score: 45, trend: '底部蓄势', price: '$224.20', change: '-0.2%', isHolding: true },
-    { symbol: 'TSLA', name: '特斯拉', score: 92, trend: '冲高过热', price: '$248.00', change: '+6.8%', isHolding: true },
-    { symbol: 'MSFT', name: '微软', score: 62, trend: '趋势起步', price: '$448.10', change: '+1.1%', isHolding: false },
-    { symbol: 'AMD', name: '超威半导体', score: 71, trend: '谷底抬头', price: '$156.30', change: '+2.5%', isHolding: false },
-  ];
+  useEffect(() => {
+    setPositions(loadPositions());
+  }, []);
 
-  const filteredStocks = stocks.filter((stock) => {
-    if (scope === 'holding' && !stock.isHolding) return false;
-    if (searchQuery) {
-      return stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || stock.name.includes(searchQuery);
+  const persist = (next: Position[]) => {
+    setPositions(next);
+    savePositions(next);
+  };
+
+  const fetchQuotes = async (list: Position[], bust = false) => {
+    if (list.length === 0) return;
+    if (bust) invalidateRhythm();
+    setRefreshing(true);
+    const entries = await Promise.all(
+      list.map(async (p) => {
+        try {
+          return [p.symbol, await getRhythm(p.symbol, '1M')] as const;
+        } catch {
+          return [p.symbol, null] as const;
+        }
+      }),
+    );
+    const map: Record<string, RhythmResponse | null> = {};
+    entries.forEach(([s, q]) => {
+      map[s] = q;
+    });
+    setQuotes(map);
+    setRefreshing(false);
+  };
+
+  useEffect(() => {
+    fetchQuotes(positions);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [positions.map((p) => p.symbol).join(',')]);
+
+  // 汇总（只统计已拿到行情的）
+  let totalValue = 0;
+  let totalCost = 0;
+  positions.forEach((p) => {
+    const q = quotes[p.symbol];
+    if (q) {
+      totalValue += p.shares * q.price;
+      totalCost += p.shares * p.avgCost;
     }
-    return true;
   });
+  const totalPnl = totalValue - totalCost;
+  const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+
+  const handleAdd = () => {
+    const shares = Number(addShares);
+    const cost = Number(addCost);
+    if (!addSymbol) {
+      setAddError('请选择一只自选股');
+      return;
+    }
+    if (positions.some((p) => p.symbol === addSymbol)) {
+      setAddError('这只已在持仓里');
+      return;
+    }
+    if (!Number.isFinite(shares) || shares <= 0) {
+      setAddError('股数填一个大于 0 的数字');
+      return;
+    }
+    if (!Number.isFinite(cost) || cost < 0) {
+      setAddError('成本价填一个不小于 0 的数字');
+      return;
+    }
+    persist([...positions, { symbol: addSymbol, shares, avgCost: cost }]);
+    setAddSymbol('');
+    setAddShares('');
+    setAddCost('');
+    setAddError('');
+    setShowAdd(false);
+  };
+
+  const candidates = watchlist.filter((w) => !positions.some((p) => p.symbol === w.symbol));
 
   return (
     <div className="p-4 space-y-5 pb-24 max-w-md mx-auto">
-      <header className="pt-2">
-        <h1 className="text-xl font-bold text-slate-100">持仓宇宙 Portfolio</h1>
-        <p className="text-xs text-slate-400 mt-0.5">【捉影乐】捕捉趋势影子 + 【随心乐】自由选择监控范围</p>
+      <header className="pt-2 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-100">持仓 Portfolio</h1>
+          <p className="text-xs text-slate-400 mt-0.5">手动记录持仓，行情与今日页同源</p>
+        </div>
+        <button
+          onClick={() => fetchQuotes(positions, true)}
+          disabled={refreshing || positions.length === 0}
+          className="text-xs text-slate-400 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-800 disabled:opacity-40"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          刷新
+        </button>
       </header>
 
-      {/* 随心乐：范围切换卡片 */}
-      <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
-        <button
-          onClick={() => setScope('holding')}
-          className={`flex-1 py-1.5 rounded-lg font-medium transition-all ${
-            scope === 'holding' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          个人持仓
-        </button>
-        <button
-          onClick={() => setScope('sector')}
-          className={`flex-1 py-1.5 rounded-lg font-medium transition-all ${
-            scope === 'sector' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          选定板块
-        </button>
-        <button
-          onClick={() => setScope('custom')}
-          className={`flex-1 py-1.5 rounded-lg font-medium transition-all ${
-            scope === 'custom' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          1000只名单
-        </button>
-      </div>
+      {/* 汇总卡 */}
+      {positions.length > 0 && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <div className="flex items-baseline justify-between">
+            <span className="text-xs text-slate-400">总市值</span>
+            <span className="text-2xl font-extrabold text-slate-100">
+              ${totalValue.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}
+            </span>
+          </div>
+          <div className="mt-1 flex items-baseline justify-between">
+            <span className="text-xs text-slate-400">总盈亏</span>
+            <span
+              className={`text-sm font-bold ${totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}
+            >
+              {totalPnl >= 0 ? '+' : ''}$
+              {totalPnl.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}{' '}
+              ({totalPnl >= 0 ? '+' : ''}
+              {totalPnlPct.toFixed(2)}%)
+            </span>
+          </div>
+        </div>
+      )}
 
-      {/* 搜索框 */}
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-500" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="搜索代码或名称 (如 NVDA, 苹果)..."
-          className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-        />
-      </div>
-
-      {/* 捉影乐列表 */}
+      {/* 持仓列表 */}
       <div className="space-y-3">
-        {filteredStocks.map((item) => (
-          <div
-            key={item.symbol}
-            className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-4 flex items-center justify-between hover:border-slate-600 transition-all"
-          >
-            <div className="space-y-1">
-              <div className="flex items-center space-x-2">
-                <span className="font-bold text-slate-100 text-base">{item.symbol}</span>
-                <span className="text-xs text-slate-400">{item.name}</span>
-                {item.isHolding && (
-                  <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[9px] px-1.5 py-0.2 rounded">
-                    持仓中
+        {positions.map((p) => {
+          const q = quotes[p.symbol];
+          const price = q?.price ?? null;
+          const dayChg = q ? dayChangePct(q) : null;
+          const pnl = price != null ? (price - p.avgCost) * p.shares : null;
+          const pnlPct = price != null && p.avgCost > 0 ? ((price - p.avgCost) / p.avgCost) * 100 : null;
+          return (
+            <div
+              key={p.symbol}
+              onClick={() => onViewSymbol(p.symbol)}
+              className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-4 cursor-pointer hover:border-slate-500 transition-all"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-100 text-base">{p.symbol}</span>
+                  <span className="text-xs text-slate-400">{nameOf(p.symbol)}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      persist(positions.filter((x) => x.symbol !== p.symbol));
+                    }}
+                    className="text-slate-600 hover:text-rose-400 p-0.5"
+                    aria-label={`删除 ${p.symbol} 持仓`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="text-right">
+                  {price != null ? (
+                    <>
+                      <div className="text-slate-200 font-semibold text-sm">${price.toFixed(2)}</div>
+                      {dayChg != null && (
+                        <div className={`text-[11px] ${dayChg >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {dayChg >= 0 ? '+' : ''}
+                          {dayChg}% 今日
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-[11px] text-slate-500">行情加载中…</div>
+                  )}
+                </div>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span className="text-slate-400">
+                  {p.shares} 股 · 成本 ${p.avgCost.toFixed(2)}
+                </span>
+                {pnl != null && pnlPct != null ? (
+                  <span className={`font-semibold ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ({pnl >= 0 ? '+' : ''}
+                    {pnlPct.toFixed(2)}%)
                   </span>
+                ) : (
+                  <span className="text-slate-600">—</span>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-200 font-medium">{item.price}</span>
-                <span className={item.change.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'}>
-                  {item.change}
-                </span>
-              </div>
+              {q && (
+                <div className="mt-2 text-[10px] text-slate-500">
+                  律动分 <span className="font-bold text-slate-300">{q.rhythmPos}</span> ·{' '}
+                  {statusForScore(q.rhythmPos)} → 点击去今日看诊断
+                </div>
+              )}
             </div>
+          );
+        })}
 
-            <div className="text-right space-y-1">
-              <div className="flex items-center gap-1 justify-end">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-xs text-slate-300 font-medium">{item.trend}</span>
-              </div>
-              <div className="text-[10px] text-slate-500">动能打分: <span className="font-bold text-slate-200">{item.score}</span></div>
+        {positions.length === 0 && (
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center space-y-3">
+            <Briefcase className="w-8 h-8 text-slate-600 mx-auto" />
+            <p className="text-sm text-slate-400">还没有记录持仓</p>
+            <button
+              onClick={() => setShowAdd(true)}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-4 py-2 rounded-xl"
+            >
+              添加第一笔持仓
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* 添加持仓 */}
+      {positions.length > 0 && !showAdd && (
+        <button
+          onClick={() => setShowAdd(true)}
+          className="w-full border border-dashed border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 rounded-xl py-2.5 text-xs flex items-center justify-center gap-1"
+        >
+          <Plus className="w-3.5 h-3.5" /> 添加持仓
+        </button>
+      )}
+
+      {showAdd && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+          <div className="text-sm font-medium text-slate-200">添加持仓</div>
+          <div>
+            <label className="text-[11px] text-slate-400">股票（从自选里选）</label>
+            <select
+              value={addSymbol}
+              onChange={(e) => {
+                setAddSymbol(e.target.value);
+                setAddError('');
+              }}
+              className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+            >
+              <option value="">请选择…</option>
+              {candidates.map((c) => (
+                <option key={c.symbol} value={c.symbol}>
+                  {c.symbol} {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[11px] text-slate-400">股数</label>
+              <input
+                value={addShares}
+                onChange={(e) => setAddShares(e.target.value)}
+                inputMode="decimal"
+                placeholder="如 100"
+                className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] text-slate-400">成本价 $</label>
+              <input
+                value={addCost}
+                onChange={(e) => setAddCost(e.target.value)}
+                inputMode="decimal"
+                placeholder="如 150.00"
+                className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              />
             </div>
           </div>
-        ))}
-      </div>
+          {addError && <div className="text-[11px] text-rose-400">{addError}</div>}
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setShowAdd(false);
+                setAddError('');
+              }}
+              className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-xl text-xs"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleAdd}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-xl text-xs font-medium"
+            >
+              保存
+            </button>
+          </div>
+          {candidates.length === 0 && (
+            <div className="text-[11px] text-slate-500">自选里的股票都已加完，去今日页「管理自选」可加更多。</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
