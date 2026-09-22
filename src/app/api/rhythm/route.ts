@@ -2,19 +2,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { RhythmPoint, RhythmResponse } from '@/lib/rhythm';
 
-const RANGE_MAP: Record<string, string> = {
-  '1W': '5d',
-  '1M': '1mo',
-  '3M': '3mo',
-  '1Y': '1y',
-};
+/**
+ * 设计说明：每个标的只拉一次全年日线（Yahoo 1y），各区间在服务端切片。
+ * 好处：① Yahoo 请求量降为 1/4，不易被限流；② 各区间的现价永远一致；
+ * ③ 涨跌幅/分位数按区间切片计算，天然合理。
+ */
 
-/** 各区间在 Stooq 日线里需要保留的最近天数 */
-const RANGE_DAYS: Record<string, number> = {
-  '1W': 7,
-  '1M': 32,
-  '3M': 95,
-  '1Y': 370,
+/** 各区间取最近多少个交易日 */
+const RANGE_POINTS: Record<string, number> = {
+  '1W': 5,
+  '1M': 22,
+  '3M': 66,
+  '1Y': 9999,
 };
 
 interface YahooChartResult {
@@ -46,11 +45,18 @@ const BASE_PRICES: Record<string, number> = {
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-// 简单内存缓存（单实例内有效，Vercel 多实例下主要靠下面 fetch 的 Data Cache）
-const cache = new Map<string, { data: RhythmResponse; expires: number }>();
+// 按标的缓存全年日线（单实例内存；跨实例靠下面 fetch 的 Vercel Data Cache）
+const cache = new Map<
+  string,
+  { series: RhythmPoint[]; source: RhythmResponse['source']; expires: number }
+>();
 
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+function sliceRange(full: RhythmPoint[], range: string): RhythmPoint[] {
+  return full.slice(-(RANGE_POINTS[range] ?? 22));
 }
 
 function buildResponse(
@@ -85,7 +91,7 @@ function buildResponse(
   };
 }
 
-/* ---------- 确定性随机数：兜底数据每天、每标的、每区间全网一致 ---------- */
+/* ---------- 确定性随机数：兜底数据每天、每标的全网一致 ---------- */
 
 function hashSeed(str: string): number {
   let h = 2166136261;
@@ -107,11 +113,11 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-/** 全部真实源都不可用时的兜底：同一天内任何设备拿到的数据完全一致 */
-function simulated(symbol: string, range: string): RhythmResponse {
+/** 全部真实源都不可用时的兜底：生成一整年确定性模拟日线，再按区间切片 */
+function simulatedFull(symbol: string): RhythmPoint[] {
   const base = BASE_PRICES[symbol] ?? 150;
-  const rand = mulberry32(hashSeed(`${symbol}:${range}:${isoDate(new Date())}`));
-  const points = 30;
+  const rand = mulberry32(hashSeed(`${symbol}:${isoDate(new Date())}`));
+  const points = 260;
   const now = Date.now();
   const series: RhythmPoint[] = [];
   let price = base * 0.96;
@@ -122,17 +128,17 @@ function simulated(symbol: string, range: string): RhythmResponse {
       close: Number(price.toFixed(2)),
     });
   }
-  return buildResponse(symbol, range, series, 'simulated');
+  return series;
 }
 
-/* ---------- 数据源 ---------- */
+/* ---------- 数据源（全年日线） ---------- */
 
-/** Yahoo Finance 日线。next.revalidate 让 Vercel Data Cache 在多实例间共享，
- *  大幅降低请求频率，避免被 Yahoo 限流。 */
-async function fetchYahoo(symbol: string, yahooRange: string): Promise<RhythmPoint[]> {
+/** Yahoo Finance 全年日线。next.revalidate 让 Vercel Data Cache 在多实例间共享，
+ *  同一标的 5 分钟内只打一次 Yahoo，大幅降低被限流概率。 */
+async function fetchYahooFull(symbol: string): Promise<RhythmPoint[]> {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     symbol,
-  )}?range=${yahooRange}&interval=1d`;
+  )}?range=1y&interval=1d`;
   const res = await fetch(url, {
     headers: { 'User-Agent': UA },
     next: { revalidate: 300 },
@@ -158,54 +164,58 @@ async function fetchYahoo(symbol: string, yahooRange: string): Promise<RhythmPoi
   return series;
 }
 
-/** Stooq 免费日线 CSV（无 key），Yahoo 被限流时的备用真实源 */
-async function fetchStooq(symbol: string, range: string): Promise<RhythmPoint[]> {
+/** Stooq 免费日线（无 key），Yahoo 被限流时的备用真实源 */
+async function fetchStooqFull(symbol: string): Promise<RhythmPoint[]> {
   const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(symbol.toLowerCase())}.us&i=d`;
   const res = await fetch(url, { next: { revalidate: 300 } });
   if (!res.ok) throw new Error(`Stooq status ${res.status}`);
   const text = await res.text();
-  const rows = text.trim().split('\n').slice(1);
-  const days = RANGE_DAYS[range] ?? 32;
+  if (!text.trim()) throw new Error('Stooq empty response');
   const series: RhythmPoint[] = [];
-  for (const row of rows) {
+  for (const row of text.trim().split('\n').slice(1)) {
     const cols = row.split(',');
     const close = Number(cols[4]);
     if (cols[0] && Number.isFinite(close)) {
       series.push({ date: cols[0], close: Number(close.toFixed(2)) });
     }
   }
-  const sliced = series.slice(-days);
-  if (sliced.length < 2) throw new Error('Stooq returned too few points');
-  return sliced;
+  if (series.length < 2) throw new Error('Stooq returned too few points');
+  return series;
 }
 
 export async function GET(req: NextRequest) {
   const symbol = (req.nextUrl.searchParams.get('symbol') || 'AAPL').toUpperCase();
   const range = req.nextUrl.searchParams.get('range') || '1M';
-  const cacheKey = `${symbol}:${range}`;
+  const debug = req.nextUrl.searchParams.get('debug') === '1';
 
-  const cached = cache.get(cacheKey);
-  if (cached && cached.expires > Date.now()) {
-    return NextResponse.json(cached.data);
-  }
-
-  let series: RhythmPoint[] | null = null;
-  let source: RhythmResponse['source'] = 'simulated';
-
-  try {
-    series = await fetchYahoo(symbol, RANGE_MAP[range] || '1mo');
-    source = 'yahoo';
-  } catch (e1) {
-    console.error(`Yahoo failed for ${symbol}:`, e1 instanceof Error ? e1.message : e1);
+  let entry = cache.get(symbol);
+  const errors: Record<string, string> = {};
+  if (!entry || entry.expires < Date.now()) {
+    let series: RhythmPoint[] | null = null;
+    let source: RhythmResponse['source'] = 'simulated';
     try {
-      series = await fetchStooq(symbol, range);
-      source = 'stooq';
-    } catch (e2) {
-      console.error(`Stooq failed for ${symbol}:`, e2 instanceof Error ? e2.message : e2);
+      series = await fetchYahooFull(symbol);
+      source = 'yahoo';
+    } catch (e1) {
+      errors.yahoo = e1 instanceof Error ? e1.message : String(e1);
+      try {
+        series = await fetchStooqFull(symbol);
+        source = 'stooq';
+      } catch (e2) {
+        errors.stooq = e2 instanceof Error ? e2.message : String(e2);
+      }
     }
+    if (!series) {
+      series = simulatedFull(symbol);
+      console.error(`All sources failed for ${symbol}:`, errors);
+    }
+    entry = { series, source, expires: Date.now() + 60_000 };
+    cache.set(symbol, entry);
   }
 
-  const data = series ? buildResponse(symbol, range, series, source) : simulated(symbol, range);
-  cache.set(cacheKey, { data, expires: Date.now() + 60_000 });
+  const data = buildResponse(symbol, range, sliceRange(entry.series, range), entry.source);
+  if (debug) {
+    return NextResponse.json({ ...data, _debug: { errors, fullPoints: entry.series.length } });
+  }
   return NextResponse.json(data);
 }

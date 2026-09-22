@@ -136,7 +136,12 @@ export default function RhythmDashboard() {
           {/* 右侧：律动诊断与信号 */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
             <div>
-              <h2 className="text-base font-semibold mb-3 text-slate-200">今日律动诊断</h2>
+              <h2 className="text-base font-semibold mb-3 text-slate-200">
+                律动诊断
+                <span className="ml-2 text-xs font-normal text-slate-400">
+                  按{range === '1W' ? '近 1 周' : range === '3M' ? '近 3 月' : range === '1Y' ? '近 1 年' : '近 1 月'}区间计算
+                </span>
+              </h2>
               <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700/50">
                 <div className="text-xs text-slate-400 mb-1">当前信号状态</div>
                 <div
