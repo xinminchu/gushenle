@@ -134,34 +134,43 @@ function simulatedFull(symbol: string): RhythmPoint[] {
 /* ---------- 数据源（全年日线） ---------- */
 
 /** Yahoo Finance 全年日线。next.revalidate 让 Vercel Data Cache 在多实例间共享，
- *  同一标的 5 分钟内只打一次 Yahoo，大幅降低被限流概率。 */
+ *  同一标的 5 分钟内只打一次 Yahoo，大幅降低被限流概率。
+ *  失败时自动重试一次（Yahoo 对机房 IP 偶发 429，短暂等待后常能恢复）。 */
 async function fetchYahooFull(symbol: string): Promise<RhythmPoint[]> {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     symbol,
   )}?range=1y&interval=1d`;
-  const res = await fetch(url, {
-    headers: { 'User-Agent': UA },
-    next: { revalidate: 300 },
-  });
-  if (!res.ok) throw new Error(`Yahoo status ${res.status}`);
-  const json = (await res.json()) as YahooChartResponse;
-  const result = json.chart?.result?.[0];
-  if (!result?.timestamp || !result.indicators?.quote?.[0]) {
-    throw new Error(json.chart?.error?.description || 'bad Yahoo payload');
-  }
-  const quotes = result.indicators.quote[0];
-  const series: RhythmPoint[] = [];
-  for (let i = 0; i < result.timestamp.length; i++) {
-    const close = quotes.close[i];
-    if (close != null) {
-      series.push({
-        date: isoDate(new Date(result.timestamp[i] * 1000)),
-        close: Number(close.toFixed(2)),
-      });
+  const attempt = async (): Promise<RhythmPoint[]> => {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': UA },
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) throw new Error(`Yahoo status ${res.status}`);
+    const json = (await res.json()) as YahooChartResponse;
+    const result = json.chart?.result?.[0];
+    if (!result?.timestamp || !result.indicators?.quote?.[0]) {
+      throw new Error(json.chart?.error?.description || 'bad Yahoo payload');
     }
+    const quotes = result.indicators.quote[0];
+    const series: RhythmPoint[] = [];
+    for (let i = 0; i < result.timestamp.length; i++) {
+      const close = quotes.close[i];
+      if (close != null) {
+        series.push({
+          date: isoDate(new Date(result.timestamp[i] * 1000)),
+          close: Number(close.toFixed(2)),
+        });
+      }
+    }
+    if (series.length < 2) throw new Error('Yahoo returned too few points');
+    return series;
+  };
+  try {
+    return await attempt();
+  } catch (e) {
+    await new Promise((r) => setTimeout(r, 1500));
+    return await attempt();
   }
-  if (series.length < 2) throw new Error('Yahoo returned too few points');
-  return series;
 }
 
 /** Stooq 免费日线（无 key），Yahoo 被限流时的备用真实源 */
@@ -188,7 +197,7 @@ export async function GET(req: NextRequest) {
   const range = req.nextUrl.searchParams.get('range') || '1M';
   const debug = req.nextUrl.searchParams.get('debug') === '1';
 
-  let entry = cache.get(symbol);
+  let entry = debug ? undefined : cache.get(symbol);
   const errors: Record<string, string> = {};
   if (!entry || entry.expires < Date.now()) {
     let series: RhythmPoint[] | null = null;
