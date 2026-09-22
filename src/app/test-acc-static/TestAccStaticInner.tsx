@@ -66,6 +66,10 @@ export default function TestAccStaticInner() {
             <div className="text-slate-400">
               {stats.total} 个信号 · {stats.sampleDays} 天样本
             </div>
+            <div className="text-slate-500 text-[11px] leading-relaxed">
+              基线（同期所有交易日天然命中率）：别追类 {fmtPct(stats.baseline.chase)} · 反弹类{' '}
+              {fmtPct(stats.baseline.bounce)}
+            </div>
           </div>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
