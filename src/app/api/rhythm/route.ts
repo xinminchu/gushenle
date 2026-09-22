@@ -133,9 +133,52 @@ function simulatedFull(symbol: string): RhythmPoint[] {
 
 /* ---------- 数据源（全年日线） ---------- */
 
-/** Yahoo Finance 全年日线。next.revalidate 让 Vercel Data Cache 在多实例间共享，
- *  同一标的 5 分钟内只打一次 Yahoo，大幅降低被限流概率。
- *  失败时自动重试一次（Yahoo 对机房 IP 偶发 429，短暂等待后常能恢复）。 */
+interface NasdaqRow {
+  date: string; // "09/21/2026"
+  close: string; // "$338.98"
+}
+
+interface NasdaqResponse {
+  data?: {
+    tradesTable?: {
+      rows?: NasdaqRow[];
+    };
+  };
+}
+
+/** Nasdaq 官方历史日线（无需 key，相对 Yahoo 不容易被限流），作为首选源 */
+async function fetchNasdaqFull(symbol: string): Promise<RhythmPoint[]> {
+  const from = isoDate(new Date(Date.now() - 370 * 86400000));
+  const url = `https://api.nasdaq.com/api/quote/${encodeURIComponent(
+    symbol,
+  )}/historical?assetclass=stocks&fromdate=${from}&limit=9999`;
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': UA,
+      Accept: 'application/json',
+      'Accept-Language': 'en-US,en;q=0.9',
+    },
+    next: { revalidate: 300 },
+  });
+  if (!res.ok) throw new Error(`Nasdaq status ${res.status}`);
+  const json = (await res.json()) as NasdaqResponse;
+  const rows = json.data?.tradesTable?.rows;
+  if (!rows || rows.length < 2) throw new Error('bad Nasdaq payload');
+  const series: RhythmPoint[] = [];
+  // rows 是倒序（最新在前），翻转成正序
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const r = rows[i];
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(r.date || '');
+    const close = Number((r.close || '').replace(/[$,]/g, ''));
+    if (m && Number.isFinite(close)) {
+      series.push({ date: `${m[3]}-${m[1]}-${m[2]}`, close: Number(close.toFixed(2)) });
+    }
+  }
+  if (series.length < 2) throw new Error('Nasdaq returned too few points');
+  return series;
+}
+
+/** Yahoo Finance 全年日线（备用源；对机房 IP 偶发 429，失败自动重试一次） */
 async function fetchYahooFull(symbol: string): Promise<RhythmPoint[]> {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     symbol,
@@ -173,25 +216,6 @@ async function fetchYahooFull(symbol: string): Promise<RhythmPoint[]> {
   }
 }
 
-/** Stooq 免费日线（无 key），Yahoo 被限流时的备用真实源 */
-async function fetchStooqFull(symbol: string): Promise<RhythmPoint[]> {
-  const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(symbol.toLowerCase())}.us&i=d`;
-  const res = await fetch(url, { next: { revalidate: 300 } });
-  if (!res.ok) throw new Error(`Stooq status ${res.status}`);
-  const text = await res.text();
-  if (!text.trim()) throw new Error('Stooq empty response');
-  const series: RhythmPoint[] = [];
-  for (const row of text.trim().split('\n').slice(1)) {
-    const cols = row.split(',');
-    const close = Number(cols[4]);
-    if (cols[0] && Number.isFinite(close)) {
-      series.push({ date: cols[0], close: Number(close.toFixed(2)) });
-    }
-  }
-  if (series.length < 2) throw new Error('Stooq returned too few points');
-  return series;
-}
-
 export async function GET(req: NextRequest) {
   const symbol = (req.nextUrl.searchParams.get('symbol') || 'AAPL').toUpperCase();
   const range = req.nextUrl.searchParams.get('range') || '1M';
@@ -203,15 +227,15 @@ export async function GET(req: NextRequest) {
     let series: RhythmPoint[] | null = null;
     let source: RhythmResponse['source'] = 'simulated';
     try {
-      series = await fetchYahooFull(symbol);
-      source = 'yahoo';
+      series = await fetchNasdaqFull(symbol);
+      source = 'nasdaq';
     } catch (e1) {
-      errors.yahoo = e1 instanceof Error ? e1.message : String(e1);
+      errors.nasdaq = e1 instanceof Error ? e1.message : String(e1);
       try {
-        series = await fetchStooqFull(symbol);
-        source = 'stooq';
+        series = await fetchYahooFull(symbol);
+        source = 'yahoo';
       } catch (e2) {
-        errors.stooq = e2 instanceof Error ? e2.message : String(e2);
+        errors.yahoo = e2 instanceof Error ? e2.message : String(e2);
       }
     }
     if (!series) {
