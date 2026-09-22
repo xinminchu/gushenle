@@ -8,9 +8,18 @@ interface Signal {
   date: string;
   score: number;
   status: string;
-  type: 'overheat' | 'oversold';
+  statusKey: 'hotStrong' | 'overheated' | 'oversoldBottom' | 'weakLow';
+  tier: 'high' | 'stable';
   nextReturn: number;
   hit: boolean;
+}
+
+interface StatusStat {
+  label: string;
+  total: number;
+  accuracy: number | null;
+  baseline: number | null;
+  edge: number | null;
 }
 
 interface AccuracyData {
@@ -19,15 +28,23 @@ interface AccuracyData {
   stats?: {
     total: number;
     accuracy: number | null;
-    overheat: { total: number; accuracy: number | null };
-    oversold: { total: number; accuracy: number | null };
+    sampleDays: number;
+    baseline: { chase: number | null; bounce: number | null };
+    statuses: Record<Signal['statusKey'], StatusStat>;
   };
   recent?: Signal[];
   rule?: string;
 }
 
+const STATUS_ORDER: Signal['statusKey'][] = ['hotStrong', 'overheated', 'oversoldBottom', 'weakLow'];
+
 function fmtPct(v: number | null): string {
   return v == null ? '—' : `${v}%`;
+}
+
+function fmtEdge(v: number | null): string {
+  if (v == null) return '—';
+  return `${v >= 0 ? '+' : ''}${v}`;
 }
 
 export default function AccuracyPanel({ symbol }: { symbol: string }) {
@@ -88,20 +105,43 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
           <div className={`text-4xl font-extrabold ${accColor}`}>{fmtPct(stats.accuracy)}</div>
           <div className="text-[10px] text-slate-400 mt-1">综合准确率</div>
         </div>
-        <div className="flex-1 space-y-2 text-xs">
-          <div className="flex justify-between bg-slate-800/50 rounded-lg px-3 py-2">
-            <span className="text-slate-400">过热信号 {stats.overheat.total} 次</span>
-            <span className="font-semibold text-slate-200">
-              命中 {fmtPct(stats.overheat.accuracy)}
-            </span>
+        <div className="flex-1 text-xs space-y-1.5">
+          <div className="text-slate-400">
+            {stats.total} 个信号 · {stats.sampleDays} 天样本
           </div>
-          <div className="flex justify-between bg-slate-800/50 rounded-lg px-3 py-2">
-            <span className="text-slate-400">超卖信号 {stats.oversold.total} 次</span>
-            <span className="font-semibold text-slate-200">
-              命中 {fmtPct(stats.oversold.accuracy)}
-            </span>
+          <div className="text-slate-500 text-[11px] leading-relaxed">
+            基线（同期所有交易日天然命中率）：别追类 {fmtPct(stats.baseline.chase)} · 反弹类{' '}
+            {fmtPct(stats.baseline.bounce)}
           </div>
         </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {stats.statuses &&
+          STATUS_ORDER.map((key) => {
+            const st = stats.statuses?.[key];
+            if (!st) return null;
+          const edgeColor =
+            st.edge == null
+              ? 'text-slate-500'
+              : st.edge > 0
+                ? 'text-emerald-400'
+                : st.edge < 0
+                  ? 'text-rose-400'
+                  : 'text-slate-400';
+          return (
+            <div key={key} className="bg-slate-800/50 rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-300 font-medium">{st.label}</span>
+                <span className="text-[10px] text-slate-500">{st.total}次</span>
+              </div>
+              <div className="mt-1 flex items-baseline justify-between">
+                <span className="text-sm font-bold text-slate-100">{fmtPct(st.accuracy)}</span>
+                <span className={`text-[10px] ${edgeColor}`}>超基线 {fmtEdge(st.edge)}%</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {recent.length > 0 && (
@@ -113,6 +153,7 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
             >
               <span className="text-slate-400">
                 {s.date.slice(5)} · {s.status} {s.score}分
+                {s.tier === 'high' && <span className="text-slate-600"> · 高波</span>}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className={s.nextReturn >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
