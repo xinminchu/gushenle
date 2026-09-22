@@ -25,7 +25,7 @@ export interface RhythmResponse {
   /** 0-100：当前价在波谷-波峰区间中的位置，即"动能分数" */
   rhythmPos: number;
   series: RhythmPoint[];
-  source: 'yahoo' | 'simulated';
+  source: 'yahoo' | 'stooq' | 'simulated';
   updatedAt: string;
 }
 
