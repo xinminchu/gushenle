@@ -1,22 +1,111 @@
 // src/app/api/rhythm/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import type { RhythmPoint, RhythmResponse } from '@/lib/rhythm';
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const symbol = searchParams.get('symbol') || 'AAPL';
-  const range = searchParams.get('range') || '1M';
+const RANGE_MAP: Record<string, string> = {
+  '1W': '5d',
+  '1M': '1mo',
+  '3M': '3mo',
+  '1Y': '1y',
+};
 
-  // 映射前端 range 到 Yahoo API 参数
-  let rangeParam = '1mo';
-  if (range === '1W') rangeParam = '5d';
-  if (range === '3M') rangeParam = '3mo';
-  if (range === '1Y') rangeParam = '1y';
+interface YahooChartResult {
+  timestamp: number[];
+  indicators: {
+    quote: Array<{
+      close: (number | null)[];
+      high: (number | null)[];
+      low: (number | null)[];
+    }>;
+  };
+}
+
+interface YahooChartResponse {
+  chart: {
+    result?: YahooChartResult[];
+    error?: { code: string; description: string };
+  };
+}
+
+/** 各标的的基准价：Yahoo 不可用时，用它做模拟曲线的起点，保证价格看起来真实 */
+const BASE_PRICES: Record<string, number> = {
+  AAPL: 228.45,
+  NVDA: 118.2,
+  TSLA: 238.1,
+  MSFT: 432.6,
+};
+
+// 简单内存缓存，避免频繁请求 Yahoo
+const cache = new Map<string, { data: RhythmResponse; expires: number }>();
+
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function buildResponse(
+  symbol: string,
+  range: string,
+  series: RhythmPoint[],
+  source: RhythmResponse['source'],
+): RhythmResponse {
+  const closes = series.map((p) => p.close);
+  const peakPrice = Math.max(...closes);
+  const valleyPrice = Math.min(...closes);
+  const last = closes[closes.length - 1];
+  const first = closes[0];
+  const span = peakPrice - valleyPrice;
+  return {
+    symbol,
+    range,
+    price: Number(last.toFixed(2)),
+    changePct: Number((((last - first) / first) * 100).toFixed(2)),
+    peak: {
+      price: Number(peakPrice.toFixed(2)),
+      date: series[closes.indexOf(peakPrice)].date,
+    },
+    valley: {
+      price: Number(valleyPrice.toFixed(2)),
+      date: series[closes.indexOf(valleyPrice)].date,
+    },
+    rhythmPos: span > 0 ? Math.round(((last - valleyPrice) / span) * 100) : 50,
+    series,
+    source,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/** Yahoo 不可用时的兜底：围绕基准价生成一条平滑模拟曲线，保证页面不白屏 */
+function simulated(symbol: string, range: string): RhythmResponse {
+  const base = BASE_PRICES[symbol] ?? 150;
+  const points = 30;
+  const now = Date.now();
+  const series: RhythmPoint[] = [];
+  let price = base * 0.96;
+  for (let i = points - 1; i >= 0; i--) {
+    price = price * (1 + (Math.sin(i * 0.7) * 0.5 + (Math.random() - 0.48)) * 0.02);
+    series.push({
+      date: isoDate(new Date(now - i * 86400000)),
+      close: Number(price.toFixed(2)),
+    });
+  }
+  return buildResponse(symbol, range, series, 'simulated');
+}
+
+export async function GET(req: NextRequest) {
+  const symbol = (req.nextUrl.searchParams.get('symbol') || 'AAPL').toUpperCase();
+  const range = req.nextUrl.searchParams.get('range') || '1M';
+  const yahooRange = RANGE_MAP[range] || '1mo';
+  const cacheKey = `${symbol}:${range}`;
+
+  const cached = cache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) {
+    return NextResponse.json(cached.data);
+  }
 
   try {
-    // 使用 Yahoo Finance 原生 v8 API 接口，并携带 User-Agent 伪装
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
-      symbol
-    )}?range=${rangeParam}&interval=1d`;
+      symbol,
+    )}?range=${yahooRange}&interval=1d`;
 
     const res = await fetch(url, {
       headers: {
@@ -25,92 +114,32 @@ export async function GET(request: Request) {
       },
       next: { revalidate: 60 }, // 缓存 60 秒，避免频繁调用被限制
     });
+    if (!res.ok) throw new Error(`Yahoo API responded with status: ${res.status}`);
 
-    if (!res.ok) {
-      throw new Error(`Yahoo API responded with status: ${res.status}`);
-    }
-
-    const json = await res.json();
+    const json = (await res.json()) as YahooChartResponse;
     const result = json.chart?.result?.[0];
-
     if (!result || !result.timestamp || !result.indicators?.quote?.[0]) {
-      throw new Error('Invalid data structure from Yahoo API');
+      throw new Error(json.chart?.error?.description || 'Invalid data structure from Yahoo API');
     }
 
     const quotes = result.indicators.quote[0];
-    const timestamps = result.timestamp;
-
-    // 过滤掉空值数据
-    const validData: Array<{ close: number; high: number; low: number; date: string }> = [];
-
-    for (let i = 0; i < timestamps.length; i++) {
+    const series: RhythmPoint[] = [];
+    for (let i = 0; i < result.timestamp.length; i++) {
       const close = quotes.close[i];
-      const high = quotes.high[i];
-      const low = quotes.low[i];
-
-      if (close != null && high != null && low != null) {
-        validData.push({
-          close,
-          high,
-          low,
-          date: new Date(timestamps[i] * 1000).toLocaleDateString('zh-CN', {
-            month: '2-digit',
-            day: '2-digit',
-          }),
+      if (close != null) {
+        series.push({
+          date: isoDate(new Date(result.timestamp[i] * 1000)),
+          close: Number(close.toFixed(2)),
         });
       }
     }
+    if (series.length < 2) throw new Error('No valid price points available');
 
-    if (validData.length === 0) {
-      throw new Error('No valid price points available');
-    }
-
-    // 计算实时与谷峰律动数据
-    const prices = validData.map((d) => d.close);
-    const highs = validData.map((d) => d.high);
-    const lows = validData.map((d) => d.low);
-
-    const latestPrice = Number(prices[prices.length - 1].toFixed(2));
-    const peak = Number(Math.max(...highs).toFixed(2));
-    const valley = Number(Math.min(...lows).toFixed(2));
-
-    const span = peak - valley;
-    const rhythmPos =
-      span > 0 ? Number((((latestPrice - valley) / span) * 100).toFixed(1)) : 50;
-
-    return NextResponse.json({
-      symbol,
-      range,
-      latestPrice,
-      peak,
-      valley,
-      rhythmPos,
-      series: validData,
-    });
-  } catch (error: any) {
-    console.error(`Fetch rhythm error for ${symbol}:`, error?.message || error);
-
-    // 备用兜底逻辑：如果外部 API 临时超时，返回基于前一日的基准模拟数据，确保前端界面绝不留空
-    const basePrices: Record<string, number> = {
-      AAPL: 228.45,
-      NVDA: 118.20,
-      TSLA: 238.10,
-      MSFT: 432.60,
-    };
-    const base = basePrices[symbol] || 150.0;
-    const mockPeak = Number((base * 1.08).toFixed(2));
-    const mockValley = Number((base * 0.92).toFixed(2));
-    const mockPos = Number((((base - mockValley) / (mockPeak - mockValley)) * 100).toFixed(1));
-
-    return NextResponse.json({
-      symbol,
-      range,
-      latestPrice: base,
-      peak: mockPeak,
-      valley: mockValley,
-      rhythmPos: mockPos,
-      series: [],
-      isFallback: true,
-    });
+    const data = buildResponse(symbol, range, series, 'yahoo');
+    cache.set(cacheKey, { data, expires: Date.now() + 60_000 });
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error(`Fetch rhythm error for ${symbol}:`, error instanceof Error ? error.message : error);
+    return NextResponse.json(simulated(symbol, range));
   }
 }
