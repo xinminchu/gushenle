@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import RhythmChart, { type ChartType } from '@/components/RhythmChart';
 import type { RhythmPoint } from '@/lib/rhythm';
 
-/** 确定性伪随机，保证每次打开数据一致 */
+/** 确定性伪随机，保证每次打开数据一致（触发部署用注释） */
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
