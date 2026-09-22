@@ -45,7 +45,7 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-/** 全部真实源都不可用时的兜底：生成多年确定性模拟日线 */
+/** 全部真实源都不可用时的兜底：生成多年确定性模拟日线（含 OHLC，供 K线用） */
 function simulatedFull(symbol: string): RhythmPoint[] {
   const base = BASE_PRICES[symbol] ?? 150;
   const rand = mulberry32(hashSeed(`${symbol}:${isoDate(new Date())}`));
@@ -55,10 +55,11 @@ function simulatedFull(symbol: string): RhythmPoint[] {
   let price = base * 0.96;
   for (let i = points - 1; i >= 0; i--) {
     price = price * (1 + (Math.sin(i * 0.7) * 0.5 + (rand() - 0.48)) * 0.02);
-    series.push({
-      date: isoDate(new Date(now - i * 86400000)),
-      close: Number(price.toFixed(2)),
-    });
+    const close = Number(price.toFixed(2));
+    const open = Number((price * (1 + (rand() - 0.5) * 0.012)).toFixed(2));
+    const high = Number((Math.max(open, close) * (1 + rand() * 0.008)).toFixed(2));
+    const low = Number((Math.min(open, close) * (1 - rand() * 0.008)).toFixed(2));
+    series.push({ date: isoDate(new Date(now - i * 86400000)), close, open, high, low });
   }
   return series;
 }
@@ -68,6 +69,9 @@ function simulatedFull(symbol: string): RhythmPoint[] {
 interface NasdaqRow {
   date: string; // "09/21/2026"
   close: string; // "$338.98"
+  open: string; // "$335.28"
+  high: string; // "$339.64"
+  low: string; // "$333.05"
 }
 
 interface NasdaqResponse {
@@ -78,7 +82,12 @@ interface NasdaqResponse {
   };
 }
 
-/** Nasdaq 官方历史日线（无需 key），作为首选源 */
+/** "$1,234.56" -> 1234.56 */
+function num(s: string | undefined): number {
+  return Number((s || '').replace(/[$,]/g, ''));
+}
+
+/** Nasdaq 官方历史日线（无需 key），作为首选源；带 open/high/low 供 K线用 */
 async function fetchNasdaqFull(symbol: string): Promise<RhythmPoint[]> {
   const from = isoDate(new Date(Date.now() - 1100 * 86400000)); // 约 3 年
   const url = `https://api.nasdaq.com/api/quote/${encodeURIComponent(
@@ -101,9 +110,19 @@ async function fetchNasdaqFull(symbol: string): Promise<RhythmPoint[]> {
   for (let i = rows.length - 1; i >= 0; i--) {
     const r = rows[i];
     const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(r.date || '');
-    const close = Number((r.close || '').replace(/[$,]/g, ''));
+    const close = num(r.close);
     if (m && Number.isFinite(close)) {
-      series.push({ date: `${m[3]}-${m[1]}-${m[2]}`, close: Number(close.toFixed(2)) });
+      const open = num(r.open);
+      const high = num(r.high);
+      const low = num(r.low);
+      series.push({
+        date: `${m[3]}-${m[1]}-${m[2]}`,
+        close: Number(close.toFixed(2)),
+        // 缺失时回退为 close，保证 K线不断裂
+        open: Number.isFinite(open) ? Number(open.toFixed(2)) : Number(close.toFixed(2)),
+        high: Number.isFinite(high) ? Number(high.toFixed(2)) : Number(close.toFixed(2)),
+        low: Number.isFinite(low) ? Number(low.toFixed(2)) : Number(close.toFixed(2)),
+      });
     }
   }
   if (series.length < 2) throw new Error('Nasdaq returned too few points');
@@ -113,7 +132,12 @@ async function fetchNasdaqFull(symbol: string): Promise<RhythmPoint[]> {
 interface YahooChartResult {
   timestamp: number[];
   indicators: {
-    quote: Array<{ close: (number | null)[] }>;
+    quote: Array<{
+      close: (number | null)[];
+      open: (number | null)[];
+      high: (number | null)[];
+      low: (number | null)[];
+    }>;
   };
 }
 
@@ -145,9 +169,16 @@ async function fetchYahooFull(symbol: string): Promise<RhythmPoint[]> {
     for (let i = 0; i < result.timestamp.length; i++) {
       const close = quotes.close[i];
       if (close != null) {
+        const c = Number(close.toFixed(2));
+        const o = quotes.open[i];
+        const h = quotes.high[i];
+        const l = quotes.low[i];
         series.push({
           date: isoDate(new Date(result.timestamp[i] * 1000)),
-          close: Number(close.toFixed(2)),
+          close: c,
+          open: o != null ? Number(o.toFixed(2)) : c,
+          high: h != null ? Number(h.toFixed(2)) : c,
+          low: l != null ? Number(l.toFixed(2)) : c,
         });
       }
     }

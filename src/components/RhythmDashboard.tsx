@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Flame, ShieldAlert, Settings2, X, Plus, RotateCcw, TrendingUp } from 'lucide-react';
-import RhythmChart from './RhythmChart';
+import RhythmChart, { type ChartType } from './RhythmChart';
 import AccuracyPanel from './AccuracyPanel';
 import type { RhythmResponse } from '@/lib/rhythm';
 import { RANGE_DEFS, RANGE_MAP, ANCHOR_RANGE_ID, scoreGradient } from '@/lib/rhythm';
@@ -27,6 +27,9 @@ export default function RhythmDashboard() {
 
   const [symbol, setSymbol] = useState('AAPL');
   const [range, setRange] = useState(ANCHOR_RANGE_ID);
+  // 图表类型：3M 及以内默认 K线，长区间默认收盘线；用户手动切换后记住选择（切区间时重置）
+  const [chartTypeOverride, setChartTypeOverride] = useState<ChartType | null>(null);
+  const [showRangeHL, setShowRangeHL] = useState(true);
   const [data, setData] = useState<RhythmResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showZenModal, setShowZenModal] = useState(false);
@@ -88,8 +91,12 @@ export default function RhythmDashboard() {
 
   const judgment = data?.judgment ?? null;
   const overHeat = !!judgment?.overheated;
-  const strongHigh = !!judgment && judgment.score >= 80 && !judgment.overheated;
+  const strongHigh =
+    !!judgment && judgment.score >= judgment.thresholds.hot && !judgment.overheated;
   const rangeLabel = RANGE_MAP[range]?.label ?? range;
+  // 短区间（≤3M）默认 K线：每天一根蜡烛，开/高/低/收一目了然
+  const isShortRange = (RANGE_MAP[range]?.points ?? 66) <= 66;
+  const chartType: ChartType = chartTypeOverride ?? (isShortRange ? 'candle' : 'line');
 
   const handleAdd = () => {
     const r = addItem(newSymbol, newName);
@@ -187,14 +194,15 @@ export default function RhythmDashboard() {
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-2">
+        {/* 自选 chips：紧凑小 pill，自动换行，一行 4~6 个 */}
+        <div className="flex flex-wrap gap-1.5">
           {watchlist.map((item) => (
             <button
               key={item.symbol}
               onClick={() => setSymbol(item.symbol)}
-              className={`py-2 rounded-xl text-sm transition-all ${
+              className={`px-3 py-1 rounded-full text-xs whitespace-nowrap transition-all ${
                 symbol === item.symbol
-                  ? 'bg-blue-600 text-white font-medium shadow-lg'
+                  ? 'bg-blue-600 text-white font-medium shadow'
                   : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
               }`}
             >
@@ -218,6 +226,18 @@ export default function RhythmDashboard() {
               <span className="ml-2 text-[10px] font-normal px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
                 主判断 · 近{ANCHOR_LABEL}
               </span>
+              {judgment && (
+                <span
+                  className={`ml-1.5 text-[10px] font-normal px-2 py-0.5 rounded-full border ${
+                    judgment.thresholds.tier === 'high'
+                      ? 'bg-orange-500/10 text-orange-400 border-orange-500/30'
+                      : 'bg-slate-800 text-slate-400 border-slate-700'
+                  }`}
+                >
+                  {judgment.thresholds.tierLabel} · {judgment.thresholds.hot}/
+                  {judgment.thresholds.cold}
+                </span>
+              )}
             </h2>
             <div
               className={`p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 ${
@@ -233,12 +253,12 @@ export default function RhythmDashboard() {
                   <span className="text-xs text-slate-400">{nameOf(symbol)}</span>
                   {overHeat && (
                     <span className="bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                      <Flame className="w-3 h-3" /> 过热
+                      <Flame className="w-3 h-3" /> 涨太猛
                     </span>
                   )}
                   {strongHigh && (
                     <span className="bg-sky-500/15 text-sky-400 border border-sky-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                      <TrendingUp className="w-3 h-3" /> 强势
+                      <TrendingUp className="w-3 h-3" /> 稳着涨
                     </span>
                   )}
                   {data.source === 'simulated' && (
@@ -265,6 +285,8 @@ export default function RhythmDashboard() {
                   <div
                     className={`h-full rounded-full bg-gradient-to-r ${scoreGradient(
                       judgment.score,
+                      judgment.thresholds.hot,
+                      judgment.thresholds.cold,
                     )} transition-all duration-700`}
                     style={{ width: `${judgment.score}%` }}
                   />
@@ -299,7 +321,10 @@ export default function RhythmDashboard() {
               {RANGE_DEFS.filter((d) => data.availableRanges.includes(d.id)).map((d) => (
                 <button
                   key={d.id}
-                  onClick={() => setRange(d.id)}
+                  onClick={() => {
+                    setRange(d.id);
+                    setChartTypeOverride(null);
+                  }}
                   className={`shrink-0 px-2.5 py-1 rounded-lg text-xs transition-colors ${
                     range === d.id
                       ? 'bg-blue-600 text-white'
@@ -311,7 +336,39 @@ export default function RhythmDashboard() {
               ))}
             </div>
 
-            <RhythmChart series={data.series} height={240} />
+            {/* 图表类型切换 + 区间高低点标注 */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex bg-slate-800 rounded-lg p-0.5 text-[11px]">
+                {(['candle', 'line'] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setChartTypeOverride(t)}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${
+                      chartType === t ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {t === 'candle' ? 'K线' : '收盘线'}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowRangeHL((v) => !v)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                  showRangeHL
+                    ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10'
+                    : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                区间高低点
+              </button>
+            </div>
+
+            <RhythmChart
+              series={data.series}
+              height={240}
+              chartType={chartType}
+              showRangeHL={showRangeHL}
+            />
 
             {/* 分位位置条：现价在所选区间分位中的位置 */}
             <div className="mt-4">
@@ -353,30 +410,31 @@ export default function RhythmDashboard() {
         </div>
       )}
 
-      {/* 沉思乐：真正冲高过热时点击诊断卡弹出的冷静拦截 */}
+      {/* 沉思乐：涨太猛了时点击诊断卡弹出的冷静拦截 */}
       {showZenModal && data && judgment && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-800 border border-amber-500/40 rounded-2xl p-6 max-w-sm w-full space-y-4 text-center shadow-2xl">
             <div className="w-12 h-12 bg-amber-500/20 border border-amber-500/40 rounded-full flex items-center justify-center mx-auto text-amber-400">
               <ShieldAlert className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-slate-100">过热风险提示</h3>
+            <h3 className="text-lg font-bold text-slate-100">涨太猛了，先缓一缓？</h3>
             <p className="text-sm text-slate-300">
-              <span className="font-semibold text-amber-400">{symbol}</span> 律动得分达到{' '}
-              <span className="font-bold">{judgment.score}</span>
-              ，市场情绪处于高位。
+              <span className="font-semibold text-amber-400">{symbol}</span>{' '}
+              这几天涨得有点猛（律动 {judgment.score}{' '}
+              分），要不要先深呼吸一下再决定？
             </p>
             <div className="bg-slate-900/60 p-3 rounded-lg text-xs text-slate-400 text-left space-y-1">
-              <p className="font-medium text-slate-300">反例检查清单：</p>
-              <p>• 是否因为害怕错过（FOMO）而想追加仓位？</p>
-              <p>• 是否符合最初设定的买入逻辑？</p>
+              <p className="font-medium text-slate-300">动手前，不妨问问自己：</p>
+              <p>• 是不是怕错过，才想追进去？</p>
+              <p>• 还记得当初为啥买它吗？</p>
+              <p>• 如果明天跌 5%，今晚还睡得着吗？</p>
             </div>
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setShowZenModal(false)}
                 className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2.5 rounded-xl text-xs font-medium"
               >
-                深呼吸，保持冷静
+                我想好了，先冷静一下
               </button>
             </div>
           </div>
