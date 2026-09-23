@@ -88,6 +88,16 @@ function syntheticCandles(symbol: string): Candle[] {
 
 const shortDate = (d: string) => d.slice(5).replace('-', '/'); // MM/DD
 
+/* ---------- 答后小悟：输了安慰、连对泼冷水 ---------- */
+const TIP_WRONG = '💡 猜错了很正常：20 根 K 线猜 5 天，长期胜率就是 50% 上下。不是你笨，是短期涨跌本来接近随机。';
+const TIP_STREAK = '💡 连击正旺，泼盆冷水：连对几次多半是运气，这时候最容易觉得自己"开悟了"——恰恰是最该冷静的时候。';
+const TIPS_ROTATE = [
+  '💡 同样 20 根线，放在牛市主升浪和震荡市里含义完全不同。光看形状不看市况，等于蒙。',
+  '💡 感觉会骗人，台账不会。这个游戏就是在拿真实数据给你做"人肉回测"。',
+  '💡 这个游戏真正的奖品不是积分，是让你对"看图猜涨跌"祛魅。',
+  '💡 K 线里大多是噪声。人脑天生爱找规律，但短期价格里规律很少、噪声很多。',
+];
+
 export default function KLineBoxGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [phase, setPhase] = useState<Phase>('loading');
@@ -99,10 +109,12 @@ export default function KLineBoxGame() {
   const [resultText, setResultText] = useState('');
   const [resultGood, setResultGood] = useState(false);
   const [gained, setGained] = useState(0);
+  const [tip, setTip] = useState('');
 
   const newRound = useCallback(async (streakNow: number) => {
     setPhase('loading');
     setResultText('');
+    setTip('');
     const list = readWatchlist();
     const pick = list[Math.floor(Math.random() * list.length)];
     let candles: Candle[] | null = null;
@@ -164,6 +176,7 @@ export default function KLineBoxGame() {
         ? `🎯 猜对了！+${pts} 分${newStreak >= 2 ? `（${newStreak} 连击🔥）` : ''}`
         : '❌ 猜错了，连击清零，再接再厉！'
     );
+    setTip(!correct ? TIP_WRONG : newStreak >= 3 ? TIP_STREAK : TIPS_ROTATE[q % TIPS_ROTATE.length]);
     const nb = { best: Math.max(best.best, newScore), streak: Math.max(best.streak, newStreak) };
     setBest(nb);
     try {
@@ -343,6 +356,11 @@ export default function KLineBoxGame() {
                   这是 <b className="text-slate-200">{round.symbol}</b> {round.name}
                   <br />
                   {round.startDate} ~ {round.endDate} 这段真实走势
+                </div>
+              )}
+              {tip && (
+                <div className="mt-2 text-xs leading-relaxed text-amber-200/90 bg-amber-500/10 border border-amber-500/25 rounded-xl px-3 py-2">
+                  {tip}
                 </div>
               )}
               <button
