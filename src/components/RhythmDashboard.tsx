@@ -58,6 +58,7 @@ export default function RhythmDashboard() {
     }
   });
   const [managing, setManaging] = useState(false);
+  const [confirmingReset, setConfirmingReset] = useState(false);
   const [newSymbol, setNewSymbol] = useState('');
   const [newName, setNewName] = useState('');
   const [addError, setAddError] = useState('');
@@ -276,13 +277,33 @@ export default function RhythmDashboard() {
                 </button>
               </div>
             )}
-            {!isDefault && (
+            {!isDefault && !confirmingReset && (
               <button
-                onClick={resetToDefault}
+                onClick={() => setConfirmingReset(true)}
                 className="text-[11px] text-slate-500 hover:text-slate-300 flex items-center gap-1"
               >
                 <RotateCcw className="w-3 h-3" /> 恢复默认推荐
               </button>
+            )}
+            {!isDefault && confirmingReset && (
+              <div className="flex items-center gap-2 text-[11px]">
+                <span className="text-amber-400">将清空你的自定义自选，确定吗？</span>
+                <button
+                  onClick={() => {
+                    resetToDefault();
+                    setConfirmingReset(false);
+                  }}
+                  className="text-red-400 underline underline-offset-2"
+                >
+                  确认恢复
+                </button>
+                <button
+                  onClick={() => setConfirmingReset(false)}
+                  className="text-slate-400 underline underline-offset-2"
+                >
+                  取消
+                </button>
+              </div>
             )}
             {/* 发现股票：按板块 / 主题筛选加入自选 */}
             <DiscoverStocks />
