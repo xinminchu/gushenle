@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Newspaper, CalendarDays, ChevronDown, RefreshCw, Landmark } from 'lucide-react';
+import { Newspaper, CalendarDays, ChevronDown, RefreshCw, Landmark, ExternalLink } from 'lucide-react';
 import {
   getUpcomingEvents,
   getYearEvents,
@@ -26,6 +26,7 @@ type NewsMarket = 'us' | 'cn';
 export default function FamilyNews() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [newsOpen, setNewsOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [newsLoading, setNewsLoading] = useState(true);
   const [newsErr, setNewsErr] = useState(false);
   const [market, setMarket] = useState<NewsMarket>(() => {
@@ -41,6 +42,7 @@ export default function FamilyNews() {
   const loadNews = async (m: NewsMarket) => {
     setNewsLoading(true);
     setNewsErr(false);
+    setExpandedId(null);
     try {
       const r = await fetch(`/api/news?market=${m}`);
       const j = await r.json();
@@ -153,15 +155,54 @@ export default function FamilyNews() {
         ) : (
           <>
             <div className="space-y-2.5">
-              {shownNews.map((n) => (
-                <div key={n.id} className="flex gap-2.5">
-                  <span className="text-[10px] text-slate-500 shrink-0 pt-0.5 w-9">{fmtTime(n.time)}</span>
-                  <div className="min-w-0">
-                    {n.title && <p className="text-[11px] font-semibold text-slate-200 leading-snug">{n.title}</p>}
-                    {n.content && <p className="text-[11px] text-slate-400 leading-snug mt-0.5">{n.content}</p>}
+              {shownNews.map((n) => {
+                const expanded = expandedId === n.id;
+                const hasTitle = n.title.length > 0;
+                // 列表只露标题（无标题则露正文前 64 字），点开展开看全文
+                const headline = hasTitle
+                  ? n.title
+                  : n.content.slice(0, 64) + (n.content.length > 64 ? '…' : '');
+                const expandable = hasTitle
+                  ? n.content.length > 0 && n.content !== n.title
+                  : n.content.length > 64;
+                return (
+                  <div key={n.id} className="flex gap-2.5">
+                    <span className="text-[10px] text-slate-500 shrink-0 pt-0.5 w-9">{fmtTime(n.time)}</span>
+                    <div className="min-w-0 flex-1">
+                      {expandable ? (
+                        <button
+                          onClick={() => setExpandedId(expanded ? null : n.id)}
+                          className="w-full text-left"
+                        >
+                          <p className="text-[11px] font-semibold text-slate-200 leading-snug">
+                            {headline}
+                            <ChevronDown
+                              className={`inline w-3 h-3 ml-1 text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                            />
+                          </p>
+                        </button>
+                      ) : (
+                        <p className="text-[11px] font-semibold text-slate-200 leading-snug">{headline}</p>
+                      )}
+                      {expanded && expandable && (
+                        <div className="mt-1 space-y-1.5">
+                          <p className="text-[11px] text-slate-400 leading-relaxed">{n.content}</p>
+                          {n.uri && (
+                            <a
+                              href={n.uri}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-0.5 text-[10px] text-sky-400 hover:text-sky-300"
+                            >
+                              查看原文 <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             {news.length > 6 && (
               <button
