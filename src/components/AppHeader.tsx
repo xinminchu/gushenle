@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Smile, UserRound, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useNickname } from '@/hooks/useNickname';
 import LoginModal from './modals/LoginModal';
 
 /** 全页面共用顶栏：不论底部切到哪个 tab（今日/持仓/记忆/家人/娱乐）都显示 */
@@ -10,7 +11,7 @@ export default function AppHeader() {
   const { user, loading, configured, signOut } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);
 
-  const shortName = user?.email ? user.email.split('@')[0] : '';
+  const shortName = useNickname(user?.email);
 
   return (
     <div className="p-4 pb-1 max-w-md mx-auto">

@@ -28,10 +28,26 @@ export function getNickname(fallbackEmail?: string | null): string {
   return '家人';
 }
 
+export const NICKNAME_EVENT = 'gushenle:nickname';
+
 export function setNickname(name: string) {
   try {
     localStorage.setItem(NICK_KEY, name.trim().slice(0, 12));
   } catch {}
+  // 广播：顶栏、发帖表单、帖子列表等所有用昵称的地方一起更新
+  try {
+    window.dispatchEvent(new Event(NICKNAME_EVENT));
+  } catch {}
+}
+
+/** 改昵称时同步更新自己所有帖子的署名，家人看到的也是新名字 */
+export async function updateMyPostsNickname(userId: string, nickname: string): Promise<void> {
+  const db = needDb();
+  const { error } = await db
+    .from('family_posts')
+    .update({ nickname: nickname.slice(0, 12) })
+    .eq('user_id', userId);
+  if (error) throw error;
 }
 
 function needDb() {

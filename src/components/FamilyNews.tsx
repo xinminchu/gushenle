@@ -20,19 +20,29 @@ function fmtTime(ms: number): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+const NEWS_MARKET_KEY = 'gushenle:news-market';
+type NewsMarket = 'us' | 'cn';
+
 export default function FamilyNews() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [newsOpen, setNewsOpen] = useState(false);
   const [newsLoading, setNewsLoading] = useState(true);
   const [newsErr, setNewsErr] = useState(false);
+  const [market, setMarket] = useState<NewsMarket>(() => {
+    try {
+      return localStorage.getItem(NEWS_MARKET_KEY) === 'cn' ? 'cn' : 'us';
+    } catch {
+      return 'us';
+    }
+  });
   const [weekEvents, setWeekEvents] = useState<CalEvent[]>([]);
   const [yearOpen, setYearOpen] = useState(false);
 
-  const loadNews = async () => {
+  const loadNews = async (m: NewsMarket) => {
     setNewsLoading(true);
     setNewsErr(false);
     try {
-      const r = await fetch('/api/news');
+      const r = await fetch(`/api/news?market=${m}`);
       const j = await r.json();
       setNews(j.items || []);
       if (!j.items || j.items.length === 0) setNewsErr(true);
@@ -43,8 +53,18 @@ export default function FamilyNews() {
     }
   };
 
+  const switchMarket = (m: NewsMarket) => {
+    if (m === market) return;
+    setMarket(m);
+    setNewsOpen(false);
+    try {
+      localStorage.setItem(NEWS_MARKET_KEY, m);
+    } catch {}
+    loadNews(m);
+  };
+
   useEffect(() => {
-    loadNews();
+    loadNews(market);
     // 未来7天：固定日程 + 自选股财报
     const run = async () => {
       const today = todayStr();
@@ -102,12 +122,29 @@ export default function FamilyNews() {
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
             <Newspaper className="w-3.5 h-3.5 text-sky-400" /> 今日大事
           </div>
-          <button
-            onClick={loadNews}
-            className="text-slate-500 hover:text-slate-300 flex items-center gap-1 text-[10px]"
-          >
-            <RefreshCw className={`w-3 h-3 ${newsLoading ? 'animate-spin' : ''}`} /> 刷新
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex bg-slate-800 rounded-full p-0.5 text-[10px]">
+              {(['us', 'cn'] as NewsMarket[]).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => switchMarket(m)}
+                  className={`px-2.5 py-1 rounded-full transition-colors ${
+                    market === m
+                      ? 'bg-sky-500/20 text-sky-300 font-semibold'
+                      : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  {m === 'us' ? '🇺🇸 美股' : '🇨🇳 国内'}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => loadNews(market)}
+              className="text-slate-500 hover:text-slate-300 flex items-center gap-1 text-[10px]"
+            >
+              <RefreshCw className={`w-3 h-3 ${newsLoading ? 'animate-spin' : ''}`} /> 刷新
+            </button>
+          </div>
         </div>
         {newsLoading ? (
           <p className="text-[11px] text-slate-500 py-2">快讯加载中…</p>

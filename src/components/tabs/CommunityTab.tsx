@@ -6,6 +6,7 @@ import {
   Users, HeartHandshake, Send, Trash2, LogIn, BarChart3, Check,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useNickname } from '@/hooks/useNickname';
 import LoginModal from '../modals/LoginModal';
 import FamilyNews from '../FamilyNews';
 import {
@@ -13,8 +14,8 @@ import {
   createPost,
   deletePost,
   toggleLike,
-  getNickname,
   setNickname,
+  updateMyPostsNickname,
   getSurvey,
   setSurveyVote,
   relativeTime,
@@ -50,7 +51,9 @@ export default function CommunityTab() {
   const [postType, setPostType] = useState<'thesis' | 'lesson'>('thesis');
   const [symbol, setSymbol] = useState('');
   const [content, setContent] = useState('');
-  const [nickname, setNicknameState] = useState('');
+  // 昵称全局同步：顶栏、帖子署名都跟着变
+  const nickname = useNickname(user?.email);
+  const [nickDraft, setNickDraft] = useState('');
   const [editingNick, setEditingNick] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
@@ -85,7 +88,6 @@ export default function CommunityTab() {
 
   useEffect(() => {
     if (!authLoading) {
-      setNicknameState(getNickname(user?.email));
       loadAll();
     }
   }, [authLoading, user, loadAll]);
@@ -105,7 +107,7 @@ export default function CommunityTab() {
     try {
       await createPost({
         user_id: user.id,
-        nickname: nickname.trim() || getNickname(user.email),
+        nickname,
         post_type: postType,
         symbol,
         content: text,
@@ -181,11 +183,21 @@ export default function CommunityTab() {
     }
   };
 
-  const saveNickname = () => {
-    const n = nickname.trim().slice(0, 12) || getNickname(user?.email);
-    setNickname(n);
-    setNicknameState(n);
+  const saveNickname = async () => {
+    const n = nickDraft.trim().slice(0, 12) || nickname;
+    setNickname(n); // 广播到顶栏等所有地方
     setEditingNick(false);
+    // 同步自己所有帖子的署名
+    if (user) {
+      try {
+        await updateMyPostsNickname(user.id, n);
+      } catch {
+        /* 本地已更新，署名下次加载时同步 */
+      }
+      setPosts((prev) =>
+        prev.map((p) => (p.user_id === user.id ? { ...p, nickname: n } : p)),
+      );
+    }
   };
 
   return (
@@ -263,8 +275,8 @@ export default function CommunityTab() {
               {editingNick ? (
                 <div className="flex items-center gap-1">
                   <input
-                    value={nickname}
-                    onChange={(e) => setNicknameState(e.target.value)}
+                    value={nickDraft}
+                    onChange={(e) => setNickDraft(e.target.value)}
                     maxLength={12}
                     className="w-20 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-emerald-500"
                   />
@@ -274,10 +286,13 @@ export default function CommunityTab() {
                 </div>
               ) : (
                 <button
-                  onClick={() => setEditingNick(true)}
+                  onClick={() => {
+                    setNickDraft(nickname);
+                    setEditingNick(true);
+                  }}
                   className="text-[11px] text-slate-500 hover:text-slate-300"
                 >
-                  我是{nickname || '家人'} ✎
+                  我是{nickname} ✎
                 </button>
               )}
             </div>
@@ -311,15 +326,18 @@ export default function CommunityTab() {
             </div>
           ) : (
             <div className="space-y-4">
-              {posts.map((post) => (
+              {posts.map((post) => {
+                // 自己的帖子永远显示当前昵称，改名即时生效
+                const displayName = post.user_id === user?.id ? nickname : post.nickname;
+                return (
                 <div key={post.id} className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-4 space-y-3">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center space-x-2">
-                      <span className={`w-8 h-8 rounded-full border flex items-center justify-center text-sm font-bold ${avatarColor(post.nickname)}`}>
-                        {post.nickname.slice(0, 1)}
+                      <span className={`w-8 h-8 rounded-full border flex items-center justify-center text-sm font-bold ${avatarColor(displayName)}`}>
+                        {displayName.slice(0, 1)}
                       </span>
                       <div>
-                        <div className="text-xs font-semibold text-slate-200">{post.nickname}</div>
+                        <div className="text-xs font-semibold text-slate-200">{displayName}</div>
                         <div className="text-[10px] text-slate-500">{relativeTime(post.created_at)}</div>
                       </div>
                     </div>
@@ -362,7 +380,8 @@ export default function CommunityTab() {
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </>
