@@ -8,6 +8,7 @@ import {
   resetWatchlist,
   type WatchlistItem,
 } from '@/lib/watchlist';
+import { symbolToName } from '@/lib/stockAliases';
 
 interface WatchlistContextValue {
   items: WatchlistItem[];
@@ -45,7 +46,8 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
     const sym = symbol.trim().toUpperCase();
     if (!/^[A-Z.]{1,8}$/.test(sym)) return 'invalid';
     if (items.some((i) => i.symbol === sym)) return 'exists';
-    persist([...items, { symbol: sym, name: name?.trim() || sym }]);
+    // 名称没填时，有中文名就自动用中文名
+    persist([...items, { symbol: sym, name: name?.trim() || symbolToName(sym) }]);
     return 'ok';
   };
 

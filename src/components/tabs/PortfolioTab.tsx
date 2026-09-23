@@ -226,8 +226,6 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
     setShowAdd(false);
   };
 
-  const candidates = watchlist.filter((w) => !positions.some((p) => p.symbol === w.symbol));
-
   return (
     <div className="p-4 space-y-5 pb-24 max-w-md mx-auto">
       <header className="pt-2 flex items-center justify-between">
@@ -480,11 +478,15 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
               className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
             >
               <option value="">请选择…</option>
-              {candidates.map((c) => (
-                <option key={c.symbol} value={c.symbol}>
-                  {c.symbol} {c.name}
-                </option>
-              ))}
+              {watchlist.map((c) => {
+                const held = positions.some((p) => p.symbol === c.symbol);
+                return (
+                  <option key={c.symbol} value={c.symbol} disabled={held}>
+                    {c.symbol} {c.name}
+                    {held ? '（已持有）' : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -536,9 +538,10 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
               保存
             </button>
           </div>
-          {candidates.length === 0 && (
-            <div className="text-[11px] text-slate-500">自选里的股票都已加完，去今日页「管理自选」可加更多。</div>
-          )}
+          {watchlist.length > 0 &&
+            watchlist.every((w) => positions.some((p) => p.symbol === w.symbol)) && (
+              <div className="text-[11px] text-slate-500">自选里的股票都已加完，去今日页「管理自选」可加更多。</div>
+            )}
         </div>
       )}
 

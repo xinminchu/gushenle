@@ -10,6 +10,7 @@ import { RANGE_DEFS, RANGE_MAP, ANCHOR_RANGE_ID, scoreGradient } from '@/lib/rhy
 import { getRhythm, invalidateRhythm } from '@/lib/market';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 import { useWatchlist } from './WatchlistContext';
+import { STOCK_NAMES } from '@/lib/stockAliases';
 import { saveOperation, todayStr, type OpAction } from '@/lib/operations';
 import { useColorScheme, schemeLabel, upText, downText } from '@/lib/colorScheme';
 
@@ -184,8 +185,11 @@ export default function RhythmDashboard() {
               <input
                 value={newSymbol}
                 onChange={(e) => {
-                  setNewSymbol(e.target.value.toUpperCase());
+                  const sym = e.target.value.toUpperCase();
+                  setNewSymbol(sym);
                   setAddError('');
+                  // 名称没手动填过时，有中文名就自动带出来
+                  setNewName((prev) => (prev.trim() ? prev : STOCK_NAMES[sym] || ''));
                 }}
                 placeholder="代码 如 COIN"
                 className="w-28 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
