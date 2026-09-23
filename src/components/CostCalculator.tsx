@@ -24,6 +24,11 @@ const BROKERS: BrokerPreset[] = [
   { id: 'tiger', name: '老虎证券', commissionPerShare: 0.0049, commissionMin: 0.99, commissionMaxRate: 0, platformPerShare: 0.005, platformMin: 1 },
   { id: 'longbridge', name: '长桥证券', commissionPerShare: 0.0049, commissionMin: 0.99, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
   { id: 'ibkr', name: '盈透证券（固定式）', commissionPerShare: 0.0035, commissionMin: 0.35, commissionMaxRate: 0.01, platformPerShare: 0, platformMin: 0 },
+  { id: 'ibkr-lite', name: '盈透证券 Lite（零佣金）', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
+  { id: 'robinhood', name: 'Robinhood（罗宾汉）', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
+  { id: 'schwab', name: 'Charles Schwab（嘉信理财）', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
+  { id: 'fidelity', name: 'Fidelity（富达）', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
+  { id: 'webull', name: 'Webull（微牛）', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
   { id: 'custom', name: '自定义…', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
 ];
 
@@ -80,6 +85,8 @@ export default function CostCalculator() {
     setCommMin(null);
     setPlatPS(null);
     setPlatMin(null);
+    // 自定义的费率输入在高级区，选中时自动展开，否则"点了没法输入"
+    if (id === 'custom') setAdvanced(true);
   };
 
   const cPS = commPS ?? String(preset.commissionPerShare);
