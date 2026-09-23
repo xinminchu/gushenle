@@ -88,6 +88,7 @@ export const STOCK_LIST: StockInfo[] = [
   { code: 'QCOM', en: 'Qualcomm', zh: '高通', sector: '半导体', themes: ['芯片'] },
   { code: 'TSM', en: 'TSMC', zh: '台积电', sector: '半导体', themes: ['AI', '芯片'] },
   { code: 'MU', en: 'Micron', zh: '美光', sector: '半导体', themes: ['AI', '芯片'] },
+  { code: '000660.KS', en: 'SK Hynix', zh: 'SK海力士', sector: '半导体', themes: ['芯片'] },
   { code: 'ARM', en: 'Arm', zh: 'Arm', sector: '半导体', themes: ['AI', '芯片'] },
   { code: 'MRVL', en: 'Marvell', zh: '美满', sector: '半导体', themes: ['AI', '芯片'] },
   { code: 'LRCX', en: 'Lam Research', zh: '泛林', sector: '半导体', themes: ['芯片'] },
@@ -218,6 +219,7 @@ export const STOCK_LIST: StockInfo[] = [
   { code: 'CAT', en: 'Caterpillar', zh: '卡特彼勒', sector: '工业', themes: ['机械'] },
   { code: 'DE', en: 'Deere', zh: '迪尔', sector: '工业', themes: ['机械'] },
   { code: 'GE', en: 'GE Aerospace', zh: 'GE航空', sector: '工业', themes: ['航空'] },
+  { code: 'RKLB', en: 'Rocket Lab USA', zh: '火箭实验室', sector: '工业', themes: ['商业航天'] },
   { code: 'HON', en: 'Honeywell', zh: '霍尼韦尔', sector: '工业', themes: [] },
   { code: 'UPS', en: 'UPS', zh: 'UPS', sector: '工业', themes: ['物流'] },
   { code: 'FDX', en: 'FedEx', zh: '联邦快递', sector: '工业', themes: ['物流'] },
@@ -263,25 +265,36 @@ export const CODE_CORRECTIONS: Record<string, string> = {
   'WALMART': 'WMT',
   'DISNEY': 'DIS',
   'TESLA MOTORS': 'TSLA',
+  'APPL': 'AAPL',
+  'TESL': 'TSLA',
+  'AMZON': 'AMZN',
 };
 
 export function findStock(code: string): StockInfo | undefined {
   return BY_CODE.get(code.trim().toUpperCase());
 }
 
+import { STOCK_PINYIN } from './stockPinyin';
+
 /**
- * 联想建议：代码前缀优先，其次英文名/中文名包含。
+ * 联想建议：代码前缀优先，其次英文名/中文名/拼音包含。
  * 用于「是不是想找 XXX？」提示，最多返回 3 个。
  */
 export function suggestStocks(input: string, limit = 3): StockInfo[] {
   const q = input.trim().toUpperCase();
   if (!q) return [];
-  const qLower = input.trim().toLowerCase();
+  const qLower = input.trim().toLowerCase().replace(/\s+/g, '');
   const codeHit: StockInfo[] = [];
   const nameHit: StockInfo[] = [];
   for (const s of STOCK_LIST) {
     if (s.code.startsWith(q)) codeHit.push(s);
-    else if (s.en.toLowerCase().includes(qLower) || s.zh.includes(input.trim())) nameHit.push(s);
+    else if (
+      s.en.toLowerCase().includes(qLower) ||
+      s.zh.includes(input.trim()) ||
+      STOCK_PINYIN[s.code]?.full.includes(qLower) ||
+      STOCK_PINYIN[s.code]?.initials.startsWith(qLower)
+    )
+      nameHit.push(s);
     if (codeHit.length + nameHit.length >= limit * 2) break;
   }
   return [...codeHit, ...nameHit].slice(0, limit);

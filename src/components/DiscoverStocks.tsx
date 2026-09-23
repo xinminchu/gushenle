@@ -2,8 +2,38 @@
 
 import { useMemo, useState } from 'react';
 import { Plus, Check, Search, ChevronDown, Compass } from 'lucide-react';
-import { SECTORS, allThemes, filterStocks } from '@/lib/stockList';
+import { SECTORS, allThemes, filterStocks, CODE_CORRECTIONS, type StockInfo } from '@/lib/stockList';
+import { STOCK_PINYIN, ALIAS_PINYIN } from '@/lib/stockPinyin';
+import { STOCK_ALIASES } from '@/lib/stockAliases';
 import { useWatchlist } from './WatchlistContext';
+
+/** 别名按代码分组：小火箭 -> RKLB 这类昵称也能搜到 */
+const ALIASES_BY_CODE = new Map<string, string[]>();
+for (const [alias, code] of Object.entries(STOCK_ALIASES)) {
+  const arr = ALIASES_BY_CODE.get(code) ?? [];
+  arr.push(alias);
+  ALIASES_BY_CODE.set(code, arr);
+}
+
+/**
+ * 搜索命中：代码 / 英文名 / 中文名 / 拼音全拼 / 拼音首字母 / 别名(含拼音)。
+ * 打错自动纠正：TESLA -> TSLA。
+ */
+function matchStock(s: StockInfo, qRaw: string): boolean {
+  const q = qRaw.trim().toLowerCase().replace(/\s+/g, '');
+  if (!q) return true;
+  const corrected = CODE_CORRECTIONS[qRaw.trim().toUpperCase()];
+  if (corrected && s.code === corrected) return true;
+  const hay: string[] = [s.code.toLowerCase(), s.en.toLowerCase(), s.zh.toLowerCase()];
+  const py = STOCK_PINYIN[s.code];
+  if (py) hay.push(py.full, py.initials);
+  for (const alias of ALIASES_BY_CODE.get(s.code) ?? []) {
+    hay.push(alias.toLowerCase());
+    const apy = ALIAS_PINYIN[alias];
+    if (apy) hay.push(apy.full, apy.initials);
+  }
+  return hay.some((h) => h.includes(q));
+}
 
 /**
  * 发现股票：按板块 / 主题筛选，一键加入自选。
@@ -20,19 +50,18 @@ export default function DiscoverStocks() {
   const inList = useMemo(() => new Set(watchlist.map((w) => w.symbol)), [watchlist]);
 
   const results = useMemo(() => {
-    let r = filterStocks(sector || undefined, theme || undefined);
-    const query = q.trim().toLowerCase();
-    if (query) {
-      const rawQ = q.trim();
-      r = r.filter(
-        (s) =>
-          s.code.toLowerCase().includes(query) ||
-          s.en.toLowerCase().includes(query) ||
-          s.zh.includes(rawQ),
-      );
-    }
-    return r;
+    const r = filterStocks(sector || undefined, theme || undefined);
+    if (!q.trim()) return r;
+    return r.filter((s) => matchStock(s, q));
   }, [sector, theme, q]);
+
+  /** 打错自动纠正提示，如输入 TESLA 显示"已自动纠正为 TSLA" */
+  const correctedHint = useMemo(() => {
+    const t = q.trim();
+    if (!t) return '';
+    const c = CODE_CORRECTIONS[t.toUpperCase()];
+    return c ? `已自动纠正为 ${c}` : '';
+  }, [q]);
 
   const chip = (active: boolean) =>
     `text-[11px] px-2.5 py-1 rounded-full border whitespace-nowrap ${
@@ -62,10 +91,13 @@ export default function DiscoverStocks() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="搜代码 / 英文名 / 中文名，如 特斯拉"
+              placeholder="搜代码 / 拼音 / 中英文名，如 pg、特斯拉、小火箭"
               className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
             />
           </div>
+          {correctedHint && (
+            <div className="text-[10px] text-emerald-400 -mt-1.5">{correctedHint}</div>
+          )}
           {/* 板块 */}
           <div>
             <div className="text-[10px] text-slate-500 mb-1">板块</div>

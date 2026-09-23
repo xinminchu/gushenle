@@ -36,6 +36,8 @@ export const STOCK_ALIASES: Record<string, string> = {
   '奈飞公司': 'NFLX',
   '沃尔玛': 'WMT', 'walmart': 'WMT',
   '可口可乐': 'KO', 'coca-cola': 'KO',
+  '小火箭': 'RKLB', '火箭实验室': 'RKLB', 'rocket lab': 'RKLB',
+  '海力士': '000660.KS', 'sk海力士': '000660.KS', 'sk hynix': '000660.KS', 'hynix': '000660.KS',
   '茅台': '600519', // A股：数据可能没有，提取出来再说，查不到会友好提示
 };
 
@@ -61,6 +63,12 @@ export function extractSymbol(text: string): string | null {
   const tickers = text.match(/\b[A-Z]{2,5}\b/g) || [];
   for (const t of tickers) {
     if (KNOWN_TICKERS.has(t)) return t;
+  }
+  // 1b) 数字代码（如韩股 000660.KS）
+  const numTickers = text.match(/\b\d{6}\.[A-Z]{2}\b/i) || [];
+  for (const t of numTickers) {
+    const up = t.toUpperCase();
+    if (KNOWN_TICKERS.has(up)) return up;
   }
   // 2) 中文别名（按 key 长度从长到短，避免"超微"先于"超微电脑"命中）
   const lower = text.toLowerCase();
