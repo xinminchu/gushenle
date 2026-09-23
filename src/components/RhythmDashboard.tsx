@@ -10,6 +10,7 @@ import { RANGE_DEFS, RANGE_MAP, ANCHOR_RANGE_ID, scoreGradient } from '@/lib/rhy
 import { getRhythm, invalidateRhythm } from '@/lib/market';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 import { useWatchlist } from './WatchlistContext';
+import DiscoverStocks from './DiscoverStocks';
 import { STOCK_NAMES } from '@/lib/stockAliases';
 import { CODE_CORRECTIONS, findStock, suggestStocks, type StockInfo } from '@/lib/stockList';
 import { saveOperation, todayStr, type OpAction } from '@/lib/operations';
@@ -283,6 +284,8 @@ export default function RhythmDashboard() {
                 <RotateCcw className="w-3 h-3" /> 恢复默认推荐
               </button>
             )}
+            {/* 发现股票：按板块 / 主题筛选加入自选 */}
+            <DiscoverStocks />
           </div>
         )}
 
