@@ -13,6 +13,7 @@ import { useWatchlist } from './WatchlistContext';
 import DiscoverStocks from './DiscoverStocks';
 import { STOCK_NAMES } from '@/lib/stockAliases';
 import { CODE_CORRECTIONS, findStock, suggestStocks, type StockInfo } from '@/lib/stockList';
+import { fmtMoney } from '@/lib/currency';
 import { saveOperation, todayStr, type OpAction } from '@/lib/operations';
 import { useColorScheme, schemeLabel, upText, downText } from '@/lib/colorScheme';
 
@@ -62,6 +63,8 @@ export default function RhythmDashboard() {
   const [newSymbol, setNewSymbol] = useState('');
   const [newName, setNewName] = useState('');
   const [addError, setAddError] = useState('');
+  // 中文输入法组词中：此时不做大写转换，不写回输入框，避免拼音串被截断提交
+  const [imeComposing, setImeComposing] = useState(false);
   /** 名称是否被用户手动改过：没改过才跟随代码自动更新 */
   const [nameEdited, setNameEdited] = useState(false);
   /** 未知代码时的联想建议 */
@@ -124,6 +127,8 @@ export default function RhythmDashboard() {
 
   const judgment = data?.judgment ?? null;
   const overHeat = !!judgment?.overheated;
+  // 韩股（.KS）：韩元计价，大数字加千分位、无小数；美股：美元保留两位
+  const fmtPrice = (p: number) => fmtMoney(symbol, p);
   const strongHigh =
     !!judgment && judgment.score >= judgment.thresholds.hot && !judgment.overheated;
   const rangeLabel = RANGE_MAP[range]?.label ?? range;
@@ -162,7 +167,7 @@ export default function RhythmDashboard() {
     } else if (r === 'exists') {
       setAddError('这只已在自选里');
     } else {
-      setAddError('代码格式不对，例如 AAPL');
+      setAddError('代码格式不对，例如 AAPL 或 000660.KS');
     }
   };
 
@@ -218,8 +223,10 @@ export default function RhythmDashboard() {
             <div className="flex gap-2">
               <input
                 value={newSymbol}
-                onChange={(e) => {
-                  const sym = e.target.value.toUpperCase();
+                onCompositionStart={() => setImeComposing(true)}
+                onCompositionEnd={(e) => {
+                  setImeComposing(false);
+                  const sym = e.currentTarget.value.toUpperCase();
                   setNewSymbol(sym);
                   setAddError('');
                   setSuggestions([]);
@@ -227,6 +234,18 @@ export default function RhythmDashboard() {
                   setAddNote('');
                   // 名称没被手动改过就跟随代码自动更新
                   if (!nameEdited) setNewName(STOCK_NAMES[sym] || '');
+                }}
+                onChange={(e) => {
+                  const rawVal = e.target.value;
+                  // 组词过程中不碰输入内容，组词结束才转大写
+                  const sym = imeComposing ? rawVal : rawVal.toUpperCase();
+                  setNewSymbol(sym);
+                  setAddError('');
+                  setSuggestions([]);
+                  setForceAdd(false);
+                  setAddNote('');
+                  // 名称没被手动改过就跟随代码自动更新
+                  if (!nameEdited) setNewName(STOCK_NAMES[sym.toUpperCase()] || '');
                 }}
                 placeholder="代码 如 COIN"
                 className="w-28 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
@@ -412,7 +431,7 @@ export default function RhythmDashboard() {
 
               <div className="mt-3 flex items-center gap-2">
                 <span className="text-sm font-semibold text-slate-200 shrink-0">
-                  ${data.price.toFixed(2)}
+                  {fmtPrice(data.price)}
                 </span>
                 {data.priceLive ? (
                   <span className="flex items-center gap-1 shrink-0 text-[9px]">
@@ -451,7 +470,7 @@ export default function RhythmDashboard() {
               <button
                 onClick={() => {
                   setOpAction(judgment.statusKey === 'oversoldBottom' ? 'buy' : 'sell');
-                  setOpPrice(data.price ? data.price.toFixed(2) : '');
+                  setOpPrice(data.price ? fmtPrice(data.price) : '');
                   setOpQty('');
                   setOpSaved(false);
                   setShowOpModal(true);
@@ -688,7 +707,7 @@ export default function RhythmDashboard() {
                   </button>
                   <button
                     onClick={() => {
-                      const price = parseFloat(opPrice);
+                      const price = parseFloat(opPrice.replace(/,/g, ''));
                       if (!(price > 0)) {
                         alert('请填写成交价格');
                         return;

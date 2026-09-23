@@ -4,7 +4,7 @@
 
 import type { RhythmPoint } from '@/lib/rhythm';
 
-export type DataSource = 'nasdaq' | 'yahoo' | 'simulated';
+export type DataSource = 'nasdaq' | 'yahoo' | 'naver' | 'simulated';
 
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -209,6 +209,104 @@ const cache = new Map<
   { series: RhythmPoint[]; source: DataSource; expires: number }
 >();
 
+/* ---------- Naver 财经（韩股专用；Nasdaq 不覆盖 KRX，Yahoo 对机房 IP 限流） ---------- */
+
+/** 首尔当前时间（KRX 交易时间判断用） */
+function seoulNow(): Date {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+}
+
+function fmtDT(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}000000`;
+}
+
+interface NaverDayRow {
+  localDate: string; // "20240102"
+  closePrice: number;
+  openPrice: number;
+  highPrice: number;
+  lowPrice: number;
+}
+
+/** Naver 韩股多年日线：symbol 如 000660.KS -> Naver 代码 000660 */
+async function fetchNaverFull(symbol: string): Promise<RhythmPoint[]> {
+  const code = symbol.split('.')[0];
+  if (!/^\d{6}$/.test(code)) throw new Error('not a KRX code');
+  const end = seoulNow();
+  const start = new Date(end);
+  start.setDate(start.getDate() - 1100);
+  const url =
+    `https://api.stock.naver.com/chart/domestic/item/${code}/day` +
+    `?startDateTime=${fmtDT(start)}&endDateTime=${fmtDT(end)}&timeframe=day`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': UA },
+    next: { revalidate: 300 },
+  });
+  if (!res.ok) throw new Error(`Naver status ${res.status}`);
+  const arr = (await res.json()) as NaverDayRow[];
+  if (!Array.isArray(arr) || arr.length < 2) throw new Error('bad Naver payload');
+  const series: RhythmPoint[] = [];
+  for (const r of arr) {
+    if (!r?.localDate || !Number.isFinite(r.closePrice) || r.closePrice <= 0) continue;
+    series.push({
+      date: `${r.localDate.slice(0, 4)}-${r.localDate.slice(4, 6)}-${r.localDate.slice(6, 8)}`,
+      close: r.closePrice,
+      open: Number.isFinite(r.openPrice) ? r.openPrice : r.closePrice,
+      high: Number.isFinite(r.highPrice) ? r.highPrice : r.closePrice,
+      low: Number.isFinite(r.lowPrice) ? r.lowPrice : r.closePrice,
+    });
+  }
+  if (series.length < 2) throw new Error('Naver returned too few points');
+  return series;
+}
+
+/** KRX 是否开盘中（周一~周五 09:00~15:30 KST） */
+function isKrxOpen(): boolean {
+  const n = seoulNow();
+  const day = n.getDay();
+  if (day === 0 || day === 6) return false;
+  const mins = n.getHours() * 60 + n.getMinutes();
+  return mins >= 9 * 60 && mins < 15 * 60 + 30;
+}
+
+interface NaverMinRow {
+  localDateTime: string;
+  currentPrice: number;
+  openPrice: number;
+}
+
+/** Naver 韩股实时价：当天分钟线最后一点；失败返回 null（静默降级为日线收盘价） */
+async function getNaverLiveQuote(code: string): Promise<LiveQuote | null> {
+  try {
+    const n = seoulNow();
+    const p2 = (v: number) => String(v).padStart(2, '0');
+    const day = `${n.getFullYear()}${p2(n.getMonth() + 1)}${p2(n.getDate())}`;
+    const url =
+      `https://api.stock.naver.com/chart/domestic/item/${code}/minute` +
+      `?startDateTime=${day}000000&endDateTime=${day}235959&timeframe=minute`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': UA },
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    const arr = (await res.json()) as NaverMinRow[];
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+    const last = arr[arr.length - 1];
+    const price = Number(last.currentPrice);
+    if (!Number.isFinite(price) || price <= 0) return null;
+    const open = Number(arr[0].openPrice) || price;
+    return {
+      price,
+      dayChangePct: Number((((price - open) / open) * 100).toFixed(2)),
+      time: String(last.localDateTime || ''),
+      marketOpen: isKrxOpen(),
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** 获取某标的的全量日线（带缓存），各 API 共用 */
 export async function getFullSeries(symbol: string): Promise<{
   series: RhythmPoint[];
@@ -223,16 +321,32 @@ export async function getFullSeries(symbol: string): Promise<{
   const errors: Record<string, string> = {};
   let series: RhythmPoint[] | null = null;
   let source: DataSource = 'simulated';
-  try {
-    series = await fetchNasdaqFull(key);
-    source = 'nasdaq';
-  } catch (e1) {
-    errors.nasdaq = e1 instanceof Error ? e1.message : String(e1);
+  if (key.endsWith('.KS')) {
+    // 韩股：Nasdaq 不覆盖，直接走 Naver，失败再试 Yahoo
     try {
-      series = await fetchYahooFull(key);
-      source = 'yahoo';
-    } catch (e2) {
-      errors.yahoo = e2 instanceof Error ? e2.message : String(e2);
+      series = await fetchNaverFull(key);
+      source = 'naver';
+    } catch (e1) {
+      errors.naver = e1 instanceof Error ? e1.message : String(e1);
+      try {
+        series = await fetchYahooFull(key);
+        source = 'yahoo';
+      } catch (e2) {
+        errors.yahoo = e2 instanceof Error ? e2.message : String(e2);
+      }
+    }
+  } else {
+    try {
+      series = await fetchNasdaqFull(key);
+      source = 'nasdaq';
+    } catch (e1) {
+      errors.nasdaq = e1 instanceof Error ? e1.message : String(e1);
+      try {
+        series = await fetchYahooFull(key);
+        source = 'yahoo';
+      } catch (e2) {
+        errors.yahoo = e2 instanceof Error ? e2.message : String(e2);
+      }
     }
   }
   if (!series) {
@@ -258,6 +372,13 @@ export interface LiveQuote {
  * 失败返回 null，调用方静默降级为日线收盘价，不抛错。
  */
 export async function getLiveQuote(symbol: string): Promise<LiveQuote | null> {
+  const key = symbol.toUpperCase();
+  // 韩股走 Naver 分钟线
+  if (key.endsWith('.KS')) {
+    const code = key.split('.')[0];
+    if (/^\d{6}$/.test(code)) return getNaverLiveQuote(code);
+    return null;
+  }
   try {
     const url = `https://api.nasdaq.com/api/quote/${encodeURIComponent(
       symbol.toUpperCase(),

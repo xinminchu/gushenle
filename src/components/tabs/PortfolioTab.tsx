@@ -8,6 +8,7 @@ import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
 import type { RhythmResponse } from '@/lib/rhythm';
 import { useColorScheme, upText, downText } from '@/lib/colorScheme';
 import CostCalculator from '@/components/CostCalculator';
+import { fmtMoney } from '@/lib/currency';
 
 /**
  * 持仓页：账户视角——我持有多少、成本、盈亏。
@@ -378,7 +379,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                 <div className="text-right">
                   {price != null ? (
                     <>
-                      <div className="text-slate-200 font-semibold text-sm">${price.toFixed(2)}</div>
+                      <div className="text-slate-200 font-semibold text-sm">{fmtMoney(p.symbol, price)}</div>
                       {dayChg != null && (
                         <div className={`text-[11px] ${dayChg >= 0 ? upText(scheme) : downText(scheme)}`}>
                           {dayChg >= 0 ? '+' : ''}
@@ -393,7 +394,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
               </div>
               <div className="mt-2 flex items-center justify-between text-xs">
                 <span className="text-slate-400">
-                  {p.shares} 股 · 成本 ${p.avgCost.toFixed(2)}
+                  {p.shares} 股 · 成本 {fmtMoney(p.symbol, p.avgCost)}
                   {(() => {
                     const d = holdingDays(p.since);
                     return d != null ? (
@@ -418,7 +419,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                 </span>
                 {pnl != null && pnlPct != null ? (
                   <span className={`font-semibold ${pnl >= 0 ? upText(scheme) : downText(scheme)}`}>
-                    {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ({pnl >= 0 ? '+' : ''}
+                    {pnl >= 0 ? '+' : ''}{fmtMoney(p.symbol, Math.abs(pnl))} ({pnl >= 0 ? '+' : ''}
                     {pnlPct.toFixed(2)}%)
                   </span>
                 ) : (

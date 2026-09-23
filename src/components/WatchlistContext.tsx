@@ -44,7 +44,8 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = (symbol: string, name?: string): 'ok' | 'exists' | 'invalid' => {
     const sym = symbol.trim().toUpperCase();
-    if (!/^[A-Z.]{1,8}$/.test(sym)) return 'invalid';
+    // 美股代码（如 AAPL）或数字代码（如韩股 000660.KS）
+    if (!/^([A-Z]{1,8}|\d{6}\.[A-Z]{2})$/.test(sym)) return 'invalid';
     if (items.some((i) => i.symbol === sym)) return 'exists';
     // 名称没填时，有中文名就自动用中文名
     persist([...items, { symbol: sym, name: name?.trim() || symbolToName(sym) }]);

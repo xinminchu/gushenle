@@ -343,7 +343,7 @@ export interface RhythmResponse {
   availableRanges: string[];
   /** 主判断：永远锚定近 3 月 */
   judgment: Judgment;
-  source: 'nasdaq' | 'yahoo' | 'simulated';
+  source: 'nasdaq' | 'yahoo' | 'naver' | 'simulated';
   updatedAt: string;
 }
 
