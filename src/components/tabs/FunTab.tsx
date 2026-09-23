@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Play, Flame, X } from 'lucide-react';
+import { Play, Flame, X, Trophy } from 'lucide-react';
+import { loadStats, recordPlay, type GameId, type GameStat } from '@/lib/gameStats';
 
 // 游戏按需加载：点开哪个才下载哪个，不拖慢首页
 const ClipperGame = dynamic(() => import('../games/ClipperGame'), { ssr: false });
@@ -12,6 +13,28 @@ const KLineBoxGame = dynamic(() => import('../games/KLineBoxGame'), { ssr: false
 
 export default function FunTab() {
   const [activeGame, setActiveGame] = useState<string | null>(null);
+  const [stats, setStats] = useState<Record<GameId, GameStat> | null>(null);
+
+  // 每次进入娱乐页刷新战绩；监听 iframe 游戏的结算事件
+  useEffect(() => {
+    setStats(loadStats());
+    const onMsg = (e: MessageEvent) => {
+      const d = e.data as { type?: string; game?: string; score?: number } | null;
+      if (!d || d.type !== 'gushenle-game-event' || !d.game) return;
+      const game = d.game as GameId;
+      if (game === 'clipper' || game === 'cool30' || game === 'bigtech') {
+        recordPlay(game, d.score || 0);
+        setStats(loadStats());
+      }
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  // 关闭游戏弹窗后刷新战绩（kline 的落袋/自动结算发生在卸载时）
+  useEffect(() => {
+    if (activeGame === null) setStats(loadStats());
+  }, [activeGame]);
 
   const games = [
     {
@@ -79,6 +102,15 @@ export default function FunTab() {
 
             <div className="flex justify-between items-center pt-1 border-t border-slate-700/40">
               <span className="text-[10px] text-slate-500">AI 难度: {game.level}</span>
+              {stats && stats[game.id as GameId] && stats[game.id as GameId].plays > 0 && (
+                <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                  <Trophy className="w-3 h-3 text-amber-400" />
+                  玩了 {stats[game.id as GameId].plays} 次 · 累计 {stats[game.id as GameId].totalScore} 分
+                  {game.id === 'kline' && stats.kline.banked > 0 && (
+                    <span className="text-amber-300">（已落袋 {stats.kline.banked}）</span>
+                  )}
+                </span>
+              )}
               <button
                 onClick={() => setActiveGame(game.id)}
                 className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-all"

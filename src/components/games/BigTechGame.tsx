@@ -276,6 +276,7 @@ export default function BigTechGame() {
 
       if (cards.length > 0 && cards.every(function (c) { return c.done; })) {
         factBox.innerHTML = '🎉 <b style="color:#4ade80">第 ' + round + ' 轮通关！</b> 新一轮即将开始…';
+        window.parent.postMessage({ type: 'gushenle-game-event', game: 'bigtech', score: 100 }, '*');
         setTimeout(function () {
           round++;
           initGame();

@@ -121,6 +121,7 @@ const htmlContent = `<!DOCTYPE html>
           clearInterval(timer);
           finalScore.innerText = score + ' 块';
           overlay.classList.add('show');
+          window.parent.postMessage({ type: 'gushenle-game-event', game: 'cool30', score: score }, '*');
         }
       }, 1000);
     }

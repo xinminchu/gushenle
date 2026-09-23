@@ -12,12 +12,15 @@ import FunTab from '../components/tabs/FunTab';
 import RhythmDashboard from '@/components/RhythmDashboard';
 import AppHeader from '@/components/AppHeader';
 import { WatchlistProvider, useWatchlist } from '@/components/WatchlistContext';
+import { AuthProvider } from '@/context/AuthContext';
 
 export default function Home() {
   return (
-    <WatchlistProvider>
-      <HomeInner />
-    </WatchlistProvider>
+    <AuthProvider>
+      <WatchlistProvider>
+        <HomeInner />
+      </WatchlistProvider>
+    </AuthProvider>
   );
 }
 

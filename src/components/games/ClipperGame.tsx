@@ -248,6 +248,7 @@ const htmlContent = `<!DOCTYPE html>
       clearInterval(timer);
       finalScore.innerText = score;
       overlay.classList.add('show');
+      window.parent.postMessage({ type: 'gushenle-game-event', game: 'clipper', score: score }, '*');
     }
 
     function resetGame() {

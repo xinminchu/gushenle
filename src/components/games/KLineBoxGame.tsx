@@ -98,6 +98,8 @@ const TIPS_ROTATE = [
   '💡 K 线里大多是噪声。人脑天生爱找规律，但短期价格里规律很少、噪声很多。',
 ];
 
+import { recordKlineSession, recordBank, getBanked } from '@/lib/gameStats';
+
 export default function KLineBoxGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [phase, setPhase] = useState<Phase>('loading');
@@ -110,6 +112,10 @@ export default function KLineBoxGame() {
   const [resultGood, setResultGood] = useState(false);
   const [gained, setGained] = useState(0);
   const [tip, setTip] = useState('');
+  const [banked, setBanked] = useState(0);
+  const [bankMsg, setBankMsg] = useState('');
+  const scoreRef = useRef(0);
+  scoreRef.current = score;
 
   const newRound = useCallback(async (streakNow: number) => {
     setPhase('loading');
@@ -146,7 +152,7 @@ export default function KLineBoxGame() {
     setPhase('ready');
   }, []);
 
-  // 挂载：读最佳成绩 + 出第一题
+  // 挂载：读最佳成绩 + 出第一题；记一次游玩；卸载时自动落袋未结算积分
   useEffect(() => {
     try {
       const raw = localStorage.getItem(BEST_KEY);
@@ -157,7 +163,13 @@ export default function KLineBoxGame() {
     } catch {
       /* 忽略 */
     }
+    setBanked(getBanked());
+    recordKlineSession();
     newRound(0);
+    return () => {
+      // 离开游戏自动落袋，避免成果清零
+      if (scoreRef.current > 0) recordBank(scoreRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -185,6 +197,17 @@ export default function KLineBoxGame() {
       /* 忽略 */
     }
     setPhase('answered');
+  };
+
+  // 见好就收：把未落袋积分转入历史已落袋
+  const bank = () => {
+    const pts = scoreRef.current;
+    if (pts <= 0) return;
+    recordBank(pts);
+    setScore(0);
+    setBanked(getBanked());
+    setBankMsg(`💰 落袋为安！${pts} 分已存入历史战绩`);
+    setTimeout(() => setBankMsg(''), 2500);
   };
 
   /* ---------- 画 K 线 ---------- */
@@ -301,11 +324,22 @@ export default function KLineBoxGame() {
 
       {/* HUD */}
       <div className="mt-2 text-xs text-slate-400 bg-[#10172a] border border-slate-700/60 rounded-full px-3 py-1">
-        得分 <b className="text-slate-100">{score}</b>
+        未落袋 <b className="text-slate-100">{score}</b>
+        {' · '}已落袋 <b className="text-amber-300">{banked}</b>
         {' · '}连击 <b className="text-slate-100">{streak}</b>
-        {' · '}最佳 <b className="text-amber-300">{best.best}</b> 分
         {best.streak > 0 && <span className="text-slate-500">（{best.streak} 连击）</span>}
       </div>
+      {score > 0 && (
+        <button
+          onClick={bank}
+          className="w-full mt-2 py-2 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 font-bold text-sm active:scale-95 transition"
+        >
+          💰 见好就收 · 落袋为安（{score} 分）
+        </button>
+      )}
+      {bankMsg && (
+        <div className="mt-2 text-xs text-center text-amber-200">{bankMsg}</div>
+      )}
 
       {/* K 线画布 */}
       <canvas
