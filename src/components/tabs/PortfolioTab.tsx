@@ -7,6 +7,7 @@ import { loadPositions, savePositions, holdingDays, sectorOf, type Position } fr
 import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
 import type { RhythmResponse } from '@/lib/rhythm';
 import { useColorScheme, upText, downText } from '@/lib/colorScheme';
+import CostCalculator from '@/components/CostCalculator';
 
 /**
  * 持仓页：账户视角——我持有多少、成本、盈亏。
@@ -540,6 +541,9 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
           )}
         </div>
       )}
+
+      {/* 真实成本试算器 */}
+      <CostCalculator />
     </div>
   );
 }
