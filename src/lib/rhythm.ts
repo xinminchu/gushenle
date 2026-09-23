@@ -324,6 +324,12 @@ export interface RhythmResponse {
   symbol: string;
   range: string;
   price: number;
+  /** true=盘中实时价，false=日线收盘价 */
+  priceLive: boolean;
+  /** 实时价的时间戳（美东），收盘价时为 null */
+  priceTime: string | null;
+  /** 当日涨跌幅（%，相对昨收）；仅实时价时有值 */
+  dayChangePct: number | null;
   /** 所选区间涨跌幅（%） */
   changePct: number;
   /** 所选区间分位低点 / 高点（5% / 95% 分位数） */

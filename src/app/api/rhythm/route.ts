@@ -9,7 +9,7 @@ import {
   type RhythmPoint,
   type RhythmResponse,
 } from '@/lib/rhythm';
-import { getFullSeries } from '@/lib/marketData';
+import { getFullSeries, getLiveQuote, type LiveQuote } from '@/lib/marketData';
 
 /**
  * 设计说明：
@@ -28,11 +28,16 @@ function buildResponse(
   rangeId: string,
   full: RhythmPoint[],
   source: RhythmResponse['source'],
+  live: LiveQuote | null,
 ): RhythmResponse {
   const series = sliceRange(full, rangeId);
   const closes = series.map((p) => p.close);
-  const last = closes[closes.length - 1];
+  const lastClose = closes[closes.length - 1];
   const first = closes[0];
+
+  // 盘中用实时价，否则用日线收盘价；诊断（judgment）永远走日线收盘序列，不受盘中噪音影响
+  const livePrice = live && live.marketOpen && live.price > 0 ? live.price : null;
+  const displayPrice = livePrice ?? lastClose;
 
   // 所选区间的分位低点/高点（5%/95% 分位数，抗离群点）
   const sorted = [...closes].sort((a, b) => a - b);
@@ -40,7 +45,7 @@ function buildResponse(
   const high = percentile(sorted, 95);
   const slicePos =
     closes.length >= 2 && high > low
-      ? Math.round(Math.min(100, Math.max(0, ((last - low) / (high - low)) * 100)))
+      ? Math.round(Math.min(100, Math.max(0, ((displayPrice - low) / (high - low)) * 100)))
       : null;
 
   // 主判断：基于全量数据，锚定近 3 月
@@ -53,8 +58,11 @@ function buildResponse(
   return {
     symbol,
     range: rangeId,
-    price: Number(last.toFixed(2)),
-    changePct: Number((((last - first) / first) * 100).toFixed(2)),
+    price: Number(displayPrice.toFixed(2)),
+    priceLive: livePrice != null,
+    priceTime: livePrice != null ? live!.time || null : null,
+    dayChangePct: livePrice != null ? live!.dayChangePct : null,
+    changePct: Number((((displayPrice - first) / first) * 100).toFixed(2)),
     low: Number(low.toFixed(2)),
     high: Number(high.toFixed(2)),
     slicePos,
@@ -73,7 +81,9 @@ export async function GET(req: NextRequest) {
   const debug = req.nextUrl.searchParams.get('debug') === '1';
 
   const { series, source, errors } = await getFullSeries(symbol);
-  const data = buildResponse(symbol, range, series, source);
+  // 实时报价失败不影响主流程，静默降级为日线收盘价
+  const live = await getLiveQuote(symbol).catch(() => null);
+  const data = buildResponse(symbol, range, series, source, live);
   if (debug) {
     return NextResponse.json({ ...data, _debug: { errors, fullPoints: series.length } });
   }

@@ -232,3 +232,48 @@ export async function getFullSeries(symbol: string): Promise<{
   cache.set(key, { series, source, expires: Date.now() + 60_000 });
   return { series, source, errors };
 }
+
+export interface LiveQuote {
+  price: number;
+  /** 当日涨跌幅（%），相对昨收 */
+  dayChangePct: number;
+  /** 如 "Sep 23, 2026 11:37 AM ET" */
+  time: string;
+  marketOpen: boolean;
+}
+
+/**
+ * Nasdaq 实时报价（盘中用）。
+ * 日线接口在盘中拿不到今天的 bar（永远显示昨收），所以开盘期间用这个补实时价。
+ * 失败返回 null，调用方静默降级为日线收盘价，不抛错。
+ */
+export async function getLiveQuote(symbol: string): Promise<LiveQuote | null> {
+  try {
+    const url = `https://api.nasdaq.com/api/quote/${encodeURIComponent(
+      symbol.toUpperCase(),
+    )}/info?assetclass=stocks`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': UA,
+        Accept: 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const data = json?.data;
+    const p = data?.primaryData;
+    const price = num(p?.lastSalePrice);
+    if (!Number.isFinite(price) || price <= 0) return null;
+    const dayChangePct = Number(String(p?.percentageChange || '').replace('%', ''));
+    return {
+      price: Number(price.toFixed(2)),
+      dayChangePct: Number.isFinite(dayChangePct) ? Number(dayChangePct.toFixed(2)) : 0,
+      time: String(p?.lastTradeTimestamp || ''),
+      marketOpen: data?.marketStatus === 'Open',
+    };
+  } catch {
+    return null;
+  }
+}

@@ -314,10 +314,24 @@ export default function RhythmDashboard() {
                 </div>
               </div>
 
-              <div className="mt-3 flex items-center gap-3">
+              <div className="mt-3 flex items-center gap-2">
                 <span className="text-sm font-semibold text-slate-200 shrink-0">
                   ${data.price.toFixed(2)}
                 </span>
+                {data.priceLive ? (
+                  <span className="flex items-center gap-1 shrink-0 text-[9px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-emerald-400">实时</span>
+                    {data.dayChangePct != null && (
+                      <span className={data.dayChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                        {data.dayChangePct >= 0 ? '+' : ''}
+                        {data.dayChangePct}%
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-[9px] text-slate-500 shrink-0">收盘价</span>
+                )}
                 <div className="flex-1 h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full bg-gradient-to-r ${scoreGradient(
