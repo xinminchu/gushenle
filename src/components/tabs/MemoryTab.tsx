@@ -113,7 +113,7 @@ export default function MemoryTab() {
       } else if (json.success && json.intent === 'chat') {
         setChatReply(json.reply || '这句话记不了一笔，换个说法试试。');
       } else {
-        setNotice({ type: 'error', text: '没能理解这句话：' + (json.error || '未知错误') });
+        setNotice({ type: 'error', text: json.error || '没能理解这句话，换个说法试试' });
       }
     } catch (err) {
       console.error(err);
