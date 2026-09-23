@@ -403,7 +403,7 @@ export default function RhythmDashboard() {
             {/* 图表类型切换 + 区间高低点标注 */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex bg-slate-800 rounded-lg p-0.5 text-[11px]">
-                {(['candle', 'line'] as const).map((t) => (
+                {(['candle', 'line', 'ohlc'] as const).map((t) => (
                   <button
                     key={t}
                     onClick={() => setChartTypeOverride(t)}
@@ -411,20 +411,22 @@ export default function RhythmDashboard() {
                       chartType === t ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    {t === 'candle' ? 'K线' : '收盘线'}
+                    {t === 'candle' ? 'K线' : t === 'line' ? '收盘线' : '四线'}
                   </button>
                 ))}
               </div>
-              <button
-                onClick={() => setShowRangeHL((v) => !v)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
-                  showRangeHL
-                    ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10'
-                    : 'border-slate-700 text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                区间高低点
-              </button>
+              {chartType !== 'ohlc' && (
+                <button
+                  onClick={() => setShowRangeHL((v) => !v)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                    showRangeHL
+                      ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10'
+                      : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  区间高低点
+                </button>
+              )}
             </div>
 
             <RhythmChart
@@ -434,6 +436,11 @@ export default function RhythmDashboard() {
               showRangeHL={showRangeHL}
               scheme={scheme}
             />
+            {chartType === 'ohlc' && (
+              <p className="text-[10px] text-slate-500 leading-relaxed mt-1.5 px-0.5">
+                怎么看：两条线之间的"带子"越宽，当天波动越大；收盘线贴着最高线走是强势，贴着最低线走是弱势；带子越收越窄之后，往往要选方向了。
+              </p>
+            )}
 
             {/* 分位位置条：现价在所选区间分位中的位置 */}
             <div className="mt-4">

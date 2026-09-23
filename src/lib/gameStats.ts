@@ -22,7 +22,7 @@ export interface GameStat {
 const KEY = 'gushenle:game_stats:v1';
 
 export const GAME_NAMES: Record<GameId, string> = {
-  clipper: '韭菜割割乐',
+  clipper: '韭菜切割乐',
   cool30: '沉思撞球',
   bigtech: '美股巨头大乱斗',
   kline: '历史 K 线盲盒',
@@ -72,16 +72,15 @@ export function recordPlay(id: GameId, score: number): void {
   if (id === 'kline') return;
   const s = loadStats();
   const g = s[id];
-  g.plays += 1;
   g.totalScore += Math.max(0, Math.round(score));
   if (score > g.best) g.best = Math.round(score);
   saveStats(s);
 }
 
-/** kline 打开一次算玩了一次。 */
-export function recordKlineSession(): void {
+/** 打开一次游戏弹窗即记一次游玩（四游戏统一口径：玩了 N 次 = 打开次数）。 */
+export function recordSession(id: GameId): void {
   const s = loadStats();
-  s.kline.plays += 1;
+  s[id].plays += 1;
   saveStats(s);
 }
 

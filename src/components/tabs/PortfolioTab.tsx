@@ -319,7 +319,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
 
       {/* 持仓列表（可拖动手柄排序，顺序自动保存） */}
       {positions.length > 0 && (
-        <div className="text-[10px] text-slate-600 px-1 -mb-1">
+        <div className="text-[11px] text-slate-400 px-1 -mb-1">
           左列：股票 / 股数·成本　右列：现价 / 盈亏
         </div>
       )}
@@ -412,7 +412,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                         }}
                         className="text-blue-400/80 hover:text-blue-300 ml-1 underline underline-offset-2"
                       >
-                        补建仓日
+                        补填建仓日期
                       </button>
                     );
                   })()}

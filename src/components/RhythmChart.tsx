@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AreaSeries,
   CandlestickSeries,
   ColorType,
+  LineSeries,
   LineStyle,
   createChart,
 } from 'lightweight-charts';
@@ -12,7 +13,7 @@ import type { RhythmPoint } from '@/lib/rhythm';
 import type { ColorScheme } from '@/lib/colorScheme';
 import { upHex, downHex } from '@/lib/colorScheme';
 
-export type ChartType = 'candle' | 'line';
+export type ChartType = 'candle' | 'line' | 'ohlc';
 
 interface RhythmChartProps {
   series: RhythmPoint[];
@@ -25,9 +26,18 @@ interface RhythmChartProps {
   scheme: ColorScheme;
 }
 
+/** 四线图图例颜色（中性色，不跟涨跌配色走） */
+const OHLC_COLORS = {
+  high: '#f43f5e', // 最高：玫红
+  low: '#22c55e', // 最低：绿
+  open: '#a78bfa', // 开盘：紫
+  close: '#38bdf8', // 收盘：天蓝（主线，加粗）
+};
+
 /**
  * 谷峰律动价格走势图（lightweight-charts）
- * K线：每天一根蜡烛，实体=开→收，影线=高低点；收盘线：面积图。
+ * K线：每天一根蜡烛，实体=开→收，影线=高低点；收盘线：面积图；
+ * 四线：开/高/低/收四条曲线，看每天波动区间的变化。
  * 深色主题，随容器宽度自适应。
  */
 export default function RhythmChart({
@@ -40,6 +50,8 @@ export default function RhythmChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const UP = upHex(scheme);
   const DOWN = downHex(scheme);
+  // 区间高低点数值：画在左上角 HTML 图例里，避免压住右侧价格轴
+  const [hl, setHl] = useState<{ hi: number; lo: number } | null>(null);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -65,6 +77,11 @@ export default function RhythmChart({
       },
     });
 
+    const hlOf = (pick: (p: RhythmPoint) => number | undefined) => {
+      const vals = series.map((p) => pick(p) ?? p.close);
+      return { hi: Math.max(...vals), lo: Math.min(...vals) };
+    };
+
     if (chartType === 'candle') {
       const candles = chart.addSeries(CandlestickSeries, {
         upColor: UP,
@@ -85,25 +102,45 @@ export default function RhythmChart({
         })),
       );
       if (showRangeHL && series.length > 0) {
-        const hi = Math.max(...series.map((p) => p.high ?? p.close));
-        const lo = Math.min(...series.map((p) => p.low ?? p.close));
+        const { hi, lo } = hlOf((p) => p.high);
+        const loV = hlOf((p) => p.low).lo;
         candles.createPriceLine({
           price: hi,
           color: 'rgba(244, 63, 94, 0.55)',
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
-          axisLabelVisible: true,
+          axisLabelVisible: false,
           title: '区间最高',
         });
         candles.createPriceLine({
-          price: lo,
+          price: loV,
           color: 'rgba(34, 197, 94, 0.55)',
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
-          axisLabelVisible: true,
+          axisLabelVisible: false,
           title: '区间最低',
         });
+        setHl({ hi, lo: loV });
+      } else {
+        setHl(null);
       }
+    } else if (chartType === 'ohlc') {
+      // 四线：开/高/低/收。极值线本身已展示区间上下沿，不再画虚线。
+      const mk = (key: 'open' | 'high' | 'low' | 'close', color: string, width: 1 | 2) => {
+        const s = chart.addSeries(LineSeries, {
+          color,
+          lineWidth: width,
+          priceLineVisible: false,
+          lastValueVisible: key === 'close',
+          crosshairMarkerVisible: key === 'close',
+        });
+        s.setData(series.map((p) => ({ time: p.date, value: p[key] ?? p.close })));
+      };
+      mk('high', OHLC_COLORS.high, 1);
+      mk('low', OHLC_COLORS.low, 1);
+      mk('open', OHLC_COLORS.open, 1);
+      mk('close', OHLC_COLORS.close, 2);
+      setHl(null);
     } else {
       // 收盘线颜色跟随区间净涨跌 + 当前配色方案
       const first = series[0]?.close ?? 0;
@@ -119,14 +156,13 @@ export default function RhythmChart({
       });
       area.setData(series.map((p) => ({ time: p.date, value: p.close })));
       if (showRangeHL && series.length > 0) {
-        const hi = Math.max(...series.map((p) => p.close));
-        const lo = Math.min(...series.map((p) => p.close));
+        const { hi, lo } = hlOf((p) => p.close);
         area.createPriceLine({
           price: hi,
           color: 'rgba(244, 63, 94, 0.55)',
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
-          axisLabelVisible: true,
+          axisLabelVisible: false,
           title: '区间最高',
         });
         area.createPriceLine({
@@ -134,9 +170,12 @@ export default function RhythmChart({
           color: 'rgba(34, 197, 94, 0.55)',
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
-          axisLabelVisible: true,
+          axisLabelVisible: false,
           title: '区间最低',
         });
+        setHl({ hi, lo });
+      } else {
+        setHl(null);
       }
     }
     chart.timeScale().fitContent();
@@ -151,7 +190,7 @@ export default function RhythmChart({
       ro.disconnect();
       chart.remove();
     };
-  }, [series, height, chartType, showRangeHL, scheme]);
+  }, [series, height, chartType, showRangeHL, scheme, UP, DOWN]);
 
   if (series.length === 0) {
     return (
@@ -164,5 +203,43 @@ export default function RhythmChart({
     );
   }
 
-  return <div ref={containerRef} className="w-full" style={{ height }} />;
+  return (
+    <div className="relative w-full" style={{ height }}>
+      <div ref={containerRef} className="w-full h-full" />
+      {/* 区间高低点图例：放左上角，不压右侧价格轴 */}
+      {hl && chartType !== 'ohlc' && (
+        <div className="absolute top-1 left-1 flex items-center gap-2 text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
+          <span>
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500/70 mr-1" />
+            区间最高 {hl.hi.toFixed(2)}
+          </span>
+          <span>
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500/70 mr-1" />
+            区间最低 {hl.lo.toFixed(2)}
+          </span>
+        </div>
+      )}
+      {/* 四线图例 */}
+      {chartType === 'ohlc' && (
+        <div className="absolute top-1 left-1 flex items-center gap-2 text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
+          {(
+            [
+              ['最高', OHLC_COLORS.high],
+              ['最低', OHLC_COLORS.low],
+              ['开盘', OHLC_COLORS.open],
+              ['收盘', OHLC_COLORS.close],
+            ] as const
+          ).map(([label, color]) => (
+            <span key={label}>
+              <span
+                className="inline-block w-2.5 h-[2px] rounded mr-1 align-middle"
+                style={{ background: color }}
+              />
+              {label}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }

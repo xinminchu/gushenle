@@ -15,8 +15,8 @@ const translations = {
     supabaseDb: '1. Supabase 数据库',
     geminiApi: '2. Gemini Flash API',
     
-    // 割割乐小游戏
-    gameTitle: '🎮 沉思乐：【韭菜割割乐】',
+    // 切割乐小游戏
+    gameTitle: '🎮 沉思乐：【韭菜切割乐】',
     slicedCount: '🌱 已割韭菜情绪',
     timeLeft: '⏱️ 冷静倒计时',
     speedLabel: '韭菜飘升速度',

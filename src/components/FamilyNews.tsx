@@ -225,8 +225,7 @@ export default function FamilyNews() {
         </div>
         {dayGroups.size === 0 ? (
           <p className="text-[11px] text-slate-500 py-1">未来7天没有重要日程，可以安心看律动。</p>
-        ) : (
-          <div className="space-y-2.5">
+        ) : (          <div className="space-y-2.5">
             {[...dayGroups.entries()].map(([date, evts]) => (
               <div key={date} className="flex gap-2.5">
                 <div className="shrink-0 w-20 pt-0.5">
@@ -255,6 +254,9 @@ export default function FamilyNews() {
             ))}
           </div>
         )}
+        <p className="text-[10px] text-slate-600 pt-1">
+          📊 自选股财报日：在「今日」页管理自选后，有财报的日子会自动列在这里。
+        </p>
         {/* 全年大事记 */}
         <div className="pt-1 border-t border-slate-800">
           <button
@@ -265,7 +267,7 @@ export default function FamilyNews() {
             <ChevronDown className={`w-3 h-3 transition-transform ${yearOpen ? 'rotate-180' : ''}`} />
           </button>
           {yearOpen && (
-            <div className="space-y-3 pt-1 max-h-80 overflow-y-auto">
+            <div className="space-y-3 pt-1">
               {[...monthGroups.entries()].map(([m, evts]) => (
                 <div key={m}>
                   <p className="text-[10px] font-semibold text-slate-500 mb-1">{Number(m)}月</p>

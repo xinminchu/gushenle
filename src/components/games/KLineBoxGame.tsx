@@ -98,7 +98,7 @@ const TIPS_ROTATE = [
   '💡 K 线里大多是噪声。人脑天生爱找规律，但短期价格里规律很少、噪声很多。',
 ];
 
-import { recordKlineSession, recordBank, getBanked } from '@/lib/gameStats';
+import { recordBank, getBanked } from '@/lib/gameStats';
 
 export default function KLineBoxGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -164,7 +164,6 @@ export default function KLineBoxGame() {
       /* 忽略 */
     }
     setBanked(getBanked());
-    recordKlineSession();
     newRound(0);
     return () => {
       // 离开游戏自动落袋，避免成果清零
