@@ -142,9 +142,11 @@ export default function BigTechGame() {
     const n = level;
     // 奇数格：floor(n*n/2) 对子 + 1 张幸运卡（点开即消除）
     const pairs = Math.floor((n * n) / 2);
-    const cell = n === 5 ? 62 : n === 7 ? 44 : 34;
     const gap = n === 5 ? 8 : n === 7 ? 6 : 4;
-    const compact = cell < 55; // 小格只显示代码
+    const compact = n !== 5; // 7x7/9x9 小格只显示代码
+    const symFs = n === 5 ? 10 : n === 7 ? 9 : 8;
+    const nmFs = 13, secFs = 9;
+    const starFs = n === 9 ? 13 : 20, lkFs = n === 9 ? 7 : 10;
     const score = pairs * 10; // 通关得分随难度走
     const stocks = buildPayload();
     const stocksJson = JSON.stringify(stocks);
@@ -156,57 +158,58 @@ export default function BigTechGame() {
   <style>
     * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
     body {
-      margin: 0; padding: 14px 0; background: #0b0f19; color: #fff;
+      margin: 0; padding: 10px 12px 14px; background: #0b0f19; color: #fff;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-      min-height: 100vh; touch-action: manipulation;
+      touch-action: manipulation;
     }
-    .title { font-size: 16px; font-weight: bold; color: #4ade80; }
+    .wrap { width: 100%; max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; }
+    .title { font-size: 16px; font-weight: bold; color: #4ade80; margin: 2px 0 0; }
     .hud {
-      margin-top: 8px; font-size: 12px; color: #94a3b8;
+      margin-top: 8px; font-size: 12px; color: #94a3b8; white-space: nowrap; max-width: 100%;
       background: #10172a; border: 1px solid #334155; border-radius: 20px;
       padding: 5px 14px;
     }
     .hud b { color: #e2e8f0; }
     .grid {
-      display: grid; grid-template-columns: repeat(${n}, ${cell}px); gap: ${gap}px;
-      background: #1e293b; padding: 12px; border-radius: 16px; margin-top: 10px;
-      justify-content: center;
+      display: grid; grid-template-columns: repeat(${n}, 1fr); gap: ${gap}px;
+      background: #1e293b; padding: 10px; border-radius: 16px; margin-top: 10px; width: 100%;
     }
     .cell {
-      width: ${cell}px; height: ${cell}px; border-radius: 10px;
+      width: 100%; aspect-ratio: 1 / 1; border-radius: 9px; min-width: 0; overflow: hidden;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       cursor: pointer; text-align: center; line-height: 1.25;
       transition: transform 0.15s, filter 0.15s;
       border: 1px solid rgba(255,255,255,0.12);
     }
     .cell:active { transform: scale(0.93); }
-    .cell .sym { font-size: ${compact ? (cell <= 36 ? 8 : 10) : 10}px; font-weight: 700; color: rgba(255,255,255,0.85); }
-    .cell .nm { font-size: 14px; font-weight: 800; color: #fff; margin: 1px 0; }
-    .cell .sec { font-size: 9px; color: rgba(255,255,255,0.65); }
+    .cell .sym { font-size: ${symFs}px; font-weight: 700; color: rgba(255,255,255,0.85); }
+    .cell .nm { font-size: ${nmFs}px; font-weight: 800; color: #fff; margin: 1px 0; white-space: nowrap; }
+    .cell .sec { font-size: ${secFs}px; color: rgba(255,255,255,0.65); white-space: nowrap; }
     ${compact ? '.cell .nm, .cell .sec { display: none; }' : ''}
     .cell.lucky { background: linear-gradient(135deg, #713f12, #a16207); border-color: #facc15; }
-    .cell.lucky .star { font-size: ${cell <= 36 ? 14 : 22}px; line-height: 1; }
-    .cell.lucky .lk { font-size: ${cell <= 36 ? 7 : 10}px; color: #fde68a; }
+    .cell.lucky .star { font-size: ${starFs}px; line-height: 1; }
+    .cell.lucky .lk { font-size: ${lkFs}px; color: #fde68a; white-space: nowrap; }
     .cell.selected { outline: 3px solid #38bdf8; outline-offset: -1px; filter: brightness(1.25); }
     .fact-box {
-      margin-top: 12px; width: 344px; min-height: 64px; background: #10172a;
-      border: 1px solid #334155; padding: 10px 14px; border-radius: 10px;
-      font-size: 13px; color: #cbd5e1; text-align: center; display: flex; align-items: center; justify-content: center;
+      margin-top: 10px; width: 100%; min-height: 56px; background: #10172a;
+      border: 1px solid #334155; padding: 8px 12px; border-radius: 10px;
+      font-size: 12px; color: #cbd5e1; text-align: center; display: flex; align-items: center; justify-content: center;
       line-height: 1.5;
     }
     .btn-restart {
-      margin-top: 12px; background: #334155; color: #38bdf8; border: 1px solid #38bdf8;
-      padding: 8px 24px; border-radius: 20px; font-weight: bold; font-size: 14px; cursor: pointer;
+      margin-top: 10px; background: #334155; color: #38bdf8; border: 1px solid #38bdf8;
+      padding: 7px 24px; border-radius: 20px; font-weight: bold; font-size: 13px; cursor: pointer;
     }
   </style>
 </head>
 <body>
+<div class="wrap">
   <div class="title">美股巨头 ${n}x${n} 配对消除</div>
   <div class="hud" id="hud"></div>
   <div class="grid" id="grid"></div>
   <div class="fact-box" id="factBox">💡 配对消除两个相同股票，解锁冷知识！</div>
   <button class="btn-restart" onclick="initGame()">重新开始 🔄</button>
+</div>
 
   <script>
     var STOCKS = ${stocksJson};
@@ -355,7 +358,7 @@ export default function BigTechGame() {
       </div>
       <iframe
         srcDoc={htmlContent}
-        className="w-full h-[560px] border-0 rounded-2xl overflow-hidden"
+        className="w-full h-[580px] border-0 rounded-2xl overflow-hidden"
         title="美股巨头大乱斗"
       />
     </div>

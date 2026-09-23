@@ -107,20 +107,22 @@ export default function FunTab() {
               </div>
             </div>
 
-            <div className="flex justify-between items-center pt-1 border-t border-slate-700/40">
-              <span className="text-[10px] text-slate-500">AI 难度: {game.level}</span>
-              {stats && stats[game.id as GameId] && stats[game.id as GameId].plays > 0 && (
-                <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                  <Trophy className="w-3 h-3 text-amber-400" />
-                  玩了 {stats[game.id as GameId].plays} 次 · 累计 {stats[game.id as GameId].totalScore} 分
-                  {game.id === 'kline' && stats.kline.banked > 0 && (
-                    <span className="text-amber-300">（已落袋 {stats.kline.banked}）</span>
-                  )}
-                </span>
-              )}
+            <div className="flex justify-between items-center gap-2 pt-1 border-t border-slate-700/40">
+              <div className="flex items-center gap-x-2 gap-y-0.5 flex-wrap min-w-0 text-[10px]">
+                <span className="text-slate-500 whitespace-nowrap">AI 难度: {game.level}</span>
+                {stats && stats[game.id as GameId] && stats[game.id as GameId].plays > 0 && (
+                  <span className="text-slate-400 flex items-center gap-1 whitespace-nowrap">
+                    <Trophy className="w-3 h-3 text-amber-400 shrink-0" />
+                    玩了 {stats[game.id as GameId].plays} 次 · 累计 {stats[game.id as GameId].totalScore} 分
+                    {game.id === 'kline' && stats.kline.banked > 0 && (
+                      <span className="text-amber-300">（已落袋 {stats.kline.banked}）</span>
+                    )}
+                  </span>
+                )}
+              </div>
               <button
                 onClick={() => openGame(game.id)}
-                className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-all"
+                className="shrink-0 whitespace-nowrap bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-all"
               >
                 <Play className="w-3 h-3 fill-current" /> 立即开始
               </button>

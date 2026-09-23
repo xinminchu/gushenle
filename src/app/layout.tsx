@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: '股神乐 (Gushenle) - 个人与家庭投资伴侣',
-  description: '快乐炒股，轻松投资。不赌不堵，不气不弃。',
+  description: '快乐炒股 轻松投资，不赌不堵 不气不弃',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
