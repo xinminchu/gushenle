@@ -86,6 +86,15 @@ const htmlContent = `<!DOCTYPE html>
       }
     }
 
+    // 挡板反弹时：把之前撞掉的砖块补满（词重新打乱），30 秒内砖块无限续上
+    function refillBricks() {
+      let missing = false;
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++)
+          if (bricks[r][c].status === 0) { bricks[r][c].status = 1; missing = true; }
+      if (missing) brickWords = shuffled(WORDS20);
+    }
+
     function movePaddle(clientX) {
       const rect = canvas.getBoundingClientRect();
       paddle.x = Math.max(0, Math.min(canvas.width - paddle.w, clientX - rect.left - paddle.w / 2));
@@ -151,6 +160,7 @@ const htmlContent = `<!DOCTYPE html>
         const c = Math.max(-1, Math.min(1, rel));
         ball.vx = c * 6; // 中间衰减、边缘加大，最多 ±6
         ball.vy = -Math.sqrt(Math.max(speed * speed - ball.vx * ball.vx, 4)); // 保持球速，vy 至少为 2
+        refillBricks(); // 挡板反弹：补满之前撞掉的砖块
       }
 
       // 砖块碰撞：按 x/y 轴侵入量，侵入小的轴翻转对应速度分量
@@ -208,7 +218,7 @@ const htmlContent = `<!DOCTYPE html>
             ctx.fillStyle = ROW_COLORS[r];
             ctx.fillRect(bx, by, brickW, brickH);
             ctx.fillStyle = '#ffffff';
-            ctx.font = '11px sans-serif';
+            ctx.font = 'bold 13px sans-serif';
             ctx.fillText(brickWords[r * cols + c], bx + brickW / 2, by + brickH / 2 + 1);
           }
         }
@@ -221,7 +231,7 @@ const htmlContent = `<!DOCTYPE html>
         const t = (now - f.born) / 600;
         ctx.globalAlpha = 1 - t;
         ctx.fillStyle = '#4ade80';
-        ctx.font = 'bold 11px sans-serif';
+        ctx.font = 'bold 12px sans-serif';
         ctx.fillText('+1 斩心魔', f.x, f.y - t * 30);
       });
       ctx.globalAlpha = 1;
