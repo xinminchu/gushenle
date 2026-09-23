@@ -64,17 +64,27 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  let trackError: string | null = null;
   try {
     if (URL && ANON) {
       const ipHash = createHash('sha256').update(clientIp(req)).digest('hex');
       const anon = createClient(URL, ANON, { auth: { persistSession: false } });
-      await anon.from('site_visits').upsert(
+      const { error } = await anon.from('site_visits').upsert(
         { visit_date: todayStr(), ip_hash: ipHash },
         { onConflict: 'visit_date,ip_hash', ignoreDuplicates: true },
       );
+      // 临时诊断：把写入错误直接返回（定位后删除）
+      trackError = error ? `${error.code} | ${error.message}` : 'insert ok';
+    } else {
+      trackError = 'missing supabase env';
     }
-  } catch {
-    // 打点失败不影响页面
+  } catch (e) {
+    trackError = `thrown: ${String(e)}`;
   }
-  return GET();
+  try {
+    const stats = await getStats();
+    return NextResponse.json({ ok: true, ...stats, trackError });
+  } catch {
+    return NextResponse.json({ ok: false, trackError });
+  }
 }
