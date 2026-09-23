@@ -150,10 +150,14 @@ interface YahooChartResponse {
 
 /** Yahoo Finance 多年日线（备用源；对机房 IP 偶发 429，失败自动重试一次） */
 async function fetchYahooFull(symbol: string): Promise<RhythmPoint[]> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
-    symbol,
-  )}?range=3y&interval=1d`;
-  const attempt = async (): Promise<RhythmPoint[]> => {
+  // query1 被限时换 query2 再试，两台主机限流通常不同步
+  const hosts = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com'];
+  let lastErr: unknown = null;
+  for (const host of hosts) {
+    const url = `https://${host}/v8/finance/chart/${encodeURIComponent(
+      symbol,
+    )}?range=3y&interval=1d`;
+    const attempt = async (): Promise<RhythmPoint[]> => {
     const res = await fetch(url, {
       headers: { 'User-Agent': UA },
       next: { revalidate: 300 },
@@ -189,8 +193,14 @@ async function fetchYahooFull(symbol: string): Promise<RhythmPoint[]> {
     return await attempt();
   } catch (e) {
     await new Promise((r) => setTimeout(r, 1500));
-    return await attempt();
+    try {
+      return await attempt();
+    } catch (e2) {
+      lastErr = e2;
+    }
   }
+  } // end host loop
+  throw lastErr instanceof Error ? lastErr : new Error('Yahoo all hosts failed');
 }
 
 // 按标的缓存全量日线（单实例内存；跨实例靠上面 fetch 的 Vercel Data Cache）
