@@ -17,8 +17,26 @@ import {
   type OpAction,
 } from '@/lib/operations';
 import { applyOperationToPositions } from '@/lib/positions';
+import { loadPositions } from '@/lib/positions';
+import { loadWatchlist } from '@/lib/watchlist';
 
 interface Review { r5: number | null; r20: number | null }
+
+interface AdviceCandidate {
+  symbol: string;
+  name: string;
+  price: number;
+  score: number;
+  status: string;
+  reason: string;
+}
+
+interface AdviceResult {
+  candidates: AdviceCandidate[];
+  excluded: AdviceCandidate[];
+  held: { symbol: string; name: string }[];
+  asOf: string;
+}
 
 export default function MemoryTab() {
   const [inputText, setInputText] = useState('');
@@ -27,6 +45,13 @@ export default function MemoryTab() {
   const [loading, setLoading] = useState(false);
   const [ops, setOps] = useState<OperationRecord[]>([]);
   const [reviews, setReviews] = useState<Record<string, Review>>({});
+  // 页面内提示（替代 alert，不再触发浏览器 Suppress dialogs）
+  const [notice, setNotice] = useState<{ type: 'error' | 'info'; text: string } | null>(null);
+  // 闲聊意图：AI 的一句引导回复
+  const [chatReply, setChatReply] = useState<string | null>(null);
+  // 咨询意图：按律动给出的买入建议
+  const [advice, setAdvice] = useState<AdviceResult | null>(null);
+  const [adviceLoading, setAdviceLoading] = useState(false);
   // 解析后可微调的字段
   const [priceEdit, setPriceEdit] = useState('');
   const [qtyEdit, setQtyEdit] = useState('');
@@ -66,6 +91,9 @@ export default function MemoryTab() {
     if (!textToAnalyze.trim()) return;
     setLoading(true);
     setParsedResult(null);
+    setChatReply(null);
+    setAdvice(null);
+    setNotice(null);
     try {
       const res = await fetch('/api/analyze-memory', {
         method: 'POST',
@@ -73,21 +101,53 @@ export default function MemoryTab() {
         body: JSON.stringify({ rawText: textToAnalyze }),
       });
       const json = await res.json();
-      if (json.success) {
+      if (json.success && json.intent === 'record') {
         const d = json.data;
         setParsedResult(d);
         setPriceEdit(d.price != null ? String(d.price) : '');
         setQtyEdit(d.qty != null ? String(d.qty) : '');
         setDateEdit(d.opDate || todayStr());
         setActionEdit(normalizeAction(d.action) ?? 'sell');
+      } else if (json.success && json.intent === 'advice') {
+        await fetchAdvice();
+      } else if (json.success && json.intent === 'chat') {
+        setChatReply(json.reply || '这句话记不了一笔，换个说法试试。');
       } else {
-        alert('解析失败：' + (json.error || '未知错误'));
+        setNotice({ type: 'error', text: '没能理解这句话：' + (json.error || '未知错误') });
       }
     } catch (err) {
       console.error(err);
-      alert('请求失败，请检查网络');
+      setNotice({ type: 'error', text: '请求失败，请检查网络后重试' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  /** 咨询意图：按自选列表逐只算律动，给出"买不算追高"的候选 */
+  const fetchAdvice = async () => {
+    setAdviceLoading(true);
+    try {
+      const { items } = loadWatchlist();
+      const held = new Set(loadPositions().map((p) => p.symbol.toUpperCase()));
+      const res = await fetch('/api/advise', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbols: items.map((i) => ({ symbol: i.symbol, name: i.name })),
+          exclude: [...held],
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setAdvice(json);
+      } else {
+        setNotice({ type: 'error', text: json.error || '律动扫描失败' });
+      }
+    } catch (err) {
+      console.error(err);
+      setNotice({ type: 'error', text: '律动扫描失败，请检查网络后重试' });
+    } finally {
+      setAdviceLoading(false);
     }
   };
 
@@ -98,7 +158,7 @@ export default function MemoryTab() {
       return;
     }
     if (!speechSupported) {
-      alert('当前浏览器不支持语音识别，请直接在输入框打字');
+      setNotice({ type: 'info', text: '当前浏览器不支持语音识别，请直接在输入框打字' });
       return;
     }
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -132,12 +192,12 @@ export default function MemoryTab() {
     if (!parsedResult) return;
     const symbol = String(parsedResult.symbol || '').toUpperCase();
     if (!symbol || symbol === 'UNKNOWN') {
-      alert('没识别出股票代码，请说出或输入代码，例如 AAPL');
+      setNotice({ type: 'error', text: '没识别出股票代码，请说出或输入代码，例如 AAPL' });
       return;
     }
     const price = parseFloat(priceEdit);
     if (!priceEdit || !(price > 0)) {
-      alert('请填写成交价格');
+      setNotice({ type: 'error', text: '请填写成交价格' });
       return;
     }
     const qty = qtyEdit ? parseInt(qtyEdit, 10) : undefined;
@@ -179,7 +239,7 @@ export default function MemoryTab() {
   const doSync = (op: OperationRecord) => {
     const qty = parseInt(syncQty, 10);
     if (!(qty > 0)) {
-      alert('请填写股数');
+      setNotice({ type: 'error', text: '请填写股数' });
       return;
     }
     const r = applyOperationToPositions({
@@ -189,7 +249,7 @@ export default function MemoryTab() {
       qty,
       date: op.date,
     });
-    alert(r.msg);
+    setNotice({ type: r.ok ? 'info' : 'error', text: r.msg });
     if (r.ok) setSyncingId(null);
   };
 
@@ -221,7 +281,7 @@ export default function MemoryTab() {
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="例如：今天 235 卖了 100 股苹果 AAPL，涨太猛了先落袋..."
+            placeholder="例如：今天 235 卖了 100 股苹果 AAPL，涨太猛了先落袋… 也可以直接问：现在买什么好？"
             className="w-full h-20 bg-slate-800/60 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
           />
           <button
@@ -264,6 +324,107 @@ export default function MemoryTab() {
         <div className="flex items-center justify-center space-x-2 text-slate-400 py-6 text-xs">
           <Sparkles className="w-4 h-4 animate-spin text-emerald-400" />
           <span>AI 正在整理...</span>
+        </div>
+      )}
+
+      {/* 页面内提示（替代 alert） */}
+      {notice && !loading && (
+        <div
+          className={`border rounded-xl p-3.5 flex items-start gap-2 ${
+            notice.type === 'error'
+              ? 'border-amber-500/40 bg-amber-500/10'
+              : 'border-blue-500/30 bg-blue-500/10'
+          }`}
+        >
+          <p className="flex-1 text-xs leading-relaxed text-slate-200">{notice.text}</p>
+          <button
+            onClick={() => setNotice(null)}
+            className="text-slate-500 hover:text-slate-300 shrink-0"
+            aria-label="关闭提示"
+          >
+            <XCircle className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* 闲聊意图：AI 的一句引导 */}
+      {chatReply && !loading && (
+        <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-2">
+          <div className="text-xs font-semibold text-slate-200 flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> AI 说
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed">{chatReply}</p>
+          <button
+            onClick={() => setChatReply(null)}
+            className="text-[11px] text-slate-500 hover:text-slate-300"
+          >
+            知道了
+          </button>
+        </div>
+      )}
+
+      {adviceLoading && (
+        <div className="flex items-center justify-center space-x-2 text-slate-400 py-6 text-xs">
+          <Sparkles className="w-4 h-4 animate-spin text-emerald-400" />
+          <span>正在按律动扫描自选…</span>
+        </div>
+      )}
+
+      {/* 咨询意图：按律动给出的买入候选 */}
+      {advice && !adviceLoading && (
+        <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
+            <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5" /> 按律动，现在买不算追高的
+            </span>
+            <span className="text-[10px] text-slate-500">{advice.asOf}</span>
+          </div>
+
+          {advice.candidates.length === 0 ? (
+            <p className="text-xs text-slate-300 leading-relaxed">
+              自选里的股票按律动现在都不适合新开仓，先不追，等回调。
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {advice.candidates.map((c) => (
+                <div key={c.symbol} className="bg-slate-800/60 border border-slate-800 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-bold text-slate-100">
+                      {c.symbol}{' '}
+                      <span className="text-[11px] font-normal text-slate-400">{c.name}</span>
+                    </span>
+                    <span className="text-xs text-slate-300">
+                      ${c.price.toFixed(2)} ·{' '}
+                      <span className="text-emerald-400 font-bold">{c.score}分</span>
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 mb-1">律动诊断：{c.status}</div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">{c.reason}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {advice.excluded.length > 0 && (
+            <div className="pt-1">
+              <div className="text-[10px] text-slate-500 mb-1">已排除（拦追高 / 不接飞刀）：</div>
+              {advice.excluded.map((e) => (
+                <p key={e.symbol} className="text-[11px] text-slate-500 leading-relaxed">
+                  · {e.symbol} {e.reason}
+                </p>
+              ))}
+            </div>
+          )}
+
+          <p className="text-[10px] text-slate-600 leading-relaxed border-t border-slate-800 pt-2">
+            律动只帮你避开追高，不预测涨跌；仅供参考，不构成投资建议。
+          </p>
+          <button
+            onClick={() => setAdvice(null)}
+            className="text-[11px] text-slate-500 hover:text-slate-300"
+          >
+            收起
+          </button>
         </div>
       )}
 
