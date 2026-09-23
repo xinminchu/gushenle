@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 // 相对路径导入组件
 import BottomNav from '../components/BottomNav';
+import SiteFooter from '../components/SiteFooter';
+import { useSiteInfo } from '../components/modals/SiteInfoModal';
 import PortfolioTab from '../components/tabs/PortfolioTab';
 import MemoryTab from '../components/tabs/MemoryTab';
 import CommunityTab from '../components/tabs/CommunityTab';
@@ -28,6 +30,7 @@ function HomeInner() {
   // 当前激活的页签状态：'today' | 'portfolio' | 'memory' | 'community' | 'fun'
   const [activeTab, setActiveTab] = useState<string>('today');
   const { setFocusSymbol } = useWatchlist();
+  const { openSection, modal } = useSiteInfo();
 
   // 持仓页点某只 -> 跳到今日页看它的律动诊断
   const viewSymbol = (symbol: string) => {
@@ -52,6 +55,10 @@ function HomeInner() {
         {activeTab === 'community' && <CommunityTab />}
         {activeTab === 'fun' && <FunTab />}
       </div>
+
+      {/* 站点页脚：简介 / 用法 / 版权法律 / 时间轴 */}
+      <SiteFooter onOpen={openSection} />
+      {modal}
 
       {/* 底部导航栏 */}
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
