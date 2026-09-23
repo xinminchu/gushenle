@@ -38,6 +38,16 @@ interface AdviceResult {
   asOf: string;
 }
 
+interface SingleAdvice {
+  symbol: string;
+  name: string;
+  price: number;
+  score: number;
+  status: string;
+  side: 'buy' | 'sell';
+  verdict: string;
+}
+
 export default function MemoryTab() {
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -52,6 +62,8 @@ export default function MemoryTab() {
   // 咨询意图：按律动给出的买入建议
   const [advice, setAdvice] = useState<AdviceResult | null>(null);
   const [adviceLoading, setAdviceLoading] = useState(false);
+  // 单只咨询：问"今天可以卖IBM吗"这种
+  const [singleAdvice, setSingleAdvice] = useState<SingleAdvice | null>(null);
   // 解析后可微调的字段
   const [priceEdit, setPriceEdit] = useState('');
   const [qtyEdit, setQtyEdit] = useState('');
@@ -93,6 +105,7 @@ export default function MemoryTab() {
     setParsedResult(null);
     setChatReply(null);
     setAdvice(null);
+    setSingleAdvice(null);
     setNotice(null);
     try {
       const res = await fetch('/api/analyze-memory', {
@@ -109,7 +122,11 @@ export default function MemoryTab() {
         setDateEdit(d.opDate || todayStr());
         setActionEdit(normalizeAction(d.action) ?? 'sell');
       } else if (json.success && json.intent === 'advice') {
-        await fetchAdvice();
+        if (json.symbol) {
+          await fetchSingleAdvice(json.symbol, json.side === 'sell' ? 'sell' : 'buy');
+        } else {
+          await fetchAdvice();
+        }
       } else if (json.success && json.intent === 'chat') {
         setChatReply(json.reply || '这句话记不了一笔，换个说法试试。');
       } else {
@@ -120,6 +137,29 @@ export default function MemoryTab() {
       setNotice({ type: 'error', text: '请求失败，请检查网络后重试' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  /** 单只咨询：问某只股票现在能不能买/卖，按律动给结论 */
+  const fetchSingleAdvice = async (symbol: string, side: 'buy' | 'sell') => {
+    setAdviceLoading(true);
+    try {
+      const res = await fetch('/api/advise', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'single', symbol, side }),
+      });
+      const json = await res.json();
+      if (json.success && json.single) {
+        setSingleAdvice(json.single);
+      } else {
+        setNotice({ type: 'info', text: json.error || '没找到这只股票的行情数据' });
+      }
+    } catch (err) {
+      console.error(err);
+      setNotice({ type: 'error', text: '律动诊断失败，请检查网络后重试' });
+    } finally {
+      setAdviceLoading(false);
     }
   };
 
@@ -281,7 +321,7 @@ export default function MemoryTab() {
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="例如：今天 235 卖了 100 股苹果 AAPL，涨太猛了先落袋… 也可以直接问：现在买什么好？"
+            placeholder="例如：今天 235 卖了 100 股苹果 AAPL… 也可以问：现在买什么好？/ 今天可以卖IBM吗？"
             className="w-full h-20 bg-slate-800/60 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
           />
           <button
@@ -366,7 +406,7 @@ export default function MemoryTab() {
       {adviceLoading && (
         <div className="flex items-center justify-center space-x-2 text-slate-400 py-6 text-xs">
           <Sparkles className="w-4 h-4 animate-spin text-emerald-400" />
-          <span>正在按律动扫描自选…</span>
+          <span>正在按律动诊断…</span>
         </div>
       )}
 
@@ -421,6 +461,41 @@ export default function MemoryTab() {
           </p>
           <button
             onClick={() => setAdvice(null)}
+            className="text-[11px] text-slate-500 hover:text-slate-300"
+          >
+            收起
+          </button>
+        </div>
+      )}
+
+      {/* 单只咨询：按律动给这只股票的买卖结论 */}
+      {singleAdvice && !adviceLoading && (
+        <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
+            <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5" />
+              {singleAdvice.side === 'sell' ? '按律动，现在能不能卖' : '按律动，这只现在能不能买'}
+            </span>
+          </div>
+          <div className="bg-slate-800/60 border border-slate-800 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-bold text-slate-100">
+                {singleAdvice.symbol}{' '}
+                <span className="text-[11px] font-normal text-slate-400">{singleAdvice.name}</span>
+              </span>
+              <span className="text-xs text-slate-300">
+                ${singleAdvice.price.toFixed(2)} ·{' '}
+                <span className="text-emerald-400 font-bold">{singleAdvice.score}分</span>
+              </span>
+            </div>
+            <div className="text-[10px] text-slate-500 mb-1">律动诊断：{singleAdvice.status}</div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">{singleAdvice.verdict}</p>
+          </div>
+          <p className="text-[10px] text-slate-600 leading-relaxed border-t border-slate-800 pt-2">
+            律动只帮你避开追高割肉，不预测涨跌；仅供参考，不构成投资建议。
+          </p>
+          <button
+            onClick={() => setSingleAdvice(null)}
             className="text-[11px] text-slate-500 hover:text-slate-300"
           >
             收起

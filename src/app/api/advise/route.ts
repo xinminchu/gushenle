@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildJudgment, STATUS_LABELS, type StatusKey } from '@/lib/rhythm';
 import { getFullSeries } from '@/lib/marketData';
+import { symbolToName } from '@/lib/stockAliases';
 
 /**
  * 按谷峰律动给"买什么"建议。
@@ -58,9 +59,108 @@ function excludedReason(statusKey: StatusKey, score: number): string {
   return `律动 ${s} 分，${STATUS_LABELS[statusKey]}，已排除。`;
 }
 
+/**
+ * 单只咨询的结论：只引用律动诊断，不预测涨跌。
+ * side=buy 回答"这只现在能不能买"，side=sell 回答"这只现在能不能卖"。
+ */
+function singleVerdict(
+  side: 'buy' | 'sell',
+  statusKey: StatusKey,
+  score: number,
+): string {
+  const s = Math.round(score);
+  const label = STATUS_LABELS[statusKey];
+  if (side === 'sell') {
+    switch (statusKey) {
+      case 'overheated':
+        return `律动 ${s} 分，${label}。真想卖，现在卖是止盈不算卖飞；也可以分批卖，别一把清。`;
+      case 'hotStrong':
+        return `律动 ${s} 分，${label}，趋势还健康。不急用钱可以拿着，设条止盈线；想卖就分批。`;
+      case 'risingAccel':
+        return `律动 ${s} 分，${label}，涨势刚起来。现在卖可能卖在半山腰，不急的话再拿拿看。`;
+      case 'sideways':
+        return `律动 ${s} 分，${label}。卖不卖都不算错，主要看你有没有更好的去处。`;
+      case 'bottomUp':
+        return `律动 ${s} 分，${label}，正在企稳。现在卖容易卖在地板上，建议再等等。`;
+      case 'oversoldBottom':
+        return `律动 ${s} 分，${label}。现在割肉大概率割在最低点，拦你一下。`;
+      case 'weakLow':
+        return `律动 ${s} 分，${label}。现在卖是割在下跌途中，除非急用钱，不然等跌不动了再说。`;
+    }
+  } else {
+    switch (statusKey) {
+      case 'overheated':
+        return `律动 ${s} 分，${label}，现在买就是追高，拦一下。`;
+      case 'hotStrong':
+        return `律动 ${s} 分，${label}，趋势健康但位置偏高，真想买只适合小仓位分批。`;
+      case 'risingAccel':
+        return `律动 ${s} 分，${label}，离过热线还有距离，现在买不算追高。`;
+      case 'sideways':
+        return `律动 ${s} 分，${label}，买了可能磨人，仓位别重。`;
+      case 'bottomUp':
+        return `律动 ${s} 分，${label}，下跌动能衰竭，想抄底可以小仓位试试。`;
+      case 'oversoldBottom':
+        return `律动 ${s} 分，${label}。超卖信号历史上不太准，谨慎，真想买也小仓位。`;
+      case 'weakLow':
+        return `律动 ${s} 分，${label}，别接飞刀，等跌不动了再说。`;
+    }
+  }
+  return `律动 ${s} 分，${label}。`;
+}
+
+async function judgeOne(symbol: string) {
+  const { series, source } = await getFullSeries(symbol);
+  const closes = series.map((p) => p.close);
+  if (closes.length === 0) return null;
+  const j = buildJudgment(closes);
+  return {
+    price: closes[closes.length - 1],
+    score: j.score,
+    statusKey: j.statusKey,
+    status: j.status,
+    hot: j.thresholds.hot,
+    simulated: source === 'simulated',
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+
+    // 单只咨询模式：问"今天可以卖IBM吗"这种
+    if (body.mode === 'single' && typeof body.symbol === 'string' && body.symbol.trim()) {
+      const symbol = body.symbol.trim().toUpperCase();
+      const side = body.side === 'sell' ? 'sell' : 'buy';
+      const name = typeof body.name === 'string' && body.name.trim()
+        ? body.name.trim()
+        : symbolToName(symbol);
+      let judged: Awaited<ReturnType<typeof judgeOne>>;
+      try {
+        judged = await judgeOne(symbol);
+      } catch {
+        judged = null;
+      }
+      if (!judged || !judged.statusKey || judged.simulated) {
+        return NextResponse.json(
+          { error: `没找到 ${symbol} 的行情数据，检查下代码对不对` },
+          { status: 404 },
+        );
+      }
+      return NextResponse.json({
+        success: true,
+        single: {
+          symbol,
+          name,
+          price: Number(judged.price.toFixed(2)),
+          score: Math.round(judged.score),
+          status: judged.status,
+          side,
+          verdict: singleVerdict(side, judged.statusKey, judged.score),
+        },
+        asOf: new Date().toISOString().slice(0, 10),
+      });
+    }
+
     const inputs: AdviseInput[] = Array.isArray(body.symbols) ? body.symbols : [];
     const exclude = new Set(
       (Array.isArray(body.exclude) ? body.exclude : []).map((s: string) =>
