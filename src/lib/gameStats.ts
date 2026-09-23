@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 
 /**
- * 四个小游戏统一战绩：localStorage 为主，登录后镜像到 Supabase。
+ * 八个小游戏统一战绩：localStorage 为主，登录后镜像到 Supabase。
  *
  * localStorage key: gushenle:game_stats:v1
  * Supabase 表: game_stats(user_id, game_id, plays, total_score, best_score, banked)
@@ -10,7 +10,15 @@ import { supabase } from './supabase';
  * 登录时云端与本地取大值合并再写回两端，多设备最终收敛且永不重复计数。
  */
 
-export type GameId = 'clipper' | 'cool30' | 'bigtech' | 'kline';
+export type GameId =
+  | 'clipper'
+  | 'cool30'
+  | 'bigtech'
+  | 'kline'
+  | 'cutloss'
+  | 'holdback'
+  | 'newstrap'
+  | 'dca';
 
 export interface GameStat {
   plays: number;
@@ -26,12 +34,25 @@ export const GAME_NAMES: Record<GameId, string> = {
   cool30: '沉思撞球',
   bigtech: '美股巨头大乱斗',
   kline: '历史 K 线盲盒',
+  cutloss: '割肉还是卧倒',
+  holdback: '忍住别追高',
+  newstrap: '消息面陷阱',
+  dca: '定投 vs 梭哈',
 };
 
 const emptyStat = (): GameStat => ({ plays: 0, totalScore: 0, best: 0, banked: 0 });
 
 function blank(): Record<GameId, GameStat> {
-  return { clipper: emptyStat(), cool30: emptyStat(), bigtech: emptyStat(), kline: emptyStat() };
+  return {
+    clipper: emptyStat(),
+    cool30: emptyStat(),
+    bigtech: emptyStat(),
+    kline: emptyStat(),
+    cutloss: emptyStat(),
+    holdback: emptyStat(),
+    newstrap: emptyStat(),
+    dca: emptyStat(),
+  };
 }
 
 export function loadStats(): Record<GameId, GameStat> {
@@ -77,7 +98,7 @@ export function recordPlay(id: GameId, score: number): void {
   saveStats(s);
 }
 
-/** 打开一次游戏弹窗即记一次游玩（四游戏统一口径：玩了 N 次 = 打开次数）。 */
+/** 打开一次游戏弹窗即记一次游玩（统一口径：玩了 N 次 = 打开次数）。 */
 export function recordSession(id: GameId): void {
   const s = loadStats();
   s[id].plays += 1;

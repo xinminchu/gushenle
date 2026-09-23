@@ -11,13 +11,17 @@ const ClipperGame = dynamic(() => import('../games/ClipperGame'), { ssr: false }
 const Cool30Game = dynamic(() => import('../games/Cool30Game'), { ssr: false });
 const BigTechGame = dynamic(() => import('../games/BigTechGame'), { ssr: false });
 const KLineBoxGame = dynamic(() => import('../games/KLineBoxGame'), { ssr: false });
+const CutLossGame = dynamic(() => import('../games/CutLossGame'), { ssr: false });
+const HoldBackGame = dynamic(() => import('../games/HoldBackGame'), { ssr: false });
+const NewsTrapGame = dynamic(() => import('../games/NewsTrapGame'), { ssr: false });
+const DcaGame = dynamic(() => import('../games/DcaGame'), { ssr: false });
 
 export default function FunTab() {
   const [activeGame, setActiveGame] = useState<string | null>(null);
   const [stats, setStats] = useState<Record<GameId, GameStat> | null>(null);
   const { user } = useAuth();
 
-  // 打开游戏即记一次游玩（四游戏统一口径）
+  // 打开游戏即记一次游玩（统一口径）
   const openGame = (id: string) => {
     recordSession(id as GameId);
     setStats(loadStats());
@@ -71,6 +75,32 @@ export default function FunTab() {
       name: '历史 K 线盲盒',
       desc: '抽取真实历史 K 线，盲猜涨跌测试投资定力。',
       level: '🟡 中等',
+    },
+    {
+      id: 'cutloss',
+      name: '割肉还是卧倒',
+      desc: '大跌中途定格，真实历史揭晓：割在地板还是卧倒回血？',
+      level: '🟡 中等',
+      hot: true,
+    },
+    {
+      id: 'holdback',
+      name: '忍住别追高',
+      desc: '股价飙升、利好连连，60 秒内管住手就是胜利。',
+      level: '🟢 极低',
+      hot: true,
+    },
+    {
+      id: 'newstrap',
+      name: '消息面陷阱',
+      desc: '真实历史大事件，猜大盘 5 日涨跌，体会消息与走势反着来。',
+      level: '🟡 中等',
+    },
+    {
+      id: 'dca',
+      name: '定投 vs 梭哈',
+      desc: '同一只股票、同一段时间，两种策略赛跑，谁笑到最后？',
+      level: '🟢 极低',
     },
   ];
 
@@ -162,6 +192,10 @@ export default function FunTab() {
               {activeGame === 'cool30' && <Cool30Game />}
               {activeGame === 'bigtech' && <BigTechGame />}
               {activeGame === 'kline' && <KLineBoxGame />}
+              {activeGame === 'cutloss' && <CutLossGame />}
+              {activeGame === 'holdback' && <HoldBackGame />}
+              {activeGame === 'newstrap' && <NewsTrapGame />}
+              {activeGame === 'dca' && <DcaGame />}
             </div>
           </div>
         </div>
