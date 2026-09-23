@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 
 /* ---------- 数据源：自选列表 ---------- */
 const WATCH_KEY = 'gushenle:watchlist:v1';
@@ -137,7 +137,15 @@ function buildPayload(): StockPayload[] {
 }
 
 export default function BigTechGame() {
+  const [level, setLevel] = useState(5); // 5 | 7 | 9
   const htmlContent = useMemo(() => {
+    const n = level;
+    // 奇数格：floor(n*n/2) 对子 + 1 张幸运卡（点开即消除）
+    const pairs = Math.floor((n * n) / 2);
+    const cell = n === 5 ? 62 : n === 7 ? 44 : 34;
+    const gap = n === 5 ? 8 : n === 7 ? 6 : 4;
+    const compact = cell < 55; // 小格只显示代码
+    const score = pairs * 10; // 通关得分随难度走
     const stocks = buildPayload();
     const stocksJson = JSON.stringify(stocks);
     return `<!DOCTYPE html>
@@ -161,20 +169,25 @@ export default function BigTechGame() {
     }
     .hud b { color: #e2e8f0; }
     .grid {
-      display: grid; grid-template-columns: repeat(4, 74px); gap: 8px;
+      display: grid; grid-template-columns: repeat(${n}, ${cell}px); gap: ${gap}px;
       background: #1e293b; padding: 12px; border-radius: 16px; margin-top: 10px;
+      justify-content: center;
     }
     .cell {
-      width: 74px; height: 74px; border-radius: 10px;
+      width: ${cell}px; height: ${cell}px; border-radius: 10px;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       cursor: pointer; text-align: center; line-height: 1.25;
       transition: transform 0.15s, filter 0.15s;
       border: 1px solid rgba(255,255,255,0.12);
     }
     .cell:active { transform: scale(0.93); }
-    .cell .sym { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.85); }
+    .cell .sym { font-size: ${compact ? (cell <= 36 ? 8 : 10) : 10}px; font-weight: 700; color: rgba(255,255,255,0.85); }
     .cell .nm { font-size: 14px; font-weight: 800; color: #fff; margin: 1px 0; }
     .cell .sec { font-size: 9px; color: rgba(255,255,255,0.65); }
+    ${compact ? '.cell .nm, .cell .sec { display: none; }' : ''}
+    .cell.lucky { background: linear-gradient(135deg, #713f12, #a16207); border-color: #facc15; }
+    .cell.lucky .star { font-size: ${cell <= 36 ? 14 : 22}px; line-height: 1; }
+    .cell.lucky .lk { font-size: ${cell <= 36 ? 7 : 10}px; color: #fde68a; }
     .cell.selected { outline: 3px solid #38bdf8; outline-offset: -1px; filter: brightness(1.25); }
     .fact-box {
       margin-top: 12px; width: 344px; min-height: 64px; background: #10172a;
@@ -189,7 +202,7 @@ export default function BigTechGame() {
   </style>
 </head>
 <body>
-  <div class="title">美股巨头 4x4 配对消除</div>
+  <div class="title">美股巨头 ${n}x${n} 配对消除</div>
   <div class="hud" id="hud"></div>
   <div class="grid" id="grid"></div>
   <div class="fact-box" id="factBox">💡 配对消除两个相同股票，解锁冷知识！</div>
@@ -203,10 +216,28 @@ export default function BigTechGame() {
     var gridEl = document.getElementById('grid');
     var factBox = document.getElementById('factBox');
     var hudEl = document.getElementById('hud');
+    var PAIRS = ${pairs};
+    var ROUND_SCORE = ${score};
+    var LUCKY_MSGS = [
+      '幸运卡直接消除！运气也是实力的一部分~',
+      '★ 天选之卡！这种好运，留一半给明天的行情吧。',
+      '幸运卡翻开！少记一张牌，多一分从容。',
+    ];
 
     function updateHud() {
       var pct = attempts === 0 ? 100 : Math.round((matched / attempts) * 100);
       hudEl.innerHTML = '第 <b>' + round + '</b> 轮 · 尝试 <b>' + attempts + '</b> 次 · 成功率 <b>' + pct + '%</b>';
+    }
+
+    function checkWin() {
+      if (cards.length > 0 && cards.every(function (c) { return c.done; })) {
+        factBox.innerHTML = '🎉 <b style="color:#4ade80">第 ' + round + ' 轮通关！</b> 新一轮即将开始…';
+        window.parent.postMessage({ type: 'gushenle-game-event', game: 'bigtech', score: ROUND_SCORE }, '*');
+        setTimeout(function () {
+          round++;
+          initGame();
+        }, 1200);
+      }
     }
 
     function initGame() {
@@ -215,11 +246,14 @@ export default function BigTechGame() {
       attempts = 0;
       matched = 0;
       shownFacts = {};
-      STOCKS.forEach(function (s) {
+      // 棋盘是奇数格：PAIRS 对子循环取 8 只股票 + 1 张幸运卡
+      for (var i = 0; i < PAIRS; i++) {
+        var s = STOCKS[i % STOCKS.length];
         cards.push({ s: s, done: false }, { s: s, done: false });
-      });
+      }
+      cards.push({ lucky: true, done: false });
       cards.sort(function () { return Math.random() - 0.5; });
-      factBox.innerText = '💡 配对消除两个相同股票，解锁冷知识！';
+      factBox.innerText = '💡 配对消除两个相同股票，解锁冷知识！金色★是幸运卡，点开即消除~';
       updateHud();
       render();
     }
@@ -228,13 +262,17 @@ export default function BigTechGame() {
       gridEl.innerHTML = '';
       cards.forEach(function (c, index) {
         var div = document.createElement('div');
-        div.className = 'cell' + (selectedIndex === index ? ' selected' : '');
-        div.style.background = c.s.done;
+        div.className = 'cell' + (c.lucky ? ' lucky' : '') + (selectedIndex === index ? ' selected' : '');
+        if (!c.lucky) div.style.background = c.s.color;
         div.style.visibility = c.done ? 'hidden' : 'visible';
-        div.innerHTML =
-          '<div class="sym">' + c.s.symbol + '</div>' +
-          '<div class="nm">' + c.s.name + '</div>' +
-          '<div class="sec">' + c.s.sector + '</div>';
+        if (c.lucky) {
+          div.innerHTML = '<div class="star">★</div><div class="lk">幸运卡</div>';
+        } else {
+          div.innerHTML =
+            '<div class="sym">' + c.s.symbol + '</div>' +
+            '<div class="nm">' + c.s.name + '</div>' +
+            '<div class="sec">' + c.s.sector + '</div>';
+        }
         div.onclick = function () { handleClick(index); };
         gridEl.appendChild(div);
       });
@@ -257,6 +295,14 @@ export default function BigTechGame() {
 
     function handleClick(index) {
       if (cards[index].done || index === selectedIndex) return;
+      if (cards[index].lucky) {
+        cards[index].done = true;
+        selectedIndex = -1;
+        factBox.innerText = '★ ' + LUCKY_MSGS[Math.floor(Math.random() * LUCKY_MSGS.length)];
+        render();
+        checkWin();
+        return;
+      }
       if (selectedIndex === -1) {
         selectedIndex = index;
       } else {
@@ -274,27 +320,44 @@ export default function BigTechGame() {
       updateHud();
       render();
 
-      if (cards.length > 0 && cards.every(function (c) { return c.done; })) {
-        factBox.innerHTML = '🎉 <b style="color:#4ade80">第 ' + round + ' 轮通关！</b> 新一轮即将开始…';
-        window.parent.postMessage({ type: 'gushenle-game-event', game: 'bigtech', score: 100 }, '*');
-        setTimeout(function () {
-          round++;
-          initGame();
-        }, 1200);
-      }
+      checkWin();
     }
 
     initGame();
   </script>
 </body>
 </html>`;
-  }, []);
+  }, [level]);
+
+  const LEVELS = [
+    { n: 5, label: '轻松' },
+    { n: 7, label: '挑战' },
+    { n: 9, label: '硬核' },
+  ];
 
   return (
-    <iframe
-      srcDoc={htmlContent}
-      className="w-full h-[560px] border-0 rounded-2xl overflow-hidden"
-      title="美股巨头大乱斗"
-    />
+    <div>
+      <div className="flex items-center justify-center gap-2 pb-1">
+        <span className="text-[11px] text-slate-400">难度</span>
+        {LEVELS.map((lv) => (
+          <button
+            key={lv.n}
+            onClick={() => setLevel(lv.n)}
+            className={`px-3 py-1 rounded-full text-[11px] border transition-colors ${
+              level === lv.n
+                ? 'bg-sky-600 border-sky-500 text-white'
+                : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {lv.n}x{lv.n} · {lv.label}
+          </button>
+        ))}
+      </div>
+      <iframe
+        srcDoc={htmlContent}
+        className="w-full h-[560px] border-0 rounded-2xl overflow-hidden"
+        title="美股巨头大乱斗"
+      />
+    </div>
   );
 }

@@ -19,7 +19,7 @@ export default function AppHeader() {
         <div>
           <h1 className="text-2xl font-bold text-slate-100">股神乐 Gushenle</h1>
           <p className="text-xs text-slate-400 mt-0.5">快乐炒股，轻松投资。</p>
-          <p className="text-[11px] text-slate-500 mt-0.5 tracking-[0.25em]">不赌，不堵。不气，不弃。</p>
+          <p className="text-[11px] text-slate-500 mt-0.5 tracking-[0.25em]">不赌不堵，不气不弃。</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {/* 登录态：未配置 Supabase 时不显示，保持游客模式干净 */}

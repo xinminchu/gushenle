@@ -22,7 +22,7 @@ export interface GameStat {
 const KEY = 'gushenle:game_stats:v1';
 
 export const GAME_NAMES: Record<GameId, string> = {
-  clipper: '韭菜切割乐',
+  clipper: '韭菜咯咯乐',
   cool30: '沉思撞球',
   bigtech: '美股巨头大乱斗',
   kline: '历史 K 线盲盒',

@@ -46,7 +46,7 @@ export default function FunTab() {
   const games = [
     {
       id: 'clipper',
-      name: '韭菜切割乐 (Clipper Party)',
+      name: '韭菜咯咯乐 (Clipper Party)',
       desc: '划线切碎“追高”、“梭哈”等冲动情绪词汇，30秒强行解压。',
       level: '🟢 极低',
       hot: true,
@@ -61,7 +61,7 @@ export default function FunTab() {
     {
       id: 'bigtech',
       name: '美股巨头大乱斗',
-      desc: '4x4 矩阵消除，边消边看美股巨头冷知识。',
+      desc: '5x5 / 7x7 / 9x9 三档难度，边消边看美股巨头冷知识。',
       level: '🟡 中等',
     },
     {
