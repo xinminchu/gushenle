@@ -69,12 +69,13 @@ export async function POST(req: NextRequest) {
     if (URL && ANON) {
       const ipHash = createHash('sha256').update(clientIp(req)).digest('hex');
       const anon = createClient(URL, ANON, { auth: { persistSession: false } });
-      const { error } = await anon.from('site_visits').upsert(
-        { visit_date: todayStr(), ip_hash: ipHash },
-        { onConflict: 'visit_date,ip_hash', ignoreDuplicates: true },
-      );
+      // 普通 insert：23505 = 当天该 IP 已记过，视为成功；避开 upsert 的 ON CONFLICT 路径
+      const { error } = await anon.from('site_visits').insert({
+        visit_date: todayStr(),
+        ip_hash: ipHash,
+      });
       // 临时诊断：把写入错误直接返回（定位后删除）
-      trackError = error ? `${error.code} | ${error.message}` : 'insert ok';
+      trackError = !error || error.code === '23505' ? 'insert ok' : `${error.code} | ${error.message}`;
     } else {
       trackError = 'missing supabase env';
     }
