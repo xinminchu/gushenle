@@ -39,25 +39,17 @@ export const STOCK_ALIASES: Record<string, string> = {
   '茅台': '600519', // A股：数据可能没有，提取出来再说，查不到会友好提示
 };
 
-/** 代码 -> 中文名（单只咨询卡展示用） */
-export const STOCK_NAMES: Record<string, string> = {
-  AAPL: '苹果', MSFT: '微软', NVDA: '英伟达', TSLA: '特斯拉',
-  INTC: '英特尔', GOOGL: '谷歌', AMZN: '亚马逊', META: 'Meta',
-  NFLX: '奈飞', AMD: '超微', QCOM: '高通', AVGO: '博通',
-  TSM: '台积电', BABA: '阿里巴巴', MU: '美光', COIN: 'Coinbase',
-  MSTR: '微策略', IBM: 'IBM', ORCL: '甲骨文', ADBE: 'Adobe',
-  CRM: '赛富时', PDD: '拼多多', JD: '京东', BIDU: '百度',
-  PLTR: 'Palantir', SMCI: '超微电脑', DELL: '戴尔', HPQ: '惠普',
-  CSCO: '思科', WMT: '沃尔玛', KO: '可口可乐',
-};
+import { STOCK_LIST } from './stockList';
+
+/** 代码 -> 中文名（单只咨询卡展示用）；从全栈名单库派生，单一数据源 */
+export const STOCK_NAMES: Record<string, string> = Object.fromEntries(
+  STOCK_LIST.map((s) => [s.code, s.zh]),
+);
 
 /** 已知的美股代码集合：从文本里抓大写代码时，只有命中这里才认，避免把"AI"当成股票 */
 const KNOWN_TICKERS = new Set<string>([
   ...Object.values(STOCK_ALIASES),
-  'IBM', 'GOOG', 'NFLX', 'AMD', 'INTC', 'MU', 'COIN', 'MSTR',
-  'PLTR', 'SMCI', 'DELL', 'HPQ', 'CSCO', 'ORCL', 'ADBE', 'CRM',
-  'PDD', 'JD', 'BIDU', 'WMT', 'KO', 'PEP', 'DIS', 'NKE', 'BA',
-  'XOM', 'JPM', 'V', 'MA', 'LLY', 'UNH', 'COST', 'AVGO', 'QCOM',
+  ...STOCK_LIST.map((s) => s.code),
 ]);
 
 /**

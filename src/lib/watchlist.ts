@@ -1,6 +1,8 @@
 // 自选列表：全 app 唯一的股票名单来源（今日 / 持仓共用）
 // 用户未自定义时，使用默认推荐（科技巨头 + 加密概念股）；持久化在 localStorage。
 
+import { CODE_CORRECTIONS, findStock } from './stockList';
+
 export interface WatchlistItem {
   symbol: string;
   name: string;
@@ -28,12 +30,23 @@ export function loadWatchlist(): { items: WatchlistItem[]; customized: boolean }
     }
     const items = (parsed.items as Array<{ symbol?: unknown; name?: unknown }>)
       .filter((i) => i && typeof i.symbol === 'string' && i.symbol.trim())
-      .map((i) => ({
-        symbol: String(i.symbol).trim().toUpperCase(),
-        name: typeof i.name === 'string' && i.name.trim() ? i.name.trim() : String(i.symbol).trim().toUpperCase(),
-      }));
-    if (items.length === 0) return { items: DEFAULT_WATCHLIST, customized: false };
-    return { items, customized: !!parsed.customized };
+      .map((i) => {
+        let sym = String(i.symbol).trim().toUpperCase();
+        // 输错自愈：TESLA/APPLE/INTEL 这类常见输错自动纠正为正确代码
+        if (CODE_CORRECTIONS[sym]) sym = CODE_CORRECTIONS[sym];
+        const known = findStock(sym);
+        const rawName = typeof i.name === 'string' && i.name.trim() ? i.name.trim() : '';
+        return {
+          symbol: sym,
+          // 名字是输错代码自带的（如 APPLE APPLE）就换成正确的中文名
+          name: rawName && rawName !== String(i.symbol).trim().toUpperCase() ? rawName : known?.zh || sym,
+        };
+      });
+    // 纠正后去重（保留第一次出现）
+    const seen = new Set<string>();
+    const deduped = items.filter((it) => (seen.has(it.symbol) ? false : (seen.add(it.symbol), true)));
+    if (deduped.length === 0) return { items: DEFAULT_WATCHLIST, customized: false };
+    return { items: deduped, customized: !!parsed.customized };
   } catch {
     return { items: DEFAULT_WATCHLIST, customized: false };
   }

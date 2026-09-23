@@ -11,6 +11,7 @@ import { getRhythm, invalidateRhythm } from '@/lib/market';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 import { useWatchlist } from './WatchlistContext';
 import { STOCK_NAMES } from '@/lib/stockAliases';
+import { CODE_CORRECTIONS, findStock, suggestStocks, type StockInfo } from '@/lib/stockList';
 import { saveOperation, todayStr, type OpAction } from '@/lib/operations';
 import { useColorScheme, schemeLabel, upText, downText } from '@/lib/colorScheme';
 
@@ -59,6 +60,14 @@ export default function RhythmDashboard() {
   const [newSymbol, setNewSymbol] = useState('');
   const [newName, setNewName] = useState('');
   const [addError, setAddError] = useState('');
+  /** 名称是否被用户手动改过：没改过才跟随代码自动更新 */
+  const [nameEdited, setNameEdited] = useState(false);
+  /** 未知代码时的联想建议 */
+  const [suggestions, setSuggestions] = useState<StockInfo[]>([]);
+  /** 名单里没有也坚持添加（二次确认后） */
+  const [forceAdd, setForceAdd] = useState(false);
+  /** 成功提示（如自动纠正），绿色显示 */
+  const [addNote, setAddNote] = useState('');
 
   // 从持仓页跳过来的标的
   useEffect(() => {
@@ -120,11 +129,33 @@ export default function RhythmDashboard() {
   const isShortRange = (RANGE_MAP[range]?.points ?? 66) <= 66;
   const chartType: ChartType = chartTypeOverride ?? (isShortRange ? 'candle' : 'line');
 
-  const handleAdd = () => {
-    const r = addItem(newSymbol, newName);
+  const handleAdd = (force = false) => {
+    const raw = newSymbol.trim().toUpperCase();
+    if (!raw) {
+      setAddError('先输入代码，例如 AAPL');
+      return;
+    }
+    // 常见输错自动纠正：TESLA->TSLA / APPLE->AAPL / INTEL->INTC
+    const sym = CODE_CORRECTIONS[raw] || raw;
+    const known = findStock(sym);
+    if (!known && !(forceAdd || force)) {
+      const sug = suggestStocks(raw);
+      setSuggestions(sug);
+      setAddError(
+        sug.length > 0
+          ? `名单里没找到 ${raw}，你是不是想找下面这几个？`
+          : `名单里没找到 ${raw}，检查下拼写，或坚持添加（数据可能不准）`,
+      );
+      return;
+    }
+    const r = addItem(sym, newName || known?.zh);
     if (r === 'ok') {
       setNewSymbol('');
       setNewName('');
+      setNameEdited(false);
+      setSuggestions([]);
+      setForceAdd(false);
+      setAddNote(CODE_CORRECTIONS[raw] ? `已自动纠正为 ${sym}` : '');
       setAddError('');
     } else if (r === 'exists') {
       setAddError('这只已在自选里');
@@ -188,26 +219,62 @@ export default function RhythmDashboard() {
                   const sym = e.target.value.toUpperCase();
                   setNewSymbol(sym);
                   setAddError('');
-                  // 名称没手动填过时，有中文名就自动带出来
-                  setNewName((prev) => (prev.trim() ? prev : STOCK_NAMES[sym] || ''));
+                  setSuggestions([]);
+                  setForceAdd(false);
+                  setAddNote('');
+                  // 名称没被手动改过就跟随代码自动更新
+                  if (!nameEdited) setNewName(STOCK_NAMES[sym] || '');
                 }}
                 placeholder="代码 如 COIN"
                 className="w-28 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
               />
               <input
                 value={newName}
-                onChange={(e) => setNewName(e.target.value)}
+                onChange={(e) => {
+                  setNewName(e.target.value);
+                  setNameEdited(true);
+                }}
                 placeholder="名称（选填）"
                 className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
               />
               <button
-                onClick={handleAdd}
+                onClick={() => handleAdd()}
                 className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-3 py-1.5 text-xs font-medium flex items-center gap-1"
               >
                 <Plus className="w-3.5 h-3.5" /> 添加
               </button>
             </div>
             {addError && <div className="text-[11px] text-rose-400">{addError}</div>}
+            {addNote && <div className="text-[11px] text-emerald-400">{addNote}</div>}
+            {suggestions.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {suggestions.map((s) => (
+                  <button
+                    key={s.code}
+                    onClick={() => {
+                      setNewSymbol(s.code);
+                      setNewName(s.zh);
+                      setNameEdited(false);
+                      setSuggestions([]);
+                      setAddError('');
+                    }}
+                    className="text-[11px] bg-slate-800 border border-slate-600 rounded-full px-2.5 py-1 text-slate-200 hover:border-blue-500"
+                  >
+                    {s.code} {s.zh}
+                  </button>
+                ))}
+                <button
+                  onClick={() => {
+                    setSuggestions([]);
+                    setAddError('');
+                    handleAdd(true);
+                  }}
+                  className="text-[11px] text-slate-500 underline underline-offset-2 hover:text-slate-300 px-1 py-1"
+                >
+                  仍要添加
+                </button>
+              </div>
+            )}
             {!isDefault && (
               <button
                 onClick={resetToDefault}
