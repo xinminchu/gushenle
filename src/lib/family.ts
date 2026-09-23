@@ -146,28 +146,58 @@ export interface SurveyState {
   myChoice: SurveyChoice | null;
 }
 
-export async function getSurvey(myUserId: string | null): Promise<SurveyState> {
+const VOTER_KEY = 'gushenle:voter_key';
+
+/** 游客投票身份：浏览器本地 UUID，一设备一票，可改 */
+export function getVoterKey(): string {
+  try {
+    let k = localStorage.getItem(VOTER_KEY);
+    if (!k) {
+      k = crypto.randomUUID();
+      localStorage.setItem(VOTER_KEY, k);
+    }
+    return k;
+  } catch {
+    return 'session-' + Math.random().toString(36).slice(2);
+  }
+}
+
+export interface VoterIdentity {
+  userId?: string;
+  voterKey?: string;
+}
+
+export async function getSurvey(
+  myUserId: string | null,
+  myVoterKey: string | null,
+): Promise<SurveyState> {
   const db = needDb();
-  // 只取 choice 列做统计，不拉 user_id
-  const { data, error } = await db.from('family_survey_votes').select('choice,user_id');
+  const { data, error } = await db.from('family_survey_votes').select('choice,user_id,voter_key');
   if (error) throw error;
   const counts: Record<SurveyChoice, number> = { yes: 0, maybe: 0, no: 0 };
   let myChoice: SurveyChoice | null = null;
   for (const row of data || []) {
     const c = row.choice as SurveyChoice;
     if (c === 'yes' || c === 'maybe' || c === 'no') counts[c] += 1;
-    if (myUserId && row.user_id === myUserId) myChoice = c;
+    if ((myUserId && row.user_id === myUserId) || (myVoterKey && row.voter_key === myVoterKey))
+      myChoice = c;
   }
   return { counts, total: (data || []).length, myChoice };
 }
 
-export async function setSurveyVote(userId: string, choice: SurveyChoice): Promise<void> {
+export async function setSurveyVote(id: VoterIdentity, choice: SurveyChoice): Promise<void> {
   const db = needDb();
-  const { error } = await db.from('family_survey_votes').upsert(
-    { user_id: userId, choice, updated_at: new Date().toISOString() },
-    { onConflict: 'user_id' },
-  );
-  if (error) throw error;
+  const match = id.userId ? { col: 'user_id', val: id.userId } : { col: 'voter_key', val: id.voterKey! };
+  // 先删旧票再投：一人（或一设备）一票，可改；避开部分唯一索引的 upsert 冲突判定
+  const { error: delErr } = await db.from('family_survey_votes').delete().eq(match.col, match.val);
+  if (delErr) throw delErr;
+  const { error: insErr } = await db.from('family_survey_votes').insert({
+    user_id: id.userId ?? null,
+    voter_key: id.voterKey ?? null,
+    choice,
+    updated_at: new Date().toISOString(),
+  });
+  if (insErr) throw insErr;
 }
 
 /** x分钟前 / x小时前 / x天前 */

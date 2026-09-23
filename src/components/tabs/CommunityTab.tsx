@@ -18,6 +18,7 @@ import {
   updateMyPostsNickname,
   getSurvey,
   setSurveyVote,
+  getVoterKey,
   relativeTime,
   SURVEY_LABEL,
   type FamilyPost,
@@ -65,19 +66,22 @@ export default function CommunityTab() {
   const [voting, setVoting] = useState(false);
 
   const loadAll = useCallback(async () => {
-    if (!user || !isSupabaseConfigured()) {
+    if (!isSupabaseConfigured()) {
       setLoading(false);
       return;
     }
     setLoading(true);
     setNotice(null);
     try {
-      const [p, s] = await Promise.all([
-        fetchPosts(user.id),
-        getSurvey(user.id),
-      ]);
-      setPosts(p);
+      // 投票对游客开放：一设备一票；帖子仍需登录
+      const s = await getSurvey(user ? user.id : null, user ? null : getVoterKey());
       setSurvey(s);
+      if (user) {
+        const p = await fetchPosts(user.id);
+        setPosts(p);
+      } else {
+        setPosts([]);
+      }
     } catch (e: any) {
       console.error(e);
       setNotice('加载失败，下拉页面重试一下');
@@ -165,15 +169,12 @@ export default function CommunityTab() {
   };
 
   const handleVote = async (choice: SurveyChoice) => {
-    if (!user) {
-      setLoginOpen(true);
-      return;
-    }
     if (voting) return;
     setVoting(true);
     try {
-      await setSurveyVote(user.id, choice);
-      const s = await getSurvey(user.id);
+      const id = user ? { userId: user.id } : { voterKey: getVoterKey() };
+      await setSurveyVote(id, choice);
+      const s = await getSurvey(user ? user.id : null, user ? null : getVoterKey());
       setSurvey(s);
     } catch (e) {
       console.error(e);
@@ -416,9 +417,6 @@ export default function CommunityTab() {
             已有 {survey.total} 人投票：{survey.counts.yes} 愿意 · {survey.counts.maybe} 看情况 · {survey.counts.no} 不愿意
             {survey.myChoice ? '（你已投票，可更改）' : ''}
           </p>
-        )}
-        {!user && isSupabaseConfigured() && (
-          <p className="text-[10px] text-slate-600">登录后可投票</p>
         )}
       </div>
 
