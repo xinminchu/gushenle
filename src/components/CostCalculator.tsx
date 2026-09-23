@@ -326,7 +326,7 @@ export default function CostCalculator() {
                   </div>
                   {r.sell.profitEaten !== null && r.sell.profitEaten > 0 && (
                     <p className="text-slate-500 leading-relaxed">
-                      费用吃掉了 {r.sell.profitEaten.toFixed(0)}% 的利润。
+                      费用吃掉了 {r.sell.profitEaten < 1 ? r.sell.profitEaten.toFixed(1) : r.sell.profitEaten.toFixed(0)}% 的利润。
                       {r.feeRatio > 1 ? '小资金短线进出的话，券商赚得比你稳。' : ''}
                     </p>
                   )}
