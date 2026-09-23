@@ -350,7 +350,10 @@ export default function RhythmDashboard() {
 
       {loading ? (
         <div className="space-y-4">
-          <div className="h-44 animate-pulse bg-slate-900 border border-slate-800 rounded-xl" />
+          <div className="h-44 bg-slate-900 border border-slate-800 rounded-xl flex flex-col items-center justify-center gap-3">
+            <div className="w-8 h-8 rounded-full border-[3px] border-slate-700 border-t-blue-500 animate-spin" />
+            <p className="text-xs text-slate-400">正在读取 {symbol} 行情…</p>
+          </div>
           <div className="h-72 animate-pulse bg-slate-900 border border-slate-800 rounded-xl" />
         </div>
       ) : data && judgment ? (
