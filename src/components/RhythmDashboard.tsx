@@ -193,23 +193,24 @@ export default function RhythmDashboard() {
                 </span>
               )}
             </div>
-            <div className="space-y-2">
+            {/* 自选列表：一行两个，紧凑网格，省页面空间 */}
+            <div className="grid grid-cols-2 gap-1.5">
               {watchlist.map((item) => (
                 <div
                   key={item.symbol}
-                  className="flex items-center justify-between bg-slate-800/60 rounded-lg px-3 py-2"
+                  className="flex items-center justify-between bg-slate-800/60 rounded-lg pl-2.5 pr-1 py-1.5 min-w-0"
                 >
-                  <div>
-                    <span className="text-sm font-semibold text-slate-100">{item.symbol}</span>
-                    <span className="ml-2 text-xs text-slate-400">{item.name}</span>
+                  <div className="min-w-0 truncate">
+                    <span className="text-xs font-semibold text-slate-100">{item.symbol}</span>
+                    <span className="ml-1.5 text-[10px] text-slate-400">{item.name}</span>
                   </div>
                   <button
                     onClick={() => removeItem(item.symbol)}
                     disabled={watchlist.length <= 1}
-                    className="text-slate-500 hover:text-rose-400 disabled:opacity-30 p-1"
+                    className="text-slate-500 hover:text-rose-400 disabled:opacity-30 p-1 shrink-0"
                     aria-label={`删除 ${item.symbol}`}
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
