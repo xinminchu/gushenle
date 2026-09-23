@@ -1,15 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mail, ShieldCheck } from 'lucide-react';
+import { X, Mail, MailOpen } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
-/** 邮箱验证码登录弹窗：不登录也能玩，登录只为多设备同步战绩 */
+/** 邮箱链接登录弹窗：不登录也能玩，登录只为多设备同步战绩 */
 export default function LoginModal({ onClose }: { onClose: () => void }) {
-  const { sendCode, verifyCode } = useAuth();
+  const { sendCode } = useAuth();
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [step, setStep] = useState<'email' | 'code'>('email');
+  const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [cooldown, setCooldown] = useState(0);
@@ -43,20 +42,8 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
     if (e) {
       setErr(e);
     } else {
-      setStep('code');
+      setSent(true);
       startCooldown();
-    }
-  };
-
-  const handleVerify = async () => {
-    setErr('');
-    setBusy(true);
-    const e = await verifyCode(email, code);
-    setBusy(false);
-    if (e) {
-      setErr(e);
-    } else {
-      onClose();
     }
   };
 
@@ -70,10 +57,10 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-          邮箱收验证码登录，游戏积分多设备同步。不登录也能玩。
+          输入邮箱，我们发一封登录邮件给你。游戏积分多设备同步。不登录也能玩。
         </p>
 
-        {step === 'email' ? (
+        {!sent ? (
           <>
             <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5">
               <Mail className="w-4 h-4 text-slate-500 shrink-0" />
@@ -93,41 +80,36 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
               disabled={busy || !email.trim()}
               className="w-full mt-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-sm font-bold active:scale-95 transition"
             >
-              {busy ? '发送中…' : '发送验证码'}
+              {busy ? '发送中…' : '发送登录邮件'}
             </button>
           </>
         ) : (
           <>
-            <p className="text-xs text-slate-400 mb-2">
-              验证码已发到 <b className="text-slate-200">{email.trim()}</b>
-            </p>
-            <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5">
-              <ShieldCheck className="w-4 h-4 text-slate-500 shrink-0" />
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="6 位验证码"
-                maxLength={6}
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                className="bg-transparent outline-none text-sm text-slate-100 w-full tracking-[0.3em] placeholder:text-slate-600 placeholder:tracking-normal"
-              />
+            <div className="flex flex-col items-center text-center py-2">
+              <MailOpen className="w-10 h-10 text-emerald-500 mb-3" />
+              <p className="text-sm text-slate-200 font-bold mb-1">登录邮件已发出</p>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                已发送到 <b className="text-slate-200">{email.trim()}</b>
+                <br />
+                打开邮件，点里面的 <b className="text-slate-200">Sign in</b> 链接即可登录。
+              </p>
             </div>
             {err && <p className="text-xs text-red-400 mt-2">{err}</p>}
             <button
-              onClick={handleVerify}
-              disabled={busy || code.length < 6}
-              className="w-full mt-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-sm font-bold active:scale-95 transition"
-            >
-              {busy ? '验证中…' : '验证登录'}
-            </button>
-            <button
               onClick={() => (cooldown > 0 ? null : handleSend())}
-              disabled={cooldown > 0}
-              className="w-full mt-2 py-2 text-xs text-slate-400 hover:text-slate-200 disabled:opacity-50"
+              disabled={cooldown > 0 || busy}
+              className="w-full mt-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 text-sm font-bold active:scale-95 transition"
             >
               {cooldown > 0 ? `重新发送 (${cooldown}s)` : '没收到？重新发送'}
+            </button>
+            <button
+              onClick={() => {
+                setSent(false);
+                setErr('');
+              }}
+              className="w-full mt-2 py-2 text-xs text-slate-500 hover:text-slate-300"
+            >
+              换个邮箱
             </button>
           </>
         )}
