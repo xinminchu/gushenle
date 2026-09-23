@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LoginModal from '../modals/LoginModal';
+import FamilyNews from '../FamilyNews';
 import {
   fetchPosts,
   createPost,
@@ -193,6 +194,9 @@ export default function CommunityTab() {
         <h1 className="text-xl font-bold text-slate-100">家人</h1>
         <p className="text-xs text-slate-400 mt-0.5">独乐乐不如大家乐</p>
       </header>
+
+      {/* 今日大事 + 财经日历：免登录可看 */}
+      <FamilyNews />
 
       {/* 理念卡片 */}
       <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4 flex items-center gap-3">
