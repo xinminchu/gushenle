@@ -22,6 +22,7 @@ import { loadPositions } from '@/lib/positions';
 import { lastSyncAt, markSynced, SYNC_DUP_WINDOW_MS } from '@/lib/positions';
 import { loadWatchlist } from '@/lib/watchlist';
 import { findSimilarRecord, findDuplicateGroups, type SimilarHit } from '@/lib/memoryParse';
+import PortraitPanel from '@/components/memory/PortraitPanel';
 
 interface Review { r5: number | null; r20: number | null }
 
@@ -892,6 +893,9 @@ export default function MemoryTab() {
           </button>
         </div>
       )}
+
+      {/* 我的投资画像：卖飞率 + 买高率，只给自己看 */}
+      <PortraitPanel ops={ops} reviews={reviews} />
 
       {/* 汇总 */}
       {totalReviewed > 0 && (
