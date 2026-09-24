@@ -60,6 +60,8 @@ export default function RhythmChart({
     const chart = createChart(el, {
       width: el.clientWidth,
       height,
+      // 关掉库自带的 TradingView 小图标跳转（MIT 协议不强制挂它）
+      attributionLogo: false,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: '#64748b',
