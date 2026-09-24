@@ -332,6 +332,8 @@ export interface RhythmResponse {
   priceTime: string | null;
   /** 当日涨跌幅（%，相对昨收）；仅实时价时有值 */
   dayChangePct: number | null;
+  /** 日线最后一根收盘价；盘中时=昨收（图上红线就是它），收盘后=现价 */
+  prevClose: number | null;
   /** 所选区间涨跌幅（%） */
   changePct: number;
   /** 所选区间分位低点 / 高点（5% / 95% 分位数） */

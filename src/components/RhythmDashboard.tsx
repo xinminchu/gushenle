@@ -655,6 +655,9 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                         {data.dayChangePct}%
                       </span>
                     )}
+                    {data.prevClose != null && (
+                      <span className="text-slate-500">昨收 {fmtPrice(data.prevClose)}</span>
+                    )}
                   </span>
                 ) : (
                   <span className="text-[9px] text-slate-500 shrink-0">收盘价</span>

@@ -62,6 +62,7 @@ function buildResponse(
     priceLive: livePrice != null,
     priceTime: livePrice != null ? live!.time || null : null,
     dayChangePct: livePrice != null ? live!.dayChangePct : null,
+    prevClose: Number(lastClose.toFixed(2)),
     changePct: Number((((displayPrice - first) / first) * 100).toFixed(2)),
     low: Number(low.toFixed(2)),
     high: Number(high.toFixed(2)),
