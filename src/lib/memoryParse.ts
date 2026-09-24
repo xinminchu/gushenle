@@ -7,6 +7,7 @@
  */
 import { extractSymbol } from '@/lib/stockAliases';
 import { normalizeSpeechText } from '@/lib/cnNumber';
+import type { OperationRecord } from './operations';
 
 /** 明确的咨询信号（想买/能不能/疑问语气…） */
 const ADVICE_WANT =
@@ -19,11 +20,18 @@ const SELL_WORD = /(卖出|卖掉|减仓|清仓|止盈|卖)/;
 /** 更正信号：说错了/改成…（优先于咨询和记录，因为"刚才那笔单价说错了"里也可能带买卖词） */
 const CORRECT_MARKER =
   /(说错了|报错了|报高了|报低了|记错了|写错了|搞错了|改成|改为|更正|应该是|不对[，,]?\s*是)/;
+/**
+ * 查重复/对账信号：有没有记重、查一下重复…
+ * 必须在咨询之前判（"有没有重复"里带"吗"），且真实动作句（"今天买了两次AAPL"）不算，仍走记一笔。
+ * 注意文本先经过 normalizeSpeechText，"两次"会变成"2次"，所以两种形态都要认。
+ */
+const AUDIT_MARKER = /重复|记重|重了|对账|对[一1]下|两次|两笔|\d+\s*[次笔]/;
 
 export type LocalIntent =
   | { intent: 'advice'; symbol: string | null; side: 'buy' | 'sell' }
   | { intent: 'record'; data: RecordParse }
   | { intent: 'correct'; data: CorrectParse }
+  | { intent: 'audit' }
   | { intent: 'unknown' };
 
 export interface RecordParse {
@@ -177,6 +185,10 @@ export function localParse(rawText: string): LocalIntent {
   if (CORRECT_MARKER.test(text)) {
     return { intent: 'correct', data: parseCorrect(text, symbol) };
   }
+  // 0.5) 查重复/对账：真实动作句（今天买了两次AAPL）除外，仍走记一笔
+  if (!DONE_MARKER.test(text) && AUDIT_MARKER.test(text)) {
+    return { intent: 'audit' };
+  }
   // 1) 明确的咨询信号 -> advice
   if (ADVICE_WANT.test(text)) {
     const sell = SELL_WORD.test(text);
@@ -194,4 +206,104 @@ export function localParse(rawText: string): LocalIntent {
     return { intent: 'record', data: parseRecord(text, symbol) };
   }
   return { intent: 'unknown' };
+}
+
+/* ---------------- 防重复：记一笔确认前 / 随时查重复 ---------------- */
+
+export interface NewRecordLike {
+  symbol: string;
+  action: 'buy' | 'sell';
+  price: number | null;
+  qty: number | null;
+  date: string; // YYYY-MM-DD
+}
+
+export type SimilarKind = 'exact' | 'field_diff';
+
+export interface SimilarHit {
+  kind: SimilarKind;
+  existing: OperationRecord;
+  /** field_diff 时：这次和上次不一样的字段（exactly one） */
+  diffField: 'price' | 'qty' | null;
+  minutesAgo: number;
+}
+
+/** 记一笔确认卡弹出前：N 分钟内有没有疑似同一笔（防语音重说、手滑点两次） */
+export const DUP_WINDOW_MS = 15 * 60 * 1000;
+
+const priceEq = (a: number | null, b: number | null) =>
+  a != null && b != null && Math.abs(a - b) < 0.005;
+const qtyStrictEq = (a: number | null, b: number | null) =>
+  (a == null && b == null) || (a != null && a === b);
+const mins = (ms: number) => Math.max(1, Math.round(ms / 60000));
+
+export function findSimilarRecord(
+  rec: NewRecordLike,
+  existing: OperationRecord[],
+  now = Date.now(),
+): SimilarHit | null {
+  const sym = (rec.symbol || '').toUpperCase();
+  if (!sym || sym === 'UNKNOWN') return null;
+  const cands = existing.filter(
+    (o) =>
+      (o.symbol || '').toUpperCase() === sym &&
+      o.action === rec.action &&
+      o.date === rec.date &&
+      now - o.createdAt >= 0 &&
+      now - o.createdAt <= DUP_WINDOW_MS,
+    // 注意：数量不在这里过滤——"只有数量不一样"正是 field_diff 要抓的场景，留给下面分类
+  );
+  if (cands.length === 0) return null;
+  const hit = cands.sort((a, b) => b.createdAt - a.createdAt)[0];
+  const samePrice = priceEq(rec.price, hit.price);
+  const sameQty = qtyStrictEq(rec.qty, hit.qty ?? null);
+  if (samePrice && sameQty) {
+    return { kind: 'exact', existing: hit, diffField: null, minutesAgo: mins(now - hit.createdAt) };
+  }
+  // 只有一个字段不一样 → 疑似把上次说错的字段重说了一遍（给"直接改上一笔"的机会）
+  const diffCount = (samePrice ? 0 : 1) + (sameQty ? 0 : 1);
+  if (diffCount === 1) {
+    const diffField = samePrice ? 'qty' : 'price';
+    const newVal = diffField === 'price' ? rec.price : rec.qty;
+    if (newVal == null) return null; // 这次没说新值，改不了，不打扰
+    return {
+      kind: 'field_diff',
+      existing: hit,
+      diffField,
+      minutesAgo: mins(now - hit.createdAt),
+    };
+  }
+  return null;
+}
+
+/**
+ * 查重复（用户说"有没有记重"时）：同日同股票同方向同数量、
+ * 价格相差 ≤1% 的视为疑似重复，成组返回。调用方只展示、由用户亲手删。
+ */
+export function findDuplicateGroups(ops: OperationRecord[]): OperationRecord[][] {
+  const groups = new Map<string, OperationRecord[]>();
+  for (const o of ops) {
+    const key = [(o.symbol || '').toUpperCase(), o.action, o.date, o.qty ?? 'na'].join('|');
+    const g = groups.get(key);
+    if (g) g.push(o);
+    else groups.set(key, [o]);
+  }
+  const out: OperationRecord[][] = [];
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    const sorted = [...g].sort((a, b) => a.createdAt - b.createdAt);
+    let suspect = false;
+    for (let i = 0; i < sorted.length && !suspect; i++) {
+      for (let j = i + 1; j < sorted.length; j++) {
+        const p1 = sorted[i].price;
+        const p2 = sorted[j].price;
+        if (p1 > 0 && p2 > 0 && Math.abs(p1 - p2) / Math.max(p1, p2) <= 0.01) {
+          suspect = true;
+          break;
+        }
+      }
+    }
+    if (suspect) out.push(sorted);
+  }
+  return out;
 }

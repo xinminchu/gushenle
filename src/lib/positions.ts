@@ -51,6 +51,8 @@ export function savePositions(positions: Position[]): void {
   }
 }
 
+/* ---------------- 持有天数 ---------------- */
+
 /** 持有天数（自然日）；没有建仓日期返回 null */
 export function holdingDays(since: string | undefined, today = new Date()): number | null {
   if (!since) return null;
@@ -79,6 +81,45 @@ const SECTOR_MAP: Record<string, string> = {
 
 export function sectorOf(symbol: string): string {
   return SECTOR_MAP[symbol.toUpperCase()] ?? '未分类';
+}
+
+/* ---------------- 同步去重：同一条操作记录短时间内重复"同步到持仓"要拦一下 ---------------- */
+
+const SYNC_LOG_KEY = 'gushenle_sync_log_v1';
+export const SYNC_DUP_WINDOW_MS = 15 * 60 * 1000;
+
+function loadSyncLog(): Record<string, number> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(SYNC_LOG_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    return obj && typeof obj === 'object' ? obj : {};
+  } catch {
+    return {};
+  }
+}
+
+/** 这条操作记录上次同步到持仓的时间戳，没有返回 null */
+export function lastSyncAt(opId: string): number | null {
+  const t = loadSyncLog()[opId];
+  return typeof t === 'number' && t > 0 ? t : null;
+}
+
+/** 记一笔"同步到持仓"的时间（只保留最近 200 条，防 localStorage 膨胀） */
+export function markSynced(opId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const log = loadSyncLog();
+    log[opId] = Date.now();
+    const keys = Object.keys(log).sort((a, b) => log[b] - log[a]).slice(0, 200);
+    const trimmed: Record<string, number> = {};
+    keys.forEach((k) => {
+      trimmed[k] = log[k];
+    });
+    localStorage.setItem(SYNC_LOG_KEY, JSON.stringify(trimmed));
+  } catch {
+    // ignore
+  }
 }
 
 /* ---------------- 操作记忆 -> 持仓同步 ---------------- */

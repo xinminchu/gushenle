@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, X, RefreshCw, Briefcase, GripVertical } from 'lucide-react';
+import { Plus, X, RefreshCw, Briefcase, GripVertical, Pencil } from 'lucide-react';
 import { useWatchlist } from '@/components/WatchlistContext';
 import { loadPositions, savePositions, holdingDays, sectorOf, type Position } from '@/lib/positions';
 import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
@@ -117,6 +117,34 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
   const persist = (next: Position[]) => {
     setPositions(next);
     savePositions(next);
+  };
+
+  /** 修正持仓：股数/成本填错、重复同步多加了，在这里直接改（两步 prompt，和"补填建仓日期"同风格） */
+  const editPosition = (p: Position) => {
+    const s1 = prompt(`修正 ${p.symbol} 持仓股数（现在 ${p.shares} 股）`, String(p.shares));
+    if (s1 == null) return;
+    const shares = Number(s1);
+    if (!Number.isFinite(shares) || shares <= 0) {
+      alert('股数不对，没改');
+      return;
+    }
+    const s2 = prompt(
+      `修正 ${p.symbol} 平均成本（现在 $${p.avgCost.toFixed(2)}）`,
+      String(p.avgCost),
+    );
+    if (s2 == null) return;
+    const cost = Number(s2);
+    if (!Number.isFinite(cost) || cost < 0) {
+      alert('成本不对，没改');
+      return;
+    }
+    persist(
+      positions.map((x) =>
+        x.symbol === p.symbol
+          ? { ...x, shares, avgCost: Math.round(cost * 100) / 100 }
+          : x,
+      ),
+    );
   };
 
   const fetchQuotes = async (list: Position[], bust = false) => {
@@ -365,6 +393,16 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                   </button>
                   <span className="font-bold text-slate-100 text-base">{p.symbol}</span>
                   <span className="text-xs text-slate-400">{nameOf(p.symbol)}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      editPosition(p);
+                    }}
+                    className="text-slate-600 hover:text-blue-400 p-0.5"
+                    aria-label={`修正 ${p.symbol} 持仓`}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

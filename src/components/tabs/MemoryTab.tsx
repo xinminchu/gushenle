@@ -19,7 +19,9 @@ import {
 } from '@/lib/operations';
 import { applyOperationToPositions } from '@/lib/positions';
 import { loadPositions } from '@/lib/positions';
+import { lastSyncAt, markSynced, SYNC_DUP_WINDOW_MS } from '@/lib/positions';
 import { loadWatchlist } from '@/lib/watchlist';
+import { findSimilarRecord, findDuplicateGroups, type SimilarHit } from '@/lib/memoryParse';
 
 interface Review { r5: number | null; r20: number | null }
 
@@ -73,6 +75,9 @@ export default function MemoryTab() {
   // 同步到持仓：展开的记录 id + 股数
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [syncQty, setSyncQty] = useState('');
+  // 防重复：记一笔确认前的相似提醒；查重复的扫描结果
+  const [dupWarning, setDupWarning] = useState<SimilarHit | null>(null);
+  const [auditGroups, setAuditGroups] = useState<OperationRecord[][] | null>(null);
 
   const recogRef = useRef<any>(null);
   const speechTextRef = useRef('');
@@ -108,6 +113,8 @@ export default function MemoryTab() {
     setAdvice(null);
     setSingleAdvice(null);
     setNotice(null);
+    setDupWarning(null);
+    setAuditGroups(null);
     try {
       const res = await fetch('/api/analyze-memory', {
         method: 'POST',
@@ -122,6 +129,25 @@ export default function MemoryTab() {
         setQtyEdit(d.qty != null ? String(d.qty) : '');
         setDateEdit(d.opDate || todayStr());
         setActionEdit(normalizeAction(d.action) ?? 'sell');
+        // 记一笔确认前：15 分钟内有没有疑似同一笔（防语音重说、手滑点两次）
+        const similar = findSimilarRecord(
+          {
+            symbol: String(d.symbol || '').toUpperCase(),
+            action: normalizeAction(d.action) ?? 'sell',
+            price: typeof d.price === 'number' ? d.price : null,
+            qty: typeof d.qty === 'number' ? d.qty : null,
+            date: d.opDate || todayStr(),
+          },
+          ops,
+        );
+        setDupWarning(similar);
+      } else if (json.success && json.intent === 'audit') {
+        // 查重复：本地扫一遍操作记录，疑似的列出来由用户亲手删
+        const groups = findDuplicateGroups(ops);
+        setAuditGroups(groups);
+        if (groups.length === 0) {
+          setNotice({ type: 'info', text: '查过了：操作记录里没有发现疑似重复的 ✓' });
+        }
       } else if (json.success && json.intent === 'advice') {
         if (json.symbol) {
           await fetchSingleAdvice(json.symbol, json.side === 'sell' ? 'sell' : 'buy');
@@ -266,6 +292,46 @@ export default function MemoryTab() {
 
   const handleCancel = () => {
     setParsedResult(null);
+    setDupWarning(null);
+  };
+
+  /**
+   * 防重复：这次和 15 分钟内那笔只有一个字段不一样（多半是上次说错重说了一遍），
+   * 直接改上一笔，不多记一条。
+   */
+  const applyDupFix = () => {
+    if (!dupWarning || dupWarning.kind !== 'field_diff') return;
+    const patch: Partial<OperationRecord> = {};
+    let label = '';
+    if (dupWarning.diffField === 'price') {
+      const v = parseFloat(priceEdit);
+      if (!(v > 0)) {
+        setNotice({ type: 'error', text: '先在下面填好正确的价格，再点「直接改上一笔」' });
+        return;
+      }
+      patch.price = v;
+      label = `单价改成 $${v}`;
+    } else if (dupWarning.diffField === 'qty') {
+      const v = parseInt(qtyEdit, 10);
+      if (!(v > 0)) {
+        setNotice({ type: 'error', text: '先在下面填好正确的数量，再点「直接改上一笔」' });
+        return;
+      }
+      patch.qty = v;
+      label = `数量改成 ${v} 股`;
+    } else {
+      return;
+    }
+    const updated = updateOperation(dupWarning.existing.id, patch);
+    if (!updated) {
+      setNotice({ type: 'error', text: '没找到那条记录' });
+      return;
+    }
+    setOps(loadOperations());
+    setParsedResult(null);
+    setDupWarning(null);
+    setInputText('');
+    setNotice({ type: 'info', text: `已更正：${updated.symbol} ${label}，没有多记一笔 ✓` });
   };
 
   /** 更正意图：说错了，直接改最近一条（或点名股票的最近一条） */
@@ -345,6 +411,15 @@ export default function MemoryTab() {
       setNotice({ type: 'error', text: '请填写股数' });
       return;
     }
+    // 同一条记录 15 分钟内重复"同步到持仓"：多半是手滑点两次，先拦一下
+    const prev = lastSyncAt(op.id);
+    if (prev && Date.now() - prev < SYNC_DUP_WINDOW_MS) {
+      const m = Math.max(1, Math.round((Date.now() - prev) / 60000));
+      if (
+        !confirm(`这条记录 ${m} 分钟前刚同步过，再同步会重复加仓。确定还要同步吗？`)
+      )
+        return;
+    }
     const r = applyOperationToPositions({
       symbol: op.symbol,
       action: op.action,
@@ -353,7 +428,10 @@ export default function MemoryTab() {
       date: op.date,
     });
     setNotice({ type: r.ok ? 'info' : 'error', text: r.msg });
-    if (r.ok) setSyncingId(null);
+    if (r.ok) {
+      markSynced(op.id);
+      setSyncingId(null);
+    }
   };
 
   // 汇总：卖飞/卖对/买高/买对（用 20 天，没有就用 5 天）
@@ -384,7 +462,7 @@ export default function MemoryTab() {
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="例如：今天 235 卖了 100 股苹果 AAPL… 说错了直接讲：刚才那笔单价说错了是 227.92"
+            placeholder="例如：今天 235 卖了 100 股苹果 AAPL…说错了讲：刚才那笔单价说错了是 227.92；查重复：有没有记重"
             className="w-full h-20 bg-slate-800/60 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
           />
           <button
@@ -643,6 +721,56 @@ export default function MemoryTab() {
             </div>
           </div>
 
+          {/* 防重复提醒：15 分钟内有疑似同一笔，只提醒、不添麻烦 */}
+          {dupWarning && (
+            <div
+              className={`rounded-lg p-3 text-xs leading-relaxed border ${
+                dupWarning.kind === 'exact'
+                  ? 'border-amber-500/40 bg-amber-500/10 text-slate-200'
+                  : 'border-blue-500/30 bg-blue-500/10 text-slate-200'
+              }`}
+            >
+              {dupWarning.kind === 'exact' ? (
+                <p>
+                  ⚠️ <span className="font-semibold">{dupWarning.minutesAgo} 分钟前</span>
+                  你刚记过一模一样的一笔（{dupWarning.existing.symbol}{' '}
+                  {ACTION_LABEL[dupWarning.existing.action]} $
+                  {dupWarning.existing.price.toFixed(2)}
+                  {dupWarning.existing.qty ? ` × ${dupWarning.existing.qty}股` : ''}）。
+                  如果是手滑说重了，点「取消」就行；真要记两笔再点「存入记忆」。
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  <p>
+                    💡 <span className="font-semibold">{dupWarning.minutesAgo} 分钟前</span>
+                    记了 {dupWarning.existing.symbol}{' '}
+                    {ACTION_LABEL[dupWarning.existing.action]} $
+                    {dupWarning.existing.price.toFixed(2)}
+                    {dupWarning.existing.qty ? ` × ${dupWarning.existing.qty}股` : ''}，
+                    这次
+                    {dupWarning.diffField === 'price'
+                      ? ` $${priceEdit || '？'}`
+                      : ` ${qtyEdit || '？'}股`}
+                    ——是上次{dupWarning.diffField === 'price' ? '价格' : '数量'}没说对吗？
+                  </p>
+                  <button
+                    onClick={applyDupFix}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs py-2 rounded-lg font-medium transition-colors"
+                  >
+                    直接改上一笔
+                    {dupWarning.diffField === 'price'
+                      ? `为 $${priceEdit || '？'}`
+                      : `为 ${qtyEdit || '？'}股`}
+                    ，不多记
+                  </button>
+                  <p className="text-[10px] text-slate-500">
+                    不是说错、真要记两笔的话，直接点下面的「存入记忆」。
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-2 pt-1">
             <button
               onClick={handleCancel}
@@ -657,6 +785,52 @@ export default function MemoryTab() {
               <CheckCircle2 className="w-3.5 h-3.5" /> 存入记忆
             </button>
           </div>
+        </div>
+      )}
+
+      {/* 查重复：疑似重复的成组列出，多的那条点 🗑 亲手删 */}
+      {auditGroups && auditGroups.length > 0 && !loading && (
+        <div className="bg-slate-900 border border-amber-500/30 rounded-xl p-4 space-y-3">
+          <div className="text-xs font-semibold text-amber-300 border-b border-slate-700/80 pb-2">
+            🔍 疑似重复（{auditGroups.length} 组），确认多余的那条点 🗑 删掉
+          </div>
+          {auditGroups.map((g, gi) => (
+            <div key={gi} className="bg-slate-800/50 border border-slate-800 rounded-lg p-2.5 space-y-1.5">
+              {g.map((o) => (
+                <div key={o.id} className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-slate-200">
+                    {o.symbol} {ACTION_LABEL[o.action]} ${o.price.toFixed(2)}
+                    {o.qty ? <span className="text-slate-500"> × {o.qty}股</span> : null}
+                    <span className="text-slate-500">
+                      {' '}
+                      · {o.date}{' '}
+                      {new Date(o.createdAt).toLocaleTimeString('zh-CN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                      })}
+                    </span>
+                  </span>
+                  <button
+                    onClick={() => {
+                      handleDelete(o.id);
+                      setAuditGroups(findDuplicateGroups(loadOperations()));
+                    }}
+                    className="text-slate-600 hover:text-rose-400 transition-colors shrink-0"
+                    aria-label="删除这条"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ))}
+          <button
+            onClick={() => setAuditGroups(null)}
+            className="text-[11px] text-slate-500 hover:text-slate-300"
+          >
+            知道了
+          </button>
         </div>
       )}
 
