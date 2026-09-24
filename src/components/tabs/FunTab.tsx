@@ -6,6 +6,7 @@ import { Flame, X, Trophy } from 'lucide-react';
 import { loadStats, recordPlay, recordSession, type GameId, type GameStat } from '@/lib/gameStats';
 import { useAuth } from '@/context/AuthContext';
 import WishPool from '../games/WishPool';
+import Leaderboard from '../games/Leaderboard';
 
 // 游戏按需加载：点开哪个才下载哪个，不拖慢首页
 const ClipperGame = dynamic(() => import('../games/ClipperGame'), { ssr: false });
@@ -167,6 +168,9 @@ export default function FunTab() {
           </p>
         )}
       </header>
+
+      {/* 🏆 英雄榜：全站次数/总分/排行 */}
+      <Leaderboard />
 
       {/* 游戏小方块 */}
       <div className={`grid ${cols === 4 ? 'grid-cols-4' : 'grid-cols-3'} gap-2`}>

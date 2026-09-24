@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { getNickname } from './family';
 
 /**
  * 八个小游戏统一战绩：localStorage 为主，登录后镜像到 Supabase。
@@ -141,6 +142,7 @@ export async function pushStatsToCloud(
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
+    const nick = getNickname(user.email);
     const rows = (Object.keys(s) as GameId[]).map((id) => ({
       user_id: user.id,
       game_id: id,
@@ -148,9 +150,17 @@ export async function pushStatsToCloud(
       total_score: s[id].totalScore,
       best_score: s[id].best,
       banked: s[id].banked,
+      display_name: nick,
       updated_at: new Date().toISOString(),
     }));
-    await supabase.from('game_stats').upsert(rows, { onConflict: 'user_id,game_id' });
+    const { error } = await supabase
+      .from('game_stats')
+      .upsert(rows, { onConflict: 'user_id,game_id' });
+    if (error) {
+      // 015 迁移还没跑时 display_name 列不存在：去掉该列重试，战绩同步不断
+      const fallback = rows.map(({ display_name: _dn, ...r }) => r);
+      await supabase.from('game_stats').upsert(fallback, { onConflict: 'user_id,game_id' });
+    }
   } catch {
     /* 网络失败就下次再说，本地不受影响 */
   }
