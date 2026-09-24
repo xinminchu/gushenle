@@ -5,6 +5,8 @@
 export interface FocusItem {
   symbol: string;
   addedAt: number;
+  /** 手动添加时从全市场库带回的英文名（自选里的走 nameOf） */
+  name?: string;
 }
 
 export interface FocusState {

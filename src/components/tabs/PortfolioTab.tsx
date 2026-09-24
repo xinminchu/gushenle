@@ -7,6 +7,7 @@ import { loadPositions, savePositions, holdingDays, sectorOf, type Position } fr
 import { loadFocus, saveFocus, weekStartStr, FOCUS_MAX, concentrationAdvice, type FocusState } from '@/lib/focus';
 import { typicalBuyAmount } from '@/lib/portrait';
 import { loadOperations } from '@/lib/operations';
+import { loadUniverse, findInUniverse } from '@/lib/universe';
 import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
 import type { RhythmResponse } from '@/lib/rhythm';
 import { useColorScheme, upText, downText } from '@/lib/colorScheme';
@@ -244,8 +245,9 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
     setShowBudgetAsk(false);
   };
 
-  /** 手动加一只关注：输代码直接加，不必先去自选 */
-  const confirmFocusAdd = () => {
+  /** 手动加一只关注：输代码直接加，先验是不是真实股票 */
+  const [focusAdding, setFocusAdding] = useState(false);
+  const confirmFocusAdd = async () => {
     const code = focusAddCode.trim().toUpperCase();
     if (!code) {
       setFocusAddError('先填个股票代码');
@@ -267,8 +269,34 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
       setFocusAddError(`关注已满 ${FOCUS_MAX} 只，先删一只再加`);
       return;
     }
+    setFocusAdding(true);
+    // 先在精选名单里找（nameOf 能解析即真实），找不到再查全市场库
+    let displayName: string | undefined;
+    const known = nameOf(code);
+    if (known !== code) {
+      displayName = known;
+    } else {
+      try {
+        const all = await loadUniverse();
+        const hit = findInUniverse(all, code, new Set());
+        if (!hit) {
+          setFocusAddError(`没找到 ${code} 这只股票，检查下代码拼写`);
+          setFocusAdding(false);
+          return;
+        }
+        displayName = hit.en.replace(/\s+(Class\s+[A-Z]\s+)?Common\s+Stock$/i, '').trim() || hit.en;
+      } catch {
+        setFocusAddError('股票库加载失败，稍后再试');
+        setFocusAdding(false);
+        return;
+      }
+    }
+    setFocusAdding(false);
     const firstOfWeek = focus.items.length === 0;
-    persistFocus({ ...focus, items: [...focus.items, { symbol: code, addedAt: Date.now() }] });
+    persistFocus({
+      ...focus,
+      items: [...focus.items, { symbol: code, addedAt: Date.now(), name: displayName }],
+    });
     setFocusAddCode('');
     setFocusAddError('');
     setShowFocusAdd(false);
@@ -276,6 +304,18 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
       setBudgetInput(typicalAmt != null ? String(typicalAmt) : '');
       setShowBudgetAsk(true);
     }
+  };
+
+  /** 改本周预算：和"修正持仓"同风格，两步 prompt 太重，这里一步就够 */
+  const editBudget = () => {
+    const v = prompt('修改本周预算（美元）', focus.budget != null ? String(focus.budget) : '');
+    if (v == null) return;
+    const n = Math.round(Number(v));
+    if (!Number.isFinite(n) || n <= 0) {
+      alert('预算得是个大于 0 的数字，没改');
+      return;
+    }
+    persistFocus({ ...focus, budget: n });
   };
 
   // 汇总（只统计已拿到行情的）
@@ -652,10 +692,20 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
           </div>
         ) : (
           focus.budget != null && (
-            <div className="text-[11px] text-slate-400 leading-relaxed">
-              本周预算 <span className="font-bold text-slate-200">${focus.budget.toLocaleString()}</span>
+            <div className="text-[11px] text-slate-400 leading-relaxed flex items-center gap-1 flex-wrap">
+              <span>
+                本周预算 <span className="font-bold text-slate-200">${focus.budget.toLocaleString()}</span>
+              </span>
+              <button
+                onClick={editBudget}
+                className="text-slate-600 hover:text-blue-400 p-0.5"
+                title="修改本周预算"
+                aria-label="修改本周预算"
+              >
+                <Pencil className="w-3 h-3" />
+              </button>
               {concentrationAdvice(focus.budget) && (
-                <span className="text-slate-500"> · 💡 {concentrationAdvice(focus.budget)}</span>
+                <span className="text-slate-500">💡 {concentrationAdvice(focus.budget)}</span>
               )}
             </div>
           )
@@ -689,7 +739,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                       <X className="w-3 h-3" />
                     </button>
                   </div>
-                  <div className="text-[10px] text-slate-500 truncate">{nameOf(f.symbol)}</div>
+                  <div className="text-[10px] text-slate-500 truncate">{f.name ?? nameOf(f.symbol)}</div>
                   <div className="mt-1 flex items-baseline justify-between">
                     <span className="text-xs text-slate-200 font-semibold">
                       {price != null ? fmtMoney(f.symbol, price) : '…'}
@@ -763,9 +813,10 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                 />
                 <button
                   onClick={confirmFocusAdd}
-                  className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg"
+                  disabled={focusAdding}
+                  className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs px-3 py-1.5 rounded-lg"
                 >
-                  加关注
+                  {focusAdding ? '查验中…' : '加关注'}
                 </button>
                 <button onClick={() => setShowFocusAdd(false)} className="text-slate-400 text-xs px-1">
                   取消
