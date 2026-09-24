@@ -6,13 +6,13 @@ import { useAuth } from '@/context/AuthContext';
 import { useNickname } from '@/hooks/useNickname';
 import { isAdminEmail } from '@/lib/admin';
 import LoginModal from './modals/LoginModal';
-import AdminMigrateModal from './modals/AdminMigrateModal';
+import AdminToolsModal from './modals/AdminToolsModal';
 
 /** 全页面共用顶栏：不论底部切到哪个 tab（今日/持仓/记忆/家人/娱乐）都显示 */
 export default function AppHeader() {
   const { user, loading, configured, signOut } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);
-  const [migrateOpen, setMigrateOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   const shortName = useNickname(user?.email);
   const isAdmin = isAdminEmail(user?.email);
@@ -49,11 +49,11 @@ export default function AppHeader() {
               </button>
             )
           )}
-          {/* 站长专属：数据库迁移入口 */}
+          {/* 站长专属：工具箱入口 */}
           {isAdmin && (
             <button
-              onClick={() => setMigrateOpen(true)}
-              title="数据库迁移"
+              onClick={() => setToolsOpen(true)}
+              title="站长工具"
               className="bg-slate-800 border border-slate-700 text-slate-400 text-xs px-2 py-1 rounded-full flex items-center active:scale-95 transition"
             >
               <Settings className="w-3.5 h-3.5" />
@@ -65,7 +65,7 @@ export default function AppHeader() {
         </div>
       </header>
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} />}
-      {migrateOpen && <AdminMigrateModal onClose={() => setMigrateOpen(false)} />}
+      {toolsOpen && <AdminToolsModal onClose={() => setToolsOpen(false)} />}
     </div>
   );
 }
