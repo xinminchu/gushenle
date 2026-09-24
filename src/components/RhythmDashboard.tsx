@@ -27,6 +27,7 @@ import { fmtMoney } from '@/lib/currency';
 import { saveOperation, todayStr, type OpAction } from '@/lib/operations';
 import { loadPositions } from '@/lib/positions';
 import { useColorScheme, schemeLabel, upText, downText } from '@/lib/colorScheme';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   findSwing,
   fibLevels,
@@ -129,6 +130,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const [range, setRange] = useState(ANCHOR_RANGE_ID);
   // 涨跌配色：默认绿涨红跌（美股习惯），页面上可一键切换，全站统一
   const { scheme, toggle: toggleScheme } = useColorScheme();
+  const { lang } = useLanguage();
   // 高波/稳健说明的展开状态
   const [showTierInfo, setShowTierInfo] = useState(false);
   // 图表类型：3M 及以内默认 K线，长区间默认收盘线；用户手动切换后记住选择（切区间时重置）
@@ -683,6 +685,9 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   )}
                 </div>
                 <div className="text-right shrink-0">
+                  <div className="text-[10px] text-slate-500 mb-0.5">
+                    {lang === 'en' ? 'Rhythm Score' : '律动值'}
+                  </div>
                   <div
                     className={`text-4xl font-extrabold ${
                       overHeat ? 'text-amber-400' : 'text-emerald-400'
