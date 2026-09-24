@@ -9,9 +9,11 @@ import {
   LineStyle,
   createChart,
 } from 'lightweight-charts';
+import type { CreatePriceLineOptions } from 'lightweight-charts';
 import type { RhythmPoint } from '@/lib/rhythm';
 import type { ColorScheme } from '@/lib/colorScheme';
 import { upHex, downHex } from '@/lib/colorScheme';
+import type { FibLevel } from '@/lib/fibonacci';
 
 export type ChartType = 'candle' | 'line' | 'ohlc';
 
@@ -24,6 +26,8 @@ interface RhythmChartProps {
   showRangeHL: boolean;
   /** 涨跌配色：cn=红涨绿跌，us=绿涨红跌 */
   scheme: ColorScheme;
+  /** 黄金分割参考线（candle/line 图上画金色虚线） */
+  fibLevels?: FibLevel[] | null;
 }
 
 /** 四线图图例颜色（中性色，不跟涨跌配色走） */
@@ -49,6 +53,7 @@ export default function RhythmChart({
   chartType,
   showRangeHL,
   scheme,
+  fibLevels,
 }: RhythmChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const UP = upHex(scheme);
@@ -85,6 +90,23 @@ export default function RhythmChart({
     const hlOf = (pick: (p: RhythmPoint) => number | undefined) => {
       const vals = series.map((p) => pick(p) ?? p.close);
       return { hi: Math.max(...vals), lo: Math.min(...vals) };
+    };
+
+    /** 黄金分割参考线：金色虚线，轴上标比例 */
+    const drawFibLines = (s: {
+      createPriceLine: (opts: CreatePriceLineOptions) => unknown;
+    }) => {
+      if (!fibLevels || fibLevels.length === 0) return;
+      for (const lv of fibLevels) {
+        s.createPriceLine({
+          price: lv.price,
+          color: 'rgba(212, 160, 23, 0.6)',
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: `${lv.ratio}`,
+        });
+      }
     };
 
     if (chartType === 'candle') {
@@ -129,6 +151,7 @@ export default function RhythmChart({
       } else {
         setHl(null);
       }
+      drawFibLines(candles);
     } else if (chartType === 'ohlc') {
       // 四线：开/高/低/收。极值线本身已展示区间上下沿，不再画虚线。
       const mk = (key: 'open' | 'high' | 'low' | 'close', color: string, width: 1 | 2) => {
@@ -182,6 +205,7 @@ export default function RhythmChart({
       } else {
         setHl(null);
       }
+      drawFibLines(area);
     }
     chart.timeScale().fitContent();
 
@@ -195,7 +219,7 @@ export default function RhythmChart({
       ro.disconnect();
       chart.remove();
     };
-  }, [series, height, chartType, showRangeHL, scheme, UP, DOWN]);
+  }, [series, height, chartType, showRangeHL, fibLevels, scheme, UP, DOWN]);
 
   if (series.length === 0) {
     return (
@@ -212,16 +236,26 @@ export default function RhythmChart({
     <div className="relative w-full" style={{ height }}>
       <div ref={containerRef} className="w-full h-full" />
       {/* 区间高低点图例：放左上角，不压右侧价格轴 */}
-      {hl && chartType !== 'ohlc' && (
+      {(hl || (fibLevels && fibLevels.length > 0)) && chartType !== 'ohlc' && (
         <div className="absolute top-1 left-1 flex items-center gap-2 text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
-          <span>
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500/70 mr-1" />
-            区间最高 {hl.hi.toFixed(2)}
-          </span>
-          <span>
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500/70 mr-1" />
-            区间最低 {hl.lo.toFixed(2)}
-          </span>
+          {hl && (
+            <>
+              <span>
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500/70 mr-1" />
+                区间最高 {hl.hi.toFixed(2)}
+              </span>
+              <span>
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500/70 mr-1" />
+                区间最低 {hl.lo.toFixed(2)}
+              </span>
+            </>
+          )}
+          {fibLevels && fibLevels.length > 0 && (
+            <span>
+              <span className="inline-block w-2.5 h-0 border-t border-dashed border-yellow-600/80 mr-1 align-middle" />
+              黄金分割
+            </span>
+          )}
         </div>
       )}
       {/* 四线图例 */}

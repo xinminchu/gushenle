@@ -26,6 +26,19 @@ import { fmtMoney } from '@/lib/currency';
 import { saveOperation, todayStr, type OpAction } from '@/lib/operations';
 import { loadPositions } from '@/lib/positions';
 import { useColorScheme, schemeLabel, upText, downText } from '@/lib/colorScheme';
+import {
+  findSwing,
+  fibLevels,
+  fibAdviceHint,
+  fibKindLabel,
+  nearestFibLevel,
+  FIB_COMBOS,
+  FIB_COMBO_IDS,
+  FIB_LOOKBACKS,
+  RECOMMENDED_FIB_COMBO,
+  RECOMMENDED_FIB_LOOKBACK,
+  type FibComboId,
+} from '@/lib/fibonacci';
 
 const ANCHOR_LABEL = RANGE_MAP[ANCHOR_RANGE_ID]?.label ?? '3月';
 
@@ -107,6 +120,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   // 图表类型：3M 及以内默认 K线，长区间默认收盘线；用户手动切换后记住选择（切区间时重置）
   const [chartTypeOverride, setChartTypeOverride] = useState<ChartType | null>(null);
   const [showRangeHL, setShowRangeHL] = useState(true);
+  /** 黄金分割参考线：开关 + 组合方案 + 波段窗口（调参用） */
+  const [showFib, setShowFib] = useState(false);
+  const [fibCombo, setFibCombo] = useState<FibComboId>(RECOMMENDED_FIB_COMBO);
+  const [fibLookback, setFibLookback] = useState<number>(RECOMMENDED_FIB_LOOKBACK);
   const [data, setData] = useState<RhythmResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showZenModal, setShowZenModal] = useState(false);
@@ -216,6 +233,31 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   // 短区间（≤3M）默认 K线：每天一根蜡烛，开/高/低/收一目了然
   const isShortRange = (RANGE_MAP[range]?.points ?? 66) <= 66;
   const chartType: ChartType = chartTypeOverride ?? (isShortRange ? 'candle' : 'line');
+
+  /** 黄金分割：图上画线用的波段与价位（开关打开时才算） */
+  const fibPts = useMemo(
+    () =>
+      (data?.series ?? []).map((p) => ({
+        date: p.date,
+        high: p.high ?? p.close,
+        low: p.low ?? p.close,
+        close: p.close,
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data?.series]
+  );
+  const fibSwing = useMemo(
+    () => (showFib ? findSwing(fibPts, fibLookback) : null),
+    [showFib, fibPts, fibLookback]
+  );
+  const fibChartLevels = fibSwing ? fibLevels(fibSwing, fibCombo) : null;
+  /** 诊断卡联动：现价贴近推荐组合的参考线时，给一句行为纠偏（常开） */
+  const fibHint = useMemo(() => {
+    if (!fibPts.length || !data?.price) return null;
+    const sw = findSwing(fibPts, RECOMMENDED_FIB_LOOKBACK);
+    if (!sw) return null;
+    return fibAdviceHint(sw, RECOMMENDED_FIB_COMBO, data.price);
+  }, [fibPts, data?.price]);
 
   // 精选名单代码集合：全市场搜索时排除（精选优先，带中文名）
   const curatedCodes = useMemo(() => new Set(STOCK_LIST.map((s) => s.code)), []);
@@ -614,6 +656,11 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               </div>
 
               <div className="mt-2 text-xs text-slate-400 leading-relaxed">{judgment.advice}</div>
+              {fibHint && (
+                <div className="mt-2 text-[11px] text-amber-300/80 leading-relaxed">
+                  {fibHint}
+                </div>
+              )}
               {overHeat && (
                 <div className="mt-2 text-[10px] text-amber-400/70">点击卡片查看冷静清单</div>
               )}
@@ -697,16 +744,28 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                 ))}
               </div>
               {chartType !== 'ohlc' && (
-                <button
-                  onClick={() => setShowRangeHL((v) => !v)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
-                    showRangeHL
-                      ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10'
-                      : 'border-slate-700 text-slate-500 hover:text-slate-300'
-                  }`}
-                >
-                  区间高低点
-                </button>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setShowFib((v) => !v)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                      showFib
+                        ? 'border-yellow-600/50 text-yellow-400 bg-yellow-500/10'
+                        : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    黄金分割
+                  </button>
+                  <button
+                    onClick={() => setShowRangeHL((v) => !v)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                      showRangeHL
+                        ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10'
+                        : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    区间高低点
+                  </button>
+                </div>
               )}
             </div>
 
@@ -716,7 +775,95 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               chartType={chartType}
               showRangeHL={showRangeHL}
               scheme={scheme}
+              fibLevels={fibChartLevels}
             />
+            {/* 黄金分割：组合方案切换 + 价位列表（调参用） */}
+            {showFib && (
+              <div className="mt-3 bg-slate-800/40 border border-slate-700/50 rounded-xl p-3">
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {FIB_COMBO_IDS.map((id) => (
+                    <button
+                      key={id}
+                      onClick={() => setFibCombo(id)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                        fibCombo === id
+                          ? 'border-yellow-600/50 text-yellow-300 bg-yellow-500/10'
+                          : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {FIB_COMBOS[id].name}
+                      {id === RECOMMENDED_FIB_COMBO && (
+                        <span className="ml-1 text-[9px] px-1 rounded bg-yellow-500/20 text-yellow-400">
+                          推荐
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                  <div className="flex gap-1.5 ml-1">
+                    {FIB_LOOKBACKS.map((lb) => (
+                      <button
+                        key={lb.days}
+                        onClick={() => setFibLookback(lb.days)}
+                        className={`px-2 py-1 rounded-lg text-[10px] transition-colors ${
+                          fibLookback === lb.days
+                            ? 'bg-slate-700 text-slate-200'
+                            : 'text-slate-500 hover:text-slate-300'
+                        }`}
+                      >
+                        {lb.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {fibSwing && fibChartLevels ? (
+                  <>
+                    <div className="text-[10px] text-slate-500 mb-1.5">
+                      波段：{fibSwing.lowDate} 低 ${fibSwing.low} → {fibSwing.highDate} 高 $
+                      {fibSwing.high}（{fibSwing.uptrend ? '上涨波段' : '下跌波段'}）
+                    </div>
+                    <div className="space-y-1">
+                      {(() => {
+                        const near = data.price
+                          ? nearestFibLevel(fibChartLevels, data.price)
+                          : null;
+                        return fibChartLevels.map((lv) => {
+                          const dist = data.price
+                            ? ((data.price - lv.price) / lv.price) * 100
+                            : null;
+                          const isNear = near?.level === lv;
+                          return (
+                            <div
+                              key={lv.ratio}
+                              className={`flex items-center justify-between text-[11px] px-2 py-1 rounded ${
+                                isNear ? 'bg-yellow-500/10' : ''
+                              }`}
+                            >
+                              <span className="text-yellow-300/90 font-mono">
+                                {isNear ? '📍 ' : ''}
+                                {lv.ratio} · {fibKindLabel(lv.kind)}
+                              </span>
+                              <span className="text-slate-300 font-mono">${lv.price}</span>
+                              <span className="text-slate-500 font-mono text-[10px]">
+                                {dist == null
+                                  ? ''
+                                  : `${dist >= 0 ? '现价在其上方' : '现价在其下方'} ${Math.abs(dist).toFixed(1)}%`}
+                              </span>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-[11px] text-slate-500">
+                    该区间点数不足，画不出可靠波段（换个长一点的展示区间试试）
+                  </div>
+                )}
+                <p className="text-[10px] text-slate-600 mt-2">
+                  参考线，不是算命：只标大家都在看的位置，不构成预测
+                </p>
+              </div>
+            )}
             {chartType === 'ohlc' && (
               <p className="text-[10px] text-slate-500 leading-relaxed mt-1.5 px-0.5">
                 怎么看：两条线之间的"带子"越宽，当天波动越大；收盘线贴着最高线走是强势，贴着最低线走是弱势；带子越收越窄之后，往往要选方向了。
