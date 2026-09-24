@@ -16,3 +16,14 @@ export const fmtMoney = (symbol: string, p: number): string =>
   `${currencySym(symbol)}${
     isKrwSymbol(symbol) ? Math.round(p).toLocaleString('en-US') : p.toFixed(2)
   }`;
+
+/** 大金额紧凑格式：$1.2B / $350M / $800K（资金流向用） */
+export const fmtCompactMoney = (symbol: string, v: number): string => {
+  const sym = currencySym(symbol);
+  const abs = Math.abs(v);
+  const sign = v < 0 ? '-' : '';
+  if (abs >= 1e9) return `${sign}${sym}${(abs / 1e9).toFixed(1)}B`;
+  if (abs >= 1e6) return `${sign}${sym}${(abs / 1e6).toFixed(0)}M`;
+  if (abs >= 1e3) return `${sign}${sym}${(abs / 1e3).toFixed(0)}K`;
+  return fmtMoney(symbol, v);
+};

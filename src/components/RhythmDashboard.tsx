@@ -6,6 +6,7 @@ import { Flame, ShieldAlert, Settings2, X, Plus, RotateCcw, TrendingUp } from 'l
 import RhythmChart, { type ChartType } from './RhythmChart';
 import AccuracyPanel from './AccuracyPanel';
 import ChipPanel from './ChipPanel';
+import FlowPanel from './FlowPanel';
 import type { RhythmResponse } from '@/lib/rhythm';
 import { RANGE_DEFS, RANGE_MAP, ANCHOR_RANGE_ID, scoreGradient } from '@/lib/rhythm';
 import { getRhythm, invalidateRhythm } from '@/lib/market';
@@ -670,8 +671,11 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
             </div>
           </div>
 
-          {/* 筹码分布：紧贴价格走势卡下方（手机上全宽展示，不与K线挤在一行） */}
-          <ChipPanel symbol={symbol} />
+          {/* 筹码分布 + 资金流向：并排小面板 */}
+          <div className="grid grid-cols-2 gap-2">
+            <ChipPanel symbol={symbol} compact />
+            <FlowPanel symbol={symbol} />
+          </div>
 
           {/* ③ 判断复盘：历史信号 vs 次日真实结果 */}
           <AccuracyPanel symbol={symbol} />
