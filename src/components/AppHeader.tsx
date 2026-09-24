@@ -1,17 +1,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Smile, UserRound, LogOut } from 'lucide-react';
+import { Smile, UserRound, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNickname } from '@/hooks/useNickname';
+import { isAdminEmail } from '@/lib/admin';
 import LoginModal from './modals/LoginModal';
+import AdminMigrateModal from './modals/AdminMigrateModal';
 
 /** 全页面共用顶栏：不论底部切到哪个 tab（今日/持仓/记忆/家人/娱乐）都显示 */
 export default function AppHeader() {
   const { user, loading, configured, signOut } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);
+  const [migrateOpen, setMigrateOpen] = useState(false);
 
   const shortName = useNickname(user?.email);
+  const isAdmin = isAdminEmail(user?.email);
 
   return (
     <div className="p-4 pb-1 max-w-md mx-auto">
@@ -45,12 +49,23 @@ export default function AppHeader() {
               </button>
             )
           )}
+          {/* 站长专属：数据库迁移入口 */}
+          {isAdmin && (
+            <button
+              onClick={() => setMigrateOpen(true)}
+              title="数据库迁移"
+              className="bg-slate-800 border border-slate-700 text-slate-400 text-xs px-2 py-1 rounded-full flex items-center active:scale-95 transition"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+          )}
           <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
             <Smile className="w-3.5 h-3.5" /> 安心享受生活
           </div>
         </div>
       </header>
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} />}
+      {migrateOpen && <AdminMigrateModal onClose={() => setMigrateOpen(false)} />}
     </div>
   );
 }

@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Lightbulb, MessageSquareHeart, Send, Trash2 } from 'lucide-react';
+import { Lightbulb, MessageSquareHeart, Send, Trash2, Reply } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useNickname } from '@/hooks/useNickname';
+import { isAdminEmail } from '@/lib/admin';
 
 interface Wish {
   id: string;
@@ -14,6 +15,8 @@ interface Wish {
   content: string;
   created_at: string;
   adopted: boolean;
+  reply_text: string | null;
+  replied_at: string | null;
 }
 
 const KIND_META = {
@@ -40,27 +43,35 @@ export default function WishPool() {
   const [points, setPoints] = useState(0);
   const [posting, setPosting] = useState(false);
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
+  const [replying, setReplying] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [replyBusy, setReplyBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const isAdmin = isAdminEmail(user?.email);
+
+  const normalize = (rows: object[]): Wish[] =>
+    rows.map((w) => ({ adopted: false, reply_text: null, replied_at: null, ...(w as Wish) }));
 
   const load = useCallback(async () => {
     if (!supabase) return;
     try {
-      let rows: Wish[] | null = null;
-      const full = await supabase
-        .from('game_wishes')
-        .select('id,user_id,nickname,kind,content,created_at,adopted')
-        .order('created_at', { ascending: false })
-        .limit(30);
-      if (full.error) {
-        // adopted 列还没建（006 没跑）时降级
-        const lite = await supabase
+      // 三档降级：009 没跑就没有 reply 列，006 没跑就没有 adopted 列
+      const tries = [
+        'id,user_id,nickname,kind,content,created_at,adopted,reply_text,replied_at',
+        'id,user_id,nickname,kind,content,created_at,adopted',
+        'id,user_id,nickname,kind,content,created_at',
+      ];
+      let rows: Wish[] = [];
+      for (const cols of tries) {
+        const r = await supabase
           .from('game_wishes')
-          .select('id,user_id,nickname,kind,content,created_at')
+          .select(cols)
           .order('created_at', { ascending: false })
           .limit(30);
-        rows = (lite.data || []).map((w) => ({ ...(w as Wish), adopted: false }));
-      } else {
-        rows = (full.data || []) as Wish[];
+        if (!r.error) {
+          rows = normalize((r.data || []) as object[]);
+          break;
+        }
       }
       setWishes(rows);
       if (user) {
@@ -113,8 +124,59 @@ export default function WishPool() {
     }
   };
 
-  const del = async (id: string) => {
-    if (confirmDel !== id) {
+  /** 站长（Mas）公开回复：走服务端 API，只有站长邮箱能写 */
+  const authToken = async () => {
+    const { data } = await supabase!.auth.getSession();
+    return data.session?.access_token ?? '';
+  };
+
+  const saveReply = async (id: string) => {
+    const text = replyText.trim();
+    if (!text || !supabase) return;
+    setReplyBusy(true);
+    try {
+      const res = await fetch('/api/admin/wish-reply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${await authToken()}`,
+        },
+        body: JSON.stringify({ id, reply_text: text }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || '保存失败');
+      setReplying(null);
+      setReplyText('');
+      await load();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : '保存失败');
+      setTimeout(() => setMsg(''), 4000);
+    } finally {
+      setReplyBusy(false);
+    }
+  };
+
+  const clearReply = async (id: string) => {
+    if (!supabase) return;
+    setReplyBusy(true);
+    try {
+      await fetch('/api/admin/wish-reply', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${await authToken()}`,
+        },
+        body: JSON.stringify({ id }),
+      });
+      setReplying(null);
+      setReplyText('');
+      await load();
+    } finally {
+      setReplyBusy(false);
+    }
+  };
+
+  const del = async (id: string) => {    if (confirmDel !== id) {
       setConfirmDel(id);
       setTimeout(() => setConfirmDel((v) => (v === id ? null : v)), 3000);
       return;
@@ -226,6 +288,77 @@ export default function WishPool() {
               )}
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">{w.content}</p>
+
+            {/* Mas 官方回复：所有人可见 */}
+            {w.reply_text && (
+              <div className="mt-2 bg-emerald-500/10 border border-emerald-500/25 rounded-lg px-2.5 py-2">
+                <div className="text-[10px] text-emerald-300 font-semibold mb-0.5">
+                  ✦ Mas 回复
+                  {w.replied_at && (
+                    <span className="font-normal text-emerald-400/60 ml-1">{fmtTime(w.replied_at)}</span>
+                  )}
+                </div>
+                <p className="text-xs text-emerald-100/90 leading-relaxed whitespace-pre-line">
+                  {w.reply_text}
+                </p>
+              </div>
+            )}
+
+            {/* 站长回复入口：只有站长登录才看得到 */}
+            {isAdmin && (
+              <div className="mt-1.5">
+                {replying === w.id ? (
+                  <div className="space-y-1.5">
+                    <textarea
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      rows={3}
+                      maxLength={500}
+                      placeholder="以 Mas 的名义公开回复…"
+                      className="w-full bg-slate-900/80 border border-emerald-500/40 rounded-lg px-2.5 py-2 text-xs text-slate-200 placeholder:text-slate-600 outline-none focus:border-emerald-400 resize-none"
+                    />
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => saveReply(w.id)}
+                        disabled={replyBusy || !replyText.trim()}
+                        className="text-[11px] px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold disabled:opacity-50"
+                      >
+                        {replyBusy ? '保存中…' : '发布回复'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setReplying(null);
+                          setReplyText('');
+                        }}
+                        className="text-[11px] px-2.5 py-1.5 rounded-lg border border-slate-700 text-slate-400"
+                      >
+                        取消
+                      </button>
+                      {w.reply_text && (
+                        <button
+                          onClick={() => clearReply(w.id)}
+                          disabled={replyBusy}
+                          className="text-[11px] px-2.5 py-1.5 rounded-lg border border-rose-500/40 text-rose-400 ml-auto"
+                        >
+                          删除回复
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setReplying(w.id);
+                      setReplyText(w.reply_text || '');
+                    }}
+                    className="flex items-center gap-1 text-[10px] text-sky-400/80 hover:text-sky-300 px-1 py-0.5"
+                  >
+                    <Reply className="w-3 h-3" />
+                    {w.reply_text ? '修改回复' : '回复'}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
