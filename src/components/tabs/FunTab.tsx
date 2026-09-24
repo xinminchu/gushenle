@@ -86,8 +86,8 @@ export default function FunTab() {
     {
       id: 'holdback',
       name: '忍住别追高',
-      desc: '股价飙升、利好连连，60 秒内管住手就是胜利。',
-      level: '🟢 极低',
+      desc: '追高模拟器：买入真能赚钱，但拿得越久越可能闪崩。跑得快还是贪到被埋？',
+      level: '🟡 中等',
       hot: true,
     },
     {

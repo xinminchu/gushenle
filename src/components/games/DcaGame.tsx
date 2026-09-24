@@ -83,7 +83,11 @@ export default function DcaGame() {
         monthFirst.push(c);
       }
     }
-    const frames = monthFirst.slice(-months);
+    // 关键机制：随机抽取一段历史，而不是永远"过去 N 年"
+    // ——牛市里梭哈必赢，游戏就没法玩了；随机窗口里有涨有跌，两边都有机会
+    const maxStart = monthFirst.length - months;
+    const startIdx = maxStart > 0 ? Math.floor(Math.random() * (maxStart + 1)) : 0;
+    const frames = monthFirst.slice(startIdx, startIdx + months);
     if (frames.length < 6) return null;
     const m = frames.length;
     const lumpShares = (MONTHLY * m) / frames[0].close;
@@ -218,7 +222,8 @@ export default function DcaGame() {
             </div>
           </div>
           <p className="text-[11px] text-slate-500 leading-relaxed px-1">
-            规则：梭哈开局一把投 {fmtMoney(MONTHLY * months)}；定投每月投 {fmtMoney(MONTHLY)}，共 {months} 个月。先猜谁赢，再看比赛！
+            规则：从过去 3 年里<span className="text-slate-200 font-semibold">随机抽一段 {months / 12} 年历史</span>；
+            梭哈开局一把投 {fmtMoney(MONTHLY * months)}，定投每月投 {fmtMoney(MONTHLY)}。先猜谁赢，再看比赛！
           </p>
           <button
             onClick={() => setPhase('guess')}
@@ -233,7 +238,7 @@ export default function DcaGame() {
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-center space-y-3">
           <p className="text-xs text-slate-300 leading-relaxed">
             <span className="font-bold text-slate-100">{list.find((w) => w.symbol === symbol)?.name}</span>
-            ，过去 {months / 12} 年，每月 {fmtMoney(MONTHLY)}
+            ，随机一段 {months / 12} 年历史，每月 {fmtMoney(MONTHLY)}
           </p>
           <p className="text-sm font-bold text-slate-100">你猜，谁笑到最后？</p>
           <div className="flex gap-2">
@@ -294,6 +299,9 @@ export default function DcaGame() {
                 }`}
               >
                 <p className="font-semibold">{resultText}</p>
+                <p className="text-slate-500 mt-1">
+                  本局区间：{race.startDate.slice(0, 7)} ~ {race.endDate.slice(0, 7)}
+                </p>
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed px-1">{tip}</p>
               <button

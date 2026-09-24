@@ -3,17 +3,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { recordPlay } from '@/lib/gameStats';
 
-type Phase = 'idle' | 'running' | 'won' | 'lost';
+type Phase = 'idle' | 'running' | 'done';
 
 const DURATION = 60;
 
 const TEMPTATIONS = [
-  '🚀 利好！分析师上调目标价！',
-  '🚀 隔壁老王晒单：三天赚 20%！',
-  '🚀 突发：成交量暴增三倍！',
-  '🚀 大 V 发文：这波看到翻倍！',
-  '🚀 盘中直线拉升，不买就晚了！',
+  '🚀 分析师上调目标价！',
+  '🚀 隔壁老王晒单：三天 20%！',
+  '🚀 成交量暴增三倍！',
+  '🚀 大 V 发文：看到翻倍！',
+  '🚀 直线拉升，再不上车晚了！',
 ];
+
+interface Trade {
+  entry: number;
+  exit: number;
+  pct: number;
+  crashed: boolean;
+}
 
 export default function HoldBackGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -21,17 +28,25 @@ export default function HoldBackGame() {
   const [left, setLeft] = useState(DURATION);
   const [tempt, setTempt] = useState('');
   const [score, setScore] = useState(0);
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [holding, setHolding] = useState<number | null>(null); // 持仓成本
+  const [pnl, setPnl] = useState(0); // 当前浮盈亏 %
   const [endText, setEndText] = useState('');
-  const reported = useRef(false);
+  const [crashFlash, setCrashFlash] = useState(false);
 
   const prices = useRef<number[]>([]);
-  const raf = useRef(0);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const temptTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const phaseRef = useRef<Phase>('idle');
-  phaseRef.current = phase;
+  const priceRef = useRef(100);
+  const holdingRef = useRef<number | null>(null);
+  const crashIn = useRef(false);
+  const holdSec = useRef(0);
+  const timers = useRef<ReturnType<typeof setInterval>[]>([]);
+  const reported = useRef(false);
+  const scoreRef = useRef(0);
+  const tradesRef = useRef<Trade[]>([]);
+  scoreRef.current = score;
+  tradesRef.current = trades;
 
-  const draw = (crash: boolean) => {
+  const draw = (crashed: boolean) => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
@@ -51,7 +66,6 @@ export default function HoldBackGame() {
     lo -= pad;
     const x = (i: number) => (i / (ps.length - 1)) * W;
     const y = (v: number) => H - ((v - lo) / (hi - lo)) * H;
-    // 网格线
     ctx.strokeStyle = 'rgba(148,163,184,0.12)';
     ctx.lineWidth = 1;
     for (let g = 1; g < 4; g++) {
@@ -60,7 +74,18 @@ export default function HoldBackGame() {
       ctx.lineTo(W, (H / 4) * g);
       ctx.stroke();
     }
-    ctx.strokeStyle = crash ? '#ef4444' : '#22c55e';
+    // 持仓成本线
+    if (holdingRef.current !== null) {
+      ctx.strokeStyle = '#fbbf24';
+      ctx.setLineDash([5, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, y(holdingRef.current));
+      ctx.lineTo(W, y(holdingRef.current));
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.strokeStyle = crashed ? '#ef4444' : '#22c55e';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ps.forEach((v, i) => {
@@ -68,133 +93,200 @@ export default function HoldBackGame() {
       else ctx.lineTo(x(i), y(v));
     });
     ctx.stroke();
-    // 当前价
     const last = ps[ps.length - 1];
-    ctx.fillStyle = crash ? '#ef4444' : '#22c55e';
+    ctx.fillStyle = crashed ? '#ef4444' : '#22c55e';
     ctx.font = 'bold 13px sans-serif';
     ctx.fillText(last.toFixed(1), W - 52, y(last) - 8);
   };
 
-  const stopAll = () => {
-    cancelAnimationFrame(raf.current);
-    if (timer.current) clearInterval(timer.current);
-    if (temptTimer.current) clearInterval(temptTimer.current);
-    timer.current = temptTimer.current = null;
+  const clearTimers = () => {
+    timers.current.forEach(clearInterval);
+    timers.current = [];
   };
 
-  useEffect(() => stopAll, []);
+  useEffect(() => clearTimers, []);
 
-  const finish = (won: boolean, survivedSec: number) => {
-    stopAll();
-    if (won) {
-      setScore(200);
-      setEndText('🧘 定力满分！60 秒里诱惑不断，你一次都没点。追高？不存在的。');
-      setPhase('won');
-    } else {
-      const pts = survivedSec * 2;
-      setScore(pts);
-      // 买入后表演一个跳水
-      let p = prices.current[prices.current.length - 1] || 100;
-      let n = 0;
-      const dive = setInterval(() => {
-        p *= 0.985;
-        prices.current.push(p);
-        if (prices.current.length > 240) prices.current.shift();
-        draw(true);
-        if (++n > 40) {
-          clearInterval(dive);
-          setEndText(`💸 追高被套！买入后一路跳水，这就是"涨太猛了"时候冲进去的下场。本局 ${pts} 分，下次忍住。`);
-          setPhase('lost');
-        }
-      }, 50);
-      return;
+  const pushPrice = (v: number) => {
+    priceRef.current = v;
+    prices.current.push(v);
+    if (prices.current.length > 240) prices.current.shift();
+  };
+
+  const finish = () => {
+    clearTimers();
+    // 60 秒到：按市价平掉未平仓位
+    let finalScore = scoreRef.current;
+    const ts = [...tradesRef.current];
+    if (holdingRef.current !== null) {
+      const pct = (priceRef.current - holdingRef.current) / holdingRef.current;
+      const pts = Math.max(0, Math.round(pct * 100 * 20));
+      finalScore += pts;
+      ts.push({ entry: holdingRef.current, exit: priceRef.current, pct, crashed: false });
+      holdingRef.current = null;
+      setHolding(null);
     }
+    setTrades(ts);
+    setScore(finalScore);
+    const wins = ts.filter((t) => t.pct > 0.005).length;
+    const crashed = ts.filter((t) => t.crashed).length;
+    let text: string;
+    if (ts.length === 0) {
+      finalScore += 80;
+      setScore(finalScore);
+      text = `🧘 60 秒一次没出手，+80 分。空仓也是一种策略——至少，你没亏。`;
+    } else {
+      text = `📊 追高 ${ts.length} 次，赚了 ${wins} 次${crashed > 0 ? `，被埋 ${crashed} 次` : ''}。`;
+      if (wins === ts.length && crashed === 0)
+        text += '这次全赚？别飘——追高十次九次是运气，第十次是学费。';
+      else if (crashed > 0)
+        text += '追高就像接飞刀：接到几次刀把，就觉得自己是刀客了，直到那次接到刀刃。';
+      else text += '有赚有亏才是常态。问题是：扣掉那几次被埋，长期还赚吗？';
+    }
+    setEndText(text);
+    setPhase('done');
     if (!reported.current) {
       reported.current = true;
-      recordPlay('holdback', won ? 200 : survivedSec * 2);
+      recordPlay('holdback', finalScore);
     }
   };
 
-  // lost 分支里 recordPlay 在 dive 结束后调——抽出来统一
-  useEffect(() => {
-    if (phase === 'lost' && !reported.current) {
-      reported.current = true;
-      recordPlay('holdback', score);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
-
   const start = () => {
-    stopAll();
+    clearTimers();
     reported.current = false;
     prices.current = [100];
+    priceRef.current = 100;
+    holdingRef.current = null;
+    crashIn.current = false;
+    holdSec.current = 0;
     setLeft(DURATION);
     setTempt('');
     setScore(0);
+    setTrades([]);
+    setHolding(null);
+    setPnl(0);
     setEndText('');
+    setCrashFlash(false);
     setPhase('running');
+    draw(false);
 
-    // 价格：上飘 + 噪声 + 偶发脉冲，诱惑拉满
-    const tick = () => {
-      if (phaseRef.current !== 'running') return;
-      const ps = prices.current;
-      const last = ps[ps.length - 1];
-      const spike = Math.random() < 0.06 ? last * 0.03 : 0;
-      const next = last + last * 0.0012 + (Math.random() - 0.48) * last * 0.006 + spike;
-      ps.push(next);
-      if (ps.length > 240) ps.shift();
-      draw(false);
-      raf.current = requestAnimationFrame(tick);
-    };
-    raf.current = requestAnimationFrame(tick);
-
-    timer.current = setInterval(() => {
-      setLeft((v) => {
-        if (v <= 1) {
-          finish(true, DURATION);
-          return 0;
+    // 价格引擎：100ms 一跳，整体上飘 + 噪声 + 偶发脉冲
+    timers.current.push(
+      setInterval(() => {
+        if (crashIn.current) return;
+        const last = priceRef.current;
+        const spike = Math.random() < 0.05 ? last * 0.02 : 0;
+        const drift = holdingRef.current !== null ? 0.0008 : 0.0012; // 持有时涨得慢一点，勾引你"再等等"
+        pushPrice(last + last * drift + (Math.random() - 0.48) * last * 0.006 + spike);
+        if (holdingRef.current !== null) {
+          setPnl(((priceRef.current - holdingRef.current) / holdingRef.current) * 100);
         }
-        return v - 1;
-      });
-    }, 1000);
+        draw(false);
+      }, 100),
+    );
 
+    // 闪崩判定：每秒一次，持有越久概率越高
+    timers.current.push(
+      setInterval(() => {
+        if (holdingRef.current === null || crashIn.current) return;
+        holdSec.current += 1;
+        const p = Math.min(0.45, 0.03 + holdSec.current * 0.025);
+        if (Math.random() < p) {
+          // 闪崩！
+          crashIn.current = true;
+          setCrashFlash(true);
+          let n = 0;
+          const dive = setInterval(() => {
+            pushPrice(priceRef.current * 0.97);
+            draw(true);
+            if (++n > 25) {
+              clearInterval(dive);
+              const entry = holdingRef.current!;
+              const pct = (priceRef.current - entry) / entry;
+              setTrades((ts) => [...ts, { entry, exit: priceRef.current, pct, crashed: true }]);
+              holdingRef.current = null;
+              setHolding(null);
+              setPnl(0);
+              crashIn.current = false;
+              holdSec.current = 0;
+              setTimeout(() => setCrashFlash(false), 1200);
+            }
+          }, 60);
+        }
+      }, 1000),
+    );
+
+    // 倒计时
+    timers.current.push(
+      setInterval(() => {
+        setLeft((v) => {
+          if (v <= 1) {
+            finish();
+            return 0;
+          }
+          return v - 1;
+        });
+      }, 1000),
+    );
+
+    // 诱惑弹幕
     let ti = 0;
-    temptTimer.current = setInterval(() => {
-      setTempt(TEMPTATIONS[ti++ % TEMPTATIONS.length]);
-    }, 9000);
+    timers.current.push(
+      setInterval(() => {
+        setTempt(TEMPTATIONS[ti++ % TEMPTATIONS.length]);
+      }, 8000),
+    );
   };
 
   const buy = () => {
-    if (phase !== 'running') return;
-    finish(false, DURATION - left);
+    if (holdingRef.current !== null || crashIn.current) return;
+    holdingRef.current = priceRef.current;
+    holdSec.current = 0;
+    setHolding(priceRef.current);
+    setPnl(0);
   };
 
-  const reset = () => {
-    stopAll();
-    reported.current = false;
-    setPhase('idle');
-    setLeft(DURATION);
-    setTempt('');
-    setEndText('');
-    prices.current = [];
+  const sell = () => {
+    if (holdingRef.current === null || crashIn.current) return;
+    const entry = holdingRef.current;
+    const pct = (priceRef.current - entry) / entry;
+    const pts = Math.max(0, Math.round(pct * 100 * 20));
+    setScore((s) => s + pts);
+    setTrades((ts) => [...ts, { entry, exit: priceRef.current, pct, crashed: false }]);
+    holdingRef.current = null;
+    setHolding(null);
+    setPnl(0);
   };
 
   return (
     <div className="w-full max-w-[340px] p-3 space-y-3">
       <div className="text-center">
         <div className="text-sm font-bold text-slate-200">🚫 忍住别追高</div>
-        <div className="text-[11px] text-slate-500 mt-0.5">60 秒，管住手就是胜利</div>
+        <div className="text-[11px] text-slate-500 mt-0.5">追高模拟器：买入可能赚，拿着可能崩</div>
       </div>
 
       <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-2 relative">
         <div className="flex items-baseline justify-between px-1 pb-1">
           <span className="text-xs font-semibold text-slate-300">某妖股分时图</span>
-          {phase === 'running' && (
-            <span className="text-sm font-bold text-amber-300 tabular-nums">{left}s</span>
-          )}
+          <span className="flex items-center gap-2">
+            {holding !== null && (
+              <span className={`text-xs font-bold tabular-nums ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                浮盈 {pnl >= 0 ? '+' : ''}{pnl.toFixed(1)}%
+              </span>
+            )}
+            {phase === 'running' && (
+              <span className="text-sm font-bold text-amber-300 tabular-nums">{left}s</span>
+            )}
+          </span>
         </div>
         <canvas ref={canvasRef} className="w-full h-[180px]" />
-        {tempt && phase === 'running' && (
+        {crashFlash && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="bg-rose-600/95 text-white text-sm font-black px-4 py-2 rounded-xl animate-bounce">
+              ⚡ 闪崩！被套了…
+            </div>
+          </div>
+        )}
+        {tempt && phase === 'running' && holding === null && !crashFlash && (
           <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-rose-600/90 text-white text-[11px] font-bold px-3 py-1.5 rounded-full animate-bounce whitespace-nowrap">
             {tempt}
           </div>
@@ -204,9 +296,9 @@ export default function HoldBackGame() {
       {phase === 'idle' && (
         <div className="text-center space-y-2">
           <p className="text-xs text-slate-400 leading-relaxed px-2">
-            股价一路飙升，利好一个接一个，"买入"按钮疯狂闪烁。
+            规则变了：<span className="text-slate-200 font-semibold">买入真的可能赚钱</span>——但拿得越久，闪崩概率越高。
             <br />
-            规则：<span className="text-slate-200 font-semibold">60 秒内一次都别点</span>，点了就追高被套。
+            赚了就跑还是贪到被埋？60 秒见分晓。不出手也行，+80 分。
           </p>
           <button
             onClick={start}
@@ -218,31 +310,48 @@ export default function HoldBackGame() {
       )}
 
       {phase === 'running' && (
-        <button
-          onClick={buy}
-          className="w-full py-4 rounded-xl bg-rose-600 text-white text-lg font-black animate-pulse shadow-lg shadow-rose-900/50"
-        >
-          🤑 点我买入，马上起飞！
-        </button>
+        <div className="space-y-2">
+          {holding === null ? (
+            <button
+              onClick={buy}
+              className="w-full py-4 rounded-xl bg-rose-600 text-white text-lg font-black animate-pulse shadow-lg shadow-rose-900/50"
+            >
+              🤑 点我追高，马上起飞！
+            </button>
+          ) : (
+            <button
+              onClick={sell}
+              className="w-full py-4 rounded-xl bg-emerald-600 text-white text-lg font-black shadow-lg shadow-emerald-900/50"
+            >
+              💰 落袋为安（{pnl >= 0 ? '+' : ''}{pnl.toFixed(1)}%）
+            </button>
+          )}
+          <p className="text-center text-[11px] text-slate-500">
+            本局 {score} 分 · 已交易 {trades.length} 次
+          </p>
+        </div>
       )}
 
-      {(phase === 'won' || phase === 'lost') && (
+      {phase === 'done' && (
         <div className="space-y-2">
-          <div
-            className={`rounded-xl p-3 text-center text-xs leading-relaxed border ${
-              phase === 'won'
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
-                : 'bg-rose-500/10 border-rose-500/30 text-rose-200'
-            }`}
-          >
+          <div className="rounded-xl p-3 text-center text-xs leading-relaxed border bg-slate-500/10 border-slate-600/40 text-slate-200">
             <p className="font-semibold">{endText}</p>
             <p className="text-amber-300 font-bold mt-1">本局 {score} 分</p>
           </div>
+          {trades.length > 0 && (
+            <div className="text-[11px] text-slate-500 space-y-0.5 px-1">
+              {trades.map((t, i) => (
+                <p key={i}>
+                  第{i + 1}笔：{t.crashed ? '⚡闪崩被埋' : `${t.pct >= 0 ? '+' : ''}${(t.pct * 100).toFixed(1)}%`}
+                </p>
+              ))}
+            </div>
+          )}
           <p className="text-[11px] text-slate-400 leading-relaxed px-1">
-            💡 追高时的心跳，和游戏里一模一样。区别是：游戏里输的是积分，实盘里输的是真钱。
+            💡 追高最毒的地方：它真的会让你先赚几次。赚的那几次不是技术，是运气在收门票。
           </p>
           <button
-            onClick={reset}
+            onClick={start}
             className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
           >
             再来一局
