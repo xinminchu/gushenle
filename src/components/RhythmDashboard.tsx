@@ -863,6 +863,31 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               )}
             </div>
 
+            {/* 黄金分割组合：一排按钮紧跟在开关下方 */}
+            {showFib && fibRangeOk && chartType !== 'ohlc' && (
+              <div className="flex gap-1.5 mb-2">
+                {FIB_COMBO_IDS.map((id) => (
+                  <Tip key={id} text={FIB_COMBOS[id].desc}>
+                    <button
+                      onClick={() => setFibCombo(id)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                        fibCombo === id
+                          ? 'border-yellow-600/50 text-yellow-300 bg-yellow-500/10'
+                          : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {FIB_COMBOS[id].name}
+                      {id === RECOMMENDED_FIB_COMBO && (
+                        <span className="ml-1 text-[9px] px-1 rounded bg-yellow-500/20 text-yellow-400">
+                          推荐
+                        </span>
+                      )}
+                    </button>
+                  </Tip>
+                ))}
+              </div>
+            )}
+
             <RhythmChart
               series={data.series}
               height={240}
@@ -872,32 +897,11 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               fibLevels={fibChartLevels}
               prevCloseLabel={prevCloseLabel}
             />
-            {/* 黄金分割：点开直接给组合按钮，默认完整五线 */}
+            {/* 黄金分割说明：组合的具体文字放图下方 */}
             {showFib && fibRangeOk && (
               <div className="mt-3 bg-slate-800/40 border border-slate-700/50 rounded-xl p-3">
-                <div className="flex flex-wrap gap-1.5 mb-1.5">
-                      {FIB_COMBO_IDS.map((id) => (
-                        <Tip key={id} text={FIB_COMBOS[id].desc}>
-                          <button
-                            onClick={() => setFibCombo(id)}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
-                              fibCombo === id
-                                ? 'border-yellow-600/50 text-yellow-300 bg-yellow-500/10'
-                                : 'border-slate-700 text-slate-500 hover:text-slate-300'
-                            }`}
-                          >
-                            {FIB_COMBOS[id].name}
-                            {id === RECOMMENDED_FIB_COMBO && (
-                              <span className="ml-1 text-[9px] px-1 rounded bg-yellow-500/20 text-yellow-400">
-                                推荐
-                              </span>
-                            )}
-                          </button>
-                        </Tip>
-                      ))}
-                    </div>
                     <p className="text-[10px] text-slate-500 leading-relaxed mb-2">
-                      {FIB_COMBOS[fibCombo].desc}
+                      {FIB_COMBOS[fibCombo].name}：{FIB_COMBOS[fibCombo].desc}
                     </p>
                 {fibSwing && fibChartLevels ? (
                   <>

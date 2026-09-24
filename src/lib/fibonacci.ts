@@ -23,7 +23,7 @@ export interface FibSwing {
   range: number;
 }
 
-export type FibComboId = 'smart' | 'classic' | 'full' | 'minimal' | 'deep' | 'extension';
+export type FibComboId = 'smart' | 'classic' | 'full' | 'extension';
 
 export interface FibCombo {
   id: FibComboId;
@@ -33,14 +33,14 @@ export interface FibCombo {
   desc: string;
 }
 
-/** 六套组合。回测结论（2026-09-24，AAPL/NVDA/MSFT/TSLA/COIN/MSTR 近3年，
+/** 四套组合。回测结论（2026-09-24，AAPL/NVDA/MSFT/TSLA/COIN/MSTR 近3年，
  * 无未来函数，5日验证）：
  * - 窗口：40天 > 60天 > 120天，单调——波段越新鲜越靠谱
  * - 回调线：0.786(67.7%) > 0.618(59.2%) > 0.5(51.8%) > 0.382(49.9%) > 0.236(41.7%)，
  *   线越深触及后越容易守住；浅线（0.236/0.382）基本是噪音
  * - 扩展目标：1.272 触及后5天内不再大涨的概率 77.6%（286次触及），拦追高最有效
  * - 收敛（2026-09-24）：诊断卡联动用"推荐视图"（smart）——上方 1.272/1.618 拦追高，
- *   下方 0.618/0.786 拦割肉，窗口 40 天；面板默认给"完整五线"（别处常见），六套组合按钮直接展示
+ *   下方 0.618/0.786 拦割肉，窗口 40 天；面板默认给"完整五线"（别处常见），四套组合按钮直接展示
  */
 export const FIB_COMBOS: Record<FibComboId, FibCombo> = {
   smart: {
@@ -64,20 +64,6 @@ export const FIB_COMBOS: Record<FibComboId, FibCombo> = {
     kind: 'retrace',
     desc: '回调全套：浅回调 0.236 到深回调 0.786（浅线多为噪音，深线更靠谱）',
   },
-  minimal: {
-    id: 'minimal',
-    name: '极简两线',
-    ratios: [0.382, 0.618],
-    kind: 'retrace',
-    desc: '只留最重要的两条：强弱分界看得最清（回测触及后守住约50%/59%）',
-  },
-  deep: {
-    id: 'deep',
-    name: '深回调',
-    ratios: [0.618, 0.786],
-    kind: 'retrace',
-    desc: '调参优选：只留触及后最容易守住的两条深线（回测约59%/68%）',
-  },
   extension: {
     id: 'extension',
     name: '扩展目标',
@@ -91,7 +77,9 @@ export const FIB_COMBO_IDS = Object.keys(FIB_COMBOS) as FibComboId[];
 
 /**
  * 回测调参后的推荐组合：诊断卡联动用"推荐视图"（smart）——上方 1.272/1.618 拦追高，
- * 下方 0.618/0.786 拦割肉。面板默认给"完整五线"（别处常见），六套组合按钮直接展示。
+ * 下方 0.618/0.786 拦割肉。面板默认给"完整五线"（别处常见），四套组合按钮直接展示。
+ * 2026-09-24 精简：去掉"极简两线"（经典三线的纯子集）、"深回调"（推荐视图与完整五线的纯子集），
+ * 被删的两个组合没有一条独立线条。
  * 调参结论更新时改这里，UI 的"推荐"徽章和诊断联动自动跟随。
  */
 export const RECOMMENDED_FIB_COMBO: FibComboId = 'smart';
@@ -141,33 +129,42 @@ export function fibLevels(swing: FibSwing, comboId: FibComboId): FibLevel[] {
     const ext = fibLevels(swing, 'extension').filter(
       (l) => l.ratio === 1.272 || l.ratio === 1.618
     );
-    const deep = fibLevels(swing, 'deep');
+    const deep = fibLevelsForRatios(swing, [0.618, 0.786], 'retrace');
     return [...ext, ...deep].sort((a, b) => b.price - a.price);
   }
   const combo = FIB_COMBOS[comboId];
+  return fibLevelsForRatios(swing, combo.ratios, combo.kind);
+}
+
+/** 按给定比率与类型算参考线价位（保留 2 位小数） */
+function fibLevelsForRatios(
+  swing: FibSwing,
+  ratios: number[],
+  kind: 'retrace' | 'extension' | 'mixed'
+): FibLevel[] {
   const { high, low, range, uptrend } = swing;
   const r2 = (n: number) => Math.round(n * 100) / 100;
-  return combo.ratios.map((r) => {
+  return ratios.map((r) => {
     let price: number;
-    let kind: FibLevelKind;
-    if (combo.kind === 'retrace') {
+    let levelKind: FibLevelKind;
+    if (kind === 'retrace') {
       if (uptrend) {
         price = high - range * r;
-        kind = 'support';
+        levelKind = 'support';
       } else {
         price = low + range * r;
-        kind = 'resistance';
+        levelKind = 'resistance';
       }
     } else {
       if (uptrend) {
         price = low + range * r;
-        kind = 'target-up';
+        levelKind = 'target-up';
       } else {
         price = high - range * r;
-        kind = 'target-down';
+        levelKind = 'target-down';
       }
     }
-    return { ratio: r, price: r2(price), kind };
+    return { ratio: r, price: r2(price), kind: levelKind };
   });
 }
 
