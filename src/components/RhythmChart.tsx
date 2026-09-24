@@ -14,6 +14,7 @@ import type { RhythmPoint } from '@/lib/rhythm';
 import type { ColorScheme } from '@/lib/colorScheme';
 import { upHex, downHex } from '@/lib/colorScheme';
 import type { FibLevel } from '@/lib/fibonacci';
+import { fibRatioLabel } from '@/lib/fibonacci';
 
 export type ChartType = 'candle' | 'line' | 'ohlc';
 
@@ -110,7 +111,7 @@ export default function RhythmChart({
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
           axisLabelVisible: true,
-          title: `${lv.ratio}`,
+          title: fibRatioLabel(lv),
         });
       }
     };

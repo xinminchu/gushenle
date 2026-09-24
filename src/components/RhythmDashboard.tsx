@@ -34,6 +34,7 @@ import {
   fibAdviceHint,
   fibPlainAdvice,
   fibKindLabel,
+  fibRatioLabel,
   nearestFibLevel,
   FIB_COMBOS,
   FIB_COMBO_IDS,
@@ -975,7 +976,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                             >
                               <span className="text-yellow-300/90 font-mono">
                                 {isNear ? '📍 ' : ''}
-                                {lv.ratio} · {fibKindLabel(lv.kind)}
+                                {fibRatioLabel(lv)} · {fibKindLabel(lv.kind)}
                               </span>
                               <span className="text-slate-300 font-mono">${lv.price}</span>
                               <span className="text-slate-500 font-mono text-[10px]">

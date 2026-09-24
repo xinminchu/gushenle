@@ -231,6 +231,14 @@ export function fibKindLabel(kind: FibLevelKind): string {
   return KIND_LABEL[kind];
 }
 
+/**
+ * 展示用比率：下行扩展目标带负号（如 -1.272），表示从锚点向下再走 1.272 倍波段幅度；
+ * 回调位（支撑/压力）与上行目标沿用常规正数。
+ */
+export function fibRatioLabel(lv: FibLevel): string {
+  return `${lv.kind === 'target-down' ? '-' : ''}${lv.ratio}`;
+}
+
 export interface FibPlainAdviceInput {
   price: number;
   levels: FibLevel[];
@@ -258,7 +266,7 @@ export function fibPlainAdvice(input: FibPlainAdviceInput): string[] | null {
   const dn = below[0] ?? null;
   const distUp = up ? ((up.price - price) / price) * 100 : null;
   const distDn = dn ? ((price - dn.price) / price) * 100 : null;
-  const name = (lv: FibLevel) => `${lv.ratio}${fibKindLabel(lv.kind)}`;
+  const name = (lv: FibLevel) => `${fibRatioLabel(lv)}${fibKindLabel(lv.kind)}`;
   const has = pnlPct != null;
   const pnl = pnlPct ?? 0;
   const pnlTxt =
@@ -346,7 +354,7 @@ export function fibAdviceHint(
   const near = nearestFibLevel(fibLevels(swing, comboId), price);
   if (!near || near.distPct > 1.5) return null;
   const { level } = near;
-  const at = `${level.ratio}${fibKindLabel(level.kind)}（$${level.price}）`;
+  const at = `${fibRatioLabel(level)}${fibKindLabel(level.kind)}（$${level.price}）`;
   switch (level.kind) {
     case 'support':
       return `📐 现价贴近${at}——跌到这儿容易稳住，别慌着割肉`;
