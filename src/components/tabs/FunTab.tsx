@@ -131,6 +131,10 @@ export default function FunTab() {
     (a, b) => (stats?.[b.id as GameId]?.plays || 0) - (stats?.[a.id as GameId]?.plays || 0)
   );
 
+  // 列数自适应：9 个及以内 3 列（9 个正好 3x3），超过 9 个换 4 列
+  const cols = sortedGames.length > 9 ? 4 : 3;
+  const compact = cols === 4;
+
   return (
     <div className="p-4 space-y-5 pb-24 max-w-md mx-auto relative">
       <header className="pt-2">
@@ -147,31 +151,48 @@ export default function FunTab() {
       </header>
 
       {/* 游戏小方块 */}
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className={`grid ${cols === 4 ? 'grid-cols-4' : 'grid-cols-3'} gap-2`}>
         {sortedGames.map((game) => {
           const st = stats?.[game.id as GameId];
           return (
             <button
               key={game.id}
               onClick={() => openGame(game.id)}
-              className="relative bg-slate-800/80 border border-slate-700 hover:border-emerald-500/50 active:scale-[0.97] rounded-xl p-3 text-left transition-all"
+              className={`relative bg-slate-800/80 border border-slate-700 hover:border-emerald-500/50 active:scale-[0.97] rounded-xl text-left transition-all ${
+                compact ? 'p-2' : 'p-3'
+              }`}
             >
               {game.hot && (
-                <span className="absolute top-2 right-2 bg-amber-500/20 text-amber-400 text-[9px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                  <Flame className="w-3 h-3" /> 热门
+                <span className="absolute top-1.5 right-1.5 bg-amber-500/20 text-amber-400 text-[9px] px-1 py-0.5 rounded flex items-center gap-0.5">
+                  <Flame className="w-2.5 h-2.5" /> 热门
                 </span>
               )}
-              <div className="text-2xl mb-1.5">{game.icon}</div>
-              <div className="font-bold text-slate-100 text-xs leading-snug pr-8">{game.name}</div>
+              <div className={compact ? 'text-xl mb-1' : 'text-2xl mb-1.5'}>{game.icon}</div>
+              <div
+                className={`font-bold text-slate-100 leading-snug ${
+                  compact ? 'text-[10px]' : 'text-xs'
+                } ${game.hot ? 'pr-7' : ''}`}
+              >
+                {game.name}
+              </div>
               {game.credit && (
-                <div className="text-[9px] text-violet-300/80 mt-0.5 truncate">💡 创意：{game.credit}</div>
+                <div className="text-[9px] text-violet-300/80 mt-0.5 truncate">💡 {game.credit}</div>
               )}
-              <div className="text-[10px] text-slate-500 mt-1">
+              <div className="text-[10px] text-slate-500 mt-1 truncate">
                 {st && st.plays > 0 ? (
-                  <span className="flex items-center gap-1">
-                    <Trophy className="w-3 h-3 text-amber-400 shrink-0" />
-                    玩了 {st.plays} 次 · {st.totalScore} 分
-                  </span>
+                  compact ? (
+                    <span className="flex items-center gap-0.5">
+                      <Trophy className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                      {st.plays} 次
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      <Trophy className="w-3 h-3 text-amber-400 shrink-0" />
+                      玩了 {st.plays} 次 · {st.totalScore} 分
+                    </span>
+                  )
+                ) : compact ? (
+                  <span className="text-emerald-400/80">NEW</span>
                 ) : (
                   '还没玩过，来试试'
                 )}
