@@ -252,6 +252,15 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
 
   const judgment = data?.judgment ?? null;
   const overHeat = !!judgment?.overheated;
+  /** 图上"最后一根日线收盘"线的标注：盘中叫昨收，收盘后叫收盘价 */
+  const prevCloseLabel = useMemo(() => {
+    if (!data || data.series.length === 0) return null;
+    const last = data.series[data.series.length - 1];
+    return {
+      price: data.prevClose ?? last.close,
+      text: data.priceLive ? '昨收' : '收盘价',
+    };
+  }, [data?.prevClose, data?.priceLive, data?.series.length]);
   /** 当前标的的持仓（有就按盈亏说话，没有就问一句）：tab 切换会重挂载，数据天然新鲜 */
   const myPosition = useMemo(() => {
     if (typeof window === 'undefined') return null;
@@ -858,6 +867,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               showRangeHL={showRangeHL}
               scheme={scheme}
               fibLevels={fibChartLevels}
+              prevCloseLabel={prevCloseLabel}
             />
             {/* 黄金分割：默认只看推荐视图，组合切换收进"换组合" */}
             {showFib && fibRangeOk && (

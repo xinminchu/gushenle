@@ -28,6 +28,8 @@ interface RhythmChartProps {
   scheme: ColorScheme;
   /** 黄金分割参考线（candle/line 图上画金色虚线） */
   fibLevels?: FibLevel[] | null;
+  /** 最后一根日线收盘线的标注：盘中=昨收，收盘后=收盘价（原来是图表库自动画的无名线，看着像实时价） */
+  prevCloseLabel?: { price: number; text: string } | null;
 }
 
 /** 四线图图例颜色（中性色，不跟涨跌配色走） */
@@ -54,6 +56,7 @@ export default function RhythmChart({
   showRangeHL,
   scheme,
   fibLevels,
+  prevCloseLabel,
 }: RhythmChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const UP = upHex(scheme);
@@ -109,6 +112,21 @@ export default function RhythmChart({
       }
     };
 
+    /** 最后一根日线收盘线：玫瑰红虚线，轴上标价，左上角图例给名字 */
+    const drawPrevCloseLine = (s: {
+      createPriceLine: (opts: CreatePriceLineOptions) => unknown;
+    }) => {
+      if (!prevCloseLabel) return;
+      s.createPriceLine({
+        price: prevCloseLabel.price,
+        color: 'rgba(244, 63, 94, 0.55)',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: prevCloseLabel.text,
+      });
+    };
+
     if (chartType === 'candle') {
       const candles = chart.addSeries(CandlestickSeries, {
         upColor: UP,
@@ -116,8 +134,9 @@ export default function RhythmChart({
         wickUpColor: UP,
         wickDownColor: DOWN,
         borderVisible: false,
-        priceLineVisible: true,
-        lastValueVisible: true,
+        // 关掉库自动的无名"最新价"线，换成下面带"昨收/收盘价"标注的线
+        priceLineVisible: false,
+        lastValueVisible: false,
       });
       candles.setData(
         series.map((p) => ({
@@ -152,6 +171,7 @@ export default function RhythmChart({
         setHl(null);
       }
       drawFibLines(candles);
+      drawPrevCloseLine(candles);
     } else if (chartType === 'ohlc') {
       // 四线：开/高/低/收。极值线本身已展示区间上下沿，不再画虚线。
       const mk = (key: 'open' | 'high' | 'low' | 'close', color: string, width: 1 | 2) => {
@@ -159,15 +179,17 @@ export default function RhythmChart({
           color,
           lineWidth: width,
           priceLineVisible: false,
-          lastValueVisible: key === 'close',
+          lastValueVisible: false,
           crosshairMarkerVisible: key === 'close',
         });
         s.setData(series.map((p) => ({ time: p.date, value: p[key] ?? p.close })));
+        return s;
       };
       mk('high', OHLC_COLORS.high, 1);
       mk('low', OHLC_COLORS.low, 1);
       mk('open', OHLC_COLORS.open, 1);
-      mk('close', OHLC_COLORS.close, 2);
+      const closeSeries = mk('close', OHLC_COLORS.close, 2);
+      drawPrevCloseLine(closeSeries);
       setHl(null);
     } else {
       // 收盘线颜色跟随区间净涨跌 + 当前配色方案
@@ -179,8 +201,9 @@ export default function RhythmChart({
         lineWidth: 2,
         topColor: `${line}59`,
         bottomColor: `${line}05`,
-        priceLineVisible: true,
-        lastValueVisible: true,
+        // 关掉库自动的无名"最新价"线，换成带"昨收/收盘价"标注的线
+        priceLineVisible: false,
+        lastValueVisible: false,
       });
       area.setData(series.map((p) => ({ time: p.date, value: p.close })));
       if (showRangeHL && series.length > 0) {
@@ -206,6 +229,7 @@ export default function RhythmChart({
         setHl(null);
       }
       drawFibLines(area);
+      drawPrevCloseLine(area);
     }
     // 黄金分割线画出可视范围时，把价格轴缩放到能看见它们。
     // lightweight-charts 的 priceLine 不参与自动缩放，所以用一条全透明的线
@@ -241,7 +265,7 @@ export default function RhythmChart({
       ro.disconnect();
       chart.remove();
     };
-  }, [series, height, chartType, showRangeHL, fibLevels, scheme, UP, DOWN]);
+  }, [series, height, chartType, showRangeHL, fibLevels, scheme, UP, DOWN, prevCloseLabel]);
 
   if (series.length === 0) {
     return (
@@ -258,8 +282,14 @@ export default function RhythmChart({
     <div className="relative w-full" style={{ height }}>
       <div ref={containerRef} className="w-full h-full" />
       {/* 区间高低点图例：放左上角，不压右侧价格轴 */}
-      {(hl || (fibLevels && fibLevels.length > 0)) && chartType !== 'ohlc' && (
+      {(hl || (fibLevels && fibLevels.length > 0) || prevCloseLabel) && chartType !== 'ohlc' && (
         <div className="absolute top-1 left-1 flex items-center gap-2 text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
+          {prevCloseLabel && (
+            <span>
+              <span className="inline-block w-2.5 h-0 border-t border-dashed border-rose-500/70 mr-1 align-middle" />
+              {prevCloseLabel.text} {prevCloseLabel.price.toFixed(2)}
+            </span>
+          )}
           {hl && (
             <>
               <span>
@@ -299,6 +329,12 @@ export default function RhythmChart({
               {label}
             </span>
           ))}
+          {prevCloseLabel && (
+            <span>
+              <span className="inline-block w-2.5 h-0 border-t border-dashed border-rose-500/70 mr-1 align-middle" />
+              {prevCloseLabel.text} {prevCloseLabel.price.toFixed(2)}
+            </span>
+          )}
         </div>
       )}
     </div>
