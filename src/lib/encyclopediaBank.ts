@@ -57,6 +57,7 @@ export const ENCYCLOPEDIA_THEMES: EncyclopediaTheme[] = [
   { key: 'behavior', name: "交易行为", emoji: "🧠", desc: "拦追高、拦割肉，管住手" },
   { key: 'risk', name: "风险管理", emoji: "🛡️", desc: "仓位止损分散，先活下去" },
   { key: 'usMechanics', name: "美股机制", emoji: "🗽", desc: "T+1 熔断盘前盘后，美股玩法" },
+  { key: 'cnMechanics', name: "A股机制", emoji: "🐲", desc: "涨跌停 T+1 开户门槛，A 股玩法" },
   { key: 'dividend', name: "分红与拆股", emoji: "💰", desc: "股息拆股回购，钱怎么分" },
 ];
 
@@ -229,4 +230,17 @@ export const ENCYCLOPEDIA_QUESTIONS: EncyclopediaQuestion[] = [
   {"id": "dividend-10", "theme": "dividend", "purpose": "advanced", "scenario": "holding", "difficulty": 3, "question": "一只股票股息率高达 12%，最该警惕什么？", "options": ["分红太多，公司太大方", "可能是股价暴跌把股息率“算”高了，分红随时可能砍", "12% 是正常水平", "赶紧全仓买入"], "answer": [1], "multi": false, "explanation": "股息率=股息÷股价，股价腰斩股息率自动翻倍，高得离谱多半是陷阱。"},
   {"id": "dividend-11", "theme": "dividend", "purpose": "advanced", "scenario": "any", "difficulty": 3, "question": "中国居民拿美股分红，预扣税怎么算？", "options": ["不用交税", "默认扣 30%，凭中美税收协定填 W-8BEN 可降到 10%", "和美股本地人一样免税", "扣 50%"], "answer": [1], "multi": false, "explanation": "美股股息先预扣再到账，协定待遇要主动填表申请。"},
   {"id": "dividend-12", "theme": "dividend", "purpose": "advanced", "scenario": "any", "difficulty": 3, "question": "DRIP（股息再投资计划）的特点是？（多选，共 2 个正确）", "options": ["分红自动按市价再买入同一只股票，利滚利", "必须手动操作，券商不提供", "很多券商免佣金、支持碎股再投", "再投资的部分不用交税"], "answer": [0, 2], "multi": true, "explanation": "DRIP 让分红自动“生小钱”，但税一分都少不了。"},
+  {"id": "cnMechanics-01", "theme": "cnMechanics", "purpose": "beginner", "scenario": "any", "difficulty": 1, "question": "A 股主板股票一天最多涨或跌多少？", "options": ["±10%", "±20%", "±30%", "不设涨跌停"], "answer": [0], "multi": false, "explanation": "主板涨跌停板是 ±10%，涨停了当天就买不到了。"},
+  {"id": "cnMechanics-02", "theme": "cnMechanics", "purpose": "beginner", "scenario": "any", "difficulty": 1, "question": "创业板和科创板股票的涨跌幅限制是多少？", "options": ["±5%", "±10%", "±30%", "±20%"], "answer": [3], "multi": false, "explanation": "创业板和科创板都是 ±20%，波动比主板更刺激。"},
+  {"id": "cnMechanics-03", "theme": "cnMechanics", "purpose": "beginner", "scenario": "any", "difficulty": 1, "question": "北交所股票的涨跌幅限制是多少？", "options": ["±30%", "±10%", "±5%", "±20%"], "answer": [0], "multi": false, "explanation": "北交所是 ±30%，三个市场里最刺激的一个。"},
+  {"id": "cnMechanics-04", "theme": "cnMechanics", "purpose": "intermediate", "scenario": "any", "difficulty": 2, "question": "今天早上买入的 A 股股票，今天下午能卖出吗？", "options": ["当天就能卖出", "要等一周", "要等到下一个交易日才能卖", "只能卖一半"], "answer": [2], "multi": false, "explanation": "A 股实行 T+1，今天买的明天才能卖，当天只能看涨跌。"},
+  {"id": "cnMechanics-05", "theme": "cnMechanics", "purpose": "intermediate", "scenario": "premarket", "difficulty": 2, "question": "A 股每天开盘前的集合竞价在哪个时间段？", "options": ["8:00-9:00", "9:30-11:30", "9:15-9:25", "14:00-15:00"], "answer": [2], "multi": false, "explanation": "9:15-9:25 集合竞价定开盘价，9:20 之后就不能撤单了。"},
+  {"id": "cnMechanics-06", "theme": "cnMechanics", "purpose": "beginner", "scenario": "any", "difficulty": 1, "question": "A 股买入股票，一次最少要买多少股？", "options": ["10 股", "100 股", "50 股", "1000 股"], "answer": [1], "multi": false, "explanation": "买入至少 1 手（100 股）；卖出时零股可以一次性清仓。"},
+  {"id": "cnMechanics-07", "theme": "cnMechanics", "purpose": "intermediate", "scenario": "any", "difficulty": 2, "question": "开通创业板交易权限，需要满足什么条件？", "options": ["无门槛直接开通", "2 年经验 + 50 万元资产", "5 年经验 + 100 万元资产", "2 年经验 + 10 万元资产"], "answer": [3], "multi": false, "explanation": "创业板要 2 年交易经验和 20 个交易日日均 10 万资产。"},
+  {"id": "cnMechanics-08", "theme": "cnMechanics", "purpose": "advanced", "scenario": "any", "difficulty": 3, "question": "以下哪些板块开户需要 50 万元资产门槛？（多选，共 2 个正确）", "options": ["创业板", "科创板", "北交所", "主板"], "answer": [1, 2], "multi": true, "explanation": "科创板和北交所都要 2 年经验 + 50 万，创业板只要 10 万。"},
+  {"id": "cnMechanics-09", "theme": "cnMechanics", "purpose": "advanced", "scenario": "any", "difficulty": 3, "question": "开通融资融券（两融）需要什么条件？", "options": ["开户满 1 个月即可", "只要成年即可", "证券交易满 6 个月 + 50 万元资产", "必须有 10 年经验"], "answer": [2], "multi": false, "explanation": "两融门槛是 6 个月交易经验加 50 万资产，加杠杆先过门槛。"},
+  {"id": "cnMechanics-10", "theme": "cnMechanics", "purpose": "intermediate", "scenario": "any", "difficulty": 2, "question": "戴帽的 ST 股票，涨跌幅限制变成多少？", "options": ["±5%", "±10%", "±20%", "不设限"], "answer": [0], "multi": false, "explanation": "ST 股被压缩到 ±5%，风险提示名副其实。"},
+  {"id": "cnMechanics-11", "theme": "cnMechanics", "purpose": "advanced", "scenario": "any", "difficulty": 3, "question": "A 股主板新股上市第一天，最多能涨多少？", "options": ["10%", "20%", "36%", "44%"], "answer": [3], "multi": false, "explanation": "主板新股首日开盘价涨 20% 上限，盘中最高涨到 44%。"},
+  {"id": "cnMechanics-12", "theme": "cnMechanics", "purpose": "beginner", "scenario": "any", "difficulty": 1, "question": "创业板、科创板、北交所的新股上市前 5 个交易日，涨跌幅怎么算？", "options": ["和其他股票一样", "上市前 5 个交易日不设涨跌幅", "涨跌幅只有 5%", "只能涨不能跌"], "answer": [1], "multi": false, "explanation": "这三个板块新股前 5 天不限涨跌，第 6 天起才恢复限制。"},
+  {"id": "cnMechanics-13", "theme": "cnMechanics", "purpose": "advanced", "scenario": "crash", "difficulty": 3, "question": "股票确定退市后，退市整理期一般有多少个交易日？", "options": ["5 个交易日", "10 个交易日", "15 个交易日", "30 个交易日"], "answer": [2], "multi": false, "explanation": "退市整理期 15 个交易日，是最后下车的窗口。"},
 ];
