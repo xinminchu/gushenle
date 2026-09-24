@@ -50,7 +50,14 @@ export default function FunTab() {
     if (activeGame === null) setStats(loadStats());
   }, [activeGame]);
 
-  const games = [
+  const games: {
+    id: string;
+    name: string;
+    icon: string;
+    level: string;
+    hot?: boolean;
+    credit?: string;
+  }[] = [
     {
       id: 'clipper',
       name: '韭菜咯咯乐',
@@ -110,6 +117,11 @@ export default function FunTab() {
     return game ? game.name : '小游戏';
   };
 
+  // 按游玩次数排序，玩得多的排前面
+  const sortedGames = [...games].sort(
+    (a, b) => (stats?.[b.id as GameId]?.plays || 0) - (stats?.[a.id as GameId]?.plays || 0)
+  );
+
   return (
     <div className="p-4 space-y-5 pb-24 max-w-md mx-auto relative">
       <header className="pt-2">
@@ -127,7 +139,7 @@ export default function FunTab() {
 
       {/* 游戏小方块 */}
       <div className="grid grid-cols-2 gap-2.5">
-        {games.map((game) => {
+        {sortedGames.map((game) => {
           const st = stats?.[game.id as GameId];
           return (
             <button
@@ -142,6 +154,9 @@ export default function FunTab() {
               )}
               <div className="text-2xl mb-1.5">{game.icon}</div>
               <div className="font-bold text-slate-100 text-xs leading-snug pr-8">{game.name}</div>
+              {game.credit && (
+                <div className="text-[9px] text-violet-300/80 mt-0.5 truncate">💡 创意：{game.credit}</div>
+              )}
               <div className="text-[10px] text-slate-500 mt-1">
                 {st && st.plays > 0 ? (
                   <span className="flex items-center gap-1">

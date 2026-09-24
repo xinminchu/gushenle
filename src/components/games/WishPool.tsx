@@ -13,6 +13,7 @@ interface Wish {
   kind: 'idea' | 'review';
   content: string;
   created_at: string;
+  adopted: boolean;
 }
 
 const KIND_META = {
@@ -46,7 +47,7 @@ export default function WishPool() {
     try {
       const { data } = await supabase
         .from('game_wishes')
-        .select('id,user_id,nickname,kind,content,created_at')
+        .select('id,user_id,nickname,kind,content,created_at,adopted')
         .order('created_at', { ascending: false })
         .limit(30);
       if (data) setWishes(data as Wish[]);
@@ -192,6 +193,11 @@ export default function WishPool() {
                 {KIND_META[w.kind].icon} {KIND_META[w.kind].label}
               </span>
               <span className="text-[11px] text-slate-300 font-medium">{w.nickname}</span>
+              {w.adopted && (
+                <span className="text-[10px] text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                  🎉 已被采纳
+                </span>
+              )}
               {w.user_id && (
                 <span className="text-[10px] text-amber-400/80">+10 贡献</span>
               )}
