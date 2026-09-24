@@ -235,4 +235,75 @@ alter table game_wishes
   add column if not exists replied_at timestamptz;
 `,
   },
+  {
+    version: "010_game_stats_encyclopedia",
+    name: "游戏战绩表：放宽 game_id 约束到 10 个游戏",
+    sql: `-- 010_game_stats_encyclopedia.sql
+-- 放宽 game_stats.game_id 的检查约束：加入股票大百科（encyclopedia）。
+-- 在 Supabase Dashboard -> SQL Editor 中执行一次即可，
+-- 或用站内「管理」→ 数据库迁移一键执行。
+
+alter table public.game_stats drop constraint if exists game_stats_game_id_check;
+alter table public.game_stats add constraint game_stats_game_id_check
+  check (game_id in (
+    'clipper', 'cool30', 'bigtech', 'kline',
+    'cutloss', 'holdback', 'newstrap', 'dca', 'dart', 'encyclopedia'
+  ));
+`,
+  },
+  {
+    version: "011_encyclopedia_favorites",
+    name: "股票大百科：我的知识库（收藏题目）",
+    sql: `-- 011_encyclopedia_favorites.sql
+-- 股票大百科：我的知识库（收藏题目）。
+-- 游客用 localStorage，登录用户同步到这张表（每用户每题一行）。
+-- 在 Supabase Dashboard -> SQL Editor 中执行一次即可，
+-- 或用站内「管理」→ 数据库迁移一键执行。
+
+create table if not exists public.encyclopedia_favorites (
+  user_id     uuid        not null references auth.users(id) on delete cascade,
+  question_id text        not null,
+  created_at  timestamptz not null default now(),
+  primary key (user_id, question_id)
+);
+
+alter table public.encyclopedia_favorites enable row level security;
+
+drop policy if exists "users manage own favorites" on public.encyclopedia_favorites;
+create policy "users manage own favorites"
+  on public.encyclopedia_favorites for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+`,
+  },
+  {
+    version: "012_encyclopedia_suggestions",
+    name: "股票大百科：题目修改建议",
+    sql: `-- 012_encyclopedia_suggestions.sql
+-- 股票大百科：题目修改建议 / 新题投稿。
+-- 游客建议只存本地队列；登录用户写入这张表。读取与采纳走 service_role
+-- （后续站长审核页），普通用户只有插入权限，且不能冒充他人 user_id。
+-- 在 Supabase Dashboard -> SQL Editor 中执行一次即可，
+-- 或用站内「管理」→ 数据库迁移一键执行。
+
+create table if not exists public.encyclopedia_suggestions (
+  id                bigint generated always as identity primary key,
+  user_id           uuid references auth.users(id) on delete set null,
+  nickname          text        not null default '匿名股友',
+  question_id       text        not null,
+  question_snapshot text        not null default '',
+  suggestion        text        not null check (char_length(suggestion) between 2 and 500),
+  status            text        not null default 'pending'
+                    check (status in ('pending', 'adopted', 'rejected')),
+  created_at        timestamptz not null default now()
+);
+
+alter table public.encyclopedia_suggestions enable row level security;
+
+drop policy if exists "anyone can suggest" on public.encyclopedia_suggestions;
+create policy "anyone can suggest"
+  on public.encyclopedia_suggestions for insert
+  with check (user_id is null or user_id = auth.uid());
+`,
+  },
 ];

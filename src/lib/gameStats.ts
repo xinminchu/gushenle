@@ -19,7 +19,8 @@ export type GameId =
   | 'holdback'
   | 'newstrap'
   | 'dca'
-  | 'dart';
+  | 'dart'
+  | 'encyclopedia';
 
 export interface GameStat {
   plays: number;
@@ -40,6 +41,7 @@ export const GAME_NAMES: Record<GameId, string> = {
   newstrap: '消息面陷阱',
   dca: '定投 vs 梭哈',
   dart: '飞镖选股',
+  encyclopedia: '股票大百科',
 };
 
 const emptyStat = (): GameStat => ({ plays: 0, totalScore: 0, best: 0, banked: 0 });
@@ -55,6 +57,7 @@ function blank(): Record<GameId, GameStat> {
     newstrap: emptyStat(),
     dca: emptyStat(),
     dart: emptyStat(),
+    encyclopedia: emptyStat(),
   };
 }
 
