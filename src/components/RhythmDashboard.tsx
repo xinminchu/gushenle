@@ -232,6 +232,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const rangeLabel = RANGE_MAP[range]?.label ?? range;
   // 短区间（≤3M）默认 K线：每天一根蜡烛，开/高/低/收一目了然
   const isShortRange = (RANGE_MAP[range]?.points ?? 66) <= 66;
+  /** 黄金分割只在 1 个月以上的走势图上露面：短区间波段找不全，画出来是噪音 */
+  const fibRangeOk = (RANGE_MAP[range]?.points ?? 0) > 22;
   const chartType: ChartType = chartTypeOverride ?? (isShortRange ? 'candle' : 'line');
 
   /** 黄金分割：图上画线用的波段与价位（开关打开时才算） */
@@ -749,16 +751,18 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               </div>
               {chartType !== 'ohlc' && (
                 <div className="flex gap-1.5">
-                  <button
-                    onClick={() => setShowFib((v) => !v)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
-                      showFib
-                        ? 'border-yellow-600/50 text-yellow-400 bg-yellow-500/10'
-                        : 'border-slate-700 text-slate-500 hover:text-slate-300'
-                    }`}
-                  >
-                    黄金分割
-                  </button>
+                  {fibRangeOk && (
+                    <button
+                      onClick={() => setShowFib((v) => !v)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                        showFib
+                          ? 'border-yellow-600/50 text-yellow-400 bg-yellow-500/10'
+                          : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      黄金分割
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowRangeHL((v) => !v)}
                     className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
@@ -781,8 +785,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               scheme={scheme}
               fibLevels={fibChartLevels}
             />
-            {/* 黄金分割：组合方案切换 + 价位列表（调参用） */}
-            {showFib && (
+            {/* 黄金分割：组合方案切换 + 价位列表（调参用），只在 1 个月以上区间显示 */}
+            {showFib && fibRangeOk && (
               <div className="mt-3 bg-slate-800/40 border border-slate-700/50 rounded-xl p-3">
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {FIB_COMBO_IDS.map((id) => (
