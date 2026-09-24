@@ -313,6 +313,17 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     () => (fibSwing ? fibLevels(fibSwing, dirComboId(fibCombo, fibSwing.uptrend)) : null),
     [fibSwing, fibCombo]
   );
+  /**
+   * 缩放基准：固定用"完整五线 + 扩展目标"的并集喂给图表缩放，
+   * 与当前选中的组合无关——切换组合只换画的线，不换比例尺，图不动。
+   */
+  const fibScaleLevels = useMemo(
+    () =>
+      fibSwing
+        ? [...fibLevels(fibSwing, 'full'), ...fibLevels(fibSwing, 'extension')]
+        : null,
+    [fibSwing]
+  );
   /** 诊断卡联动：现价贴近推荐视图（上方 1.272/1.618 拦追高，
    * 下方 0.618/0.786 拦割肉）时给一句行为纠偏（常开）。 */
   const fibHint = useMemo(() => {
@@ -897,6 +908,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               showRangeHL={showRangeHL}
               scheme={scheme}
               fibLevels={fibChartLevels}
+              fibScaleLevels={fibScaleLevels}
               prevCloseLabel={prevCloseLabel}
             />
             {/* 黄金分割说明：组合的具体文字放图下方 */}
@@ -908,8 +920,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                 {fibSwing && fibChartLevels ? (
                   <>
                     <div className="text-[10px] text-slate-500 mb-1.5">
-                      波段：{fibSwing.lowDate} 低 ${fibSwing.low} → {fibSwing.highDate} 高 $
-                      {fibSwing.high}（{fibSwing.uptrend ? '上涨波段' : '下跌波段'}）
+                      波段：
+                      {fibSwing.uptrend
+                        ? `${fibSwing.lowDate} 低 $${fibSwing.low} → ${fibSwing.highDate} 高 $${fibSwing.high}（上涨波段）`
+                        : `${fibSwing.highDate} 高 $${fibSwing.high} → ${fibSwing.lowDate} 低 $${fibSwing.low}（下跌波段）`}
                     </div>
                     {/* 说人话：现价在哪 + 按持仓给行动句，每句带数字，不说空话 */}
                     {(() => {

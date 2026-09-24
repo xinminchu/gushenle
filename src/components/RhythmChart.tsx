@@ -28,6 +28,8 @@ interface RhythmChartProps {
   scheme: ColorScheme;
   /** 黄金分割参考线（candle/line 图上画金色虚线） */
   fibLevels?: FibLevel[] | null;
+  /** 喂给自动缩放的固定参考价集合：与所选组合无关，切换组合不跑比例尺 */
+  fibScaleLevels?: FibLevel[] | null;
   /** 最后一根日线收盘线的标注：盘中=昨收，收盘后=收盘价（原来是图表库自动画的无名线，看着像实时价） */
   prevCloseLabel?: { price: number; text: string } | null;
 }
@@ -56,6 +58,7 @@ export default function RhythmChart({
   showRangeHL,
   scheme,
   fibLevels,
+  fibScaleLevels,
   prevCloseLabel,
 }: RhythmChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -234,7 +237,10 @@ export default function RhythmChart({
     // 黄金分割线画出可视范围时，把价格轴缩放到能看见它们。
     // lightweight-charts 的 priceLine 不参与自动缩放，所以用一条全透明的线
     // 把各参考价"喂"给缩放逻辑（颜色透明、不画价格线、不响应十字线）。
-    if (fibLevels && fibLevels.length > 0 && series.length > 1) {
+    // 注意：喂的是固定的 fibScaleLevels（完整五线+扩展目标并集），
+    // 与当前选中的组合无关——切换组合只换画的线，比例尺不动。
+    const scaleLevels = fibScaleLevels && fibScaleLevels.length > 0 ? fibScaleLevels : fibLevels;
+    if (scaleLevels && scaleLevels.length > 0 && series.length > 1) {
       const scaler = chart.addSeries(LineSeries, {
         color: 'rgba(0, 0, 0, 0)',
         lineWidth: 1,
@@ -245,8 +251,8 @@ export default function RhythmChart({
       const n = series.length;
       const used = new Set<number>();
       const scalerData: { time: string; value: number }[] = [];
-      fibLevels.forEach((lv, i) => {
-        const j = Math.min(n - 1, Math.floor(((i + 1) * n) / (fibLevels.length + 1)));
+      scaleLevels.forEach((lv, i) => {
+        const j = Math.min(n - 1, Math.floor(((i + 1) * n) / (scaleLevels.length + 1)));
         if (used.has(j)) return;
         used.add(j);
         scalerData.push({ time: series[j].date, value: lv.price });
@@ -265,7 +271,7 @@ export default function RhythmChart({
       ro.disconnect();
       chart.remove();
     };
-  }, [series, height, chartType, showRangeHL, fibLevels, scheme, UP, DOWN, prevCloseLabel]);
+  }, [series, height, chartType, showRangeHL, fibLevels, fibScaleLevels, scheme, UP, DOWN, prevCloseLabel]);
 
   if (series.length === 0) {
     return (
