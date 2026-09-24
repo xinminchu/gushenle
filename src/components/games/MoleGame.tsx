@@ -188,7 +188,7 @@ export default function MoleGame() {
               {m && phase === 'playing' && (
                 <button
                   onClick={() => whack(i)}
-                  className={`mole-pop absolute bottom-3 left-1/2 -translate-x-1/2 flex flex-col items-center rounded-xl px-1 py-0.5 active:scale-90 transition-transform border-2 ${
+                  className={`mole-pop absolute bottom-3 left-1/2 -translate-x-1/2 flex flex-col items-center rounded-xl px-1.5 py-1 active:scale-90 transition-transform border-2 ${
                     m.kind === 'short'
                       ? 'border-rose-500 bg-rose-950/80'
                       : m.kind === 'gold'
@@ -196,9 +196,9 @@ export default function MoleGame() {
                         : 'border-slate-600 bg-slate-800/90'
                   }`}
                 >
-                  <span className="text-3xl leading-none">{m.face}</span>
+                  <span className="text-5xl leading-none">{m.face}</span>
                   <span
-                    className={`text-[9px] font-bold tabular-nums ${
+                    className={`text-xs font-bold tabular-nums ${
                       m.kind === 'short'
                         ? 'text-rose-300'
                         : m.kind === 'gold'
