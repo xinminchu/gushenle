@@ -9,7 +9,8 @@ import { isAdminEmail } from '@/lib/admin';
 import LoginModal from './modals/LoginModal';
 import AdminToolsModal from './modals/AdminToolsModal';
 
-/** 全页面共用顶栏：不论底部切到哪个 tab（今日/持仓/记忆/资讯/娱乐）都显示 */
+/** 全页面共用顶栏：不论底部切到哪个 tab（今日/持仓/记忆/资讯/娱乐）都显示
+ *  Logo 中英常驻；下方一条 slogan 横幅，一行中文，不折行 */
 export default function AppHeader() {
   const { user, loading, configured, signOut } = useAuth();
   const { lang, setLang, t } = useLanguage();
@@ -20,18 +21,14 @@ export default function AppHeader() {
   const isAdmin = isAdminEmail(user?.email);
 
   return (
-    <div className="p-4 pb-1 max-w-md mx-auto">
-      <header className="flex justify-between items-start gap-2 pt-2">
-        {/* 左：标题一行，不折行 */}
-        <h1 className="text-xl font-bold text-slate-100 whitespace-nowrap pt-1.5">
-          {t('appName')}
-        </h1>
-        {/* 右：两句 tagline + 操作行 */}
-        <div className="flex flex-col items-end gap-1.5 min-w-0">
-          <div className="text-right leading-tight">
-            <p className="text-[10px] text-slate-400">{t('tagline1')}</p>
-            <p className="text-[10px] text-slate-500">{t('tagline2')}</p>
-          </div>
+    <div className="max-w-md mx-auto">
+      <div className="px-4 pt-4 pb-1.5">
+        <header className="flex justify-between items-center gap-2">
+          {/* 左：Logo 中英常驻，不随语言切换 */}
+          <h1 className="text-xl font-bold text-slate-100 whitespace-nowrap">
+            股神乐 Gushenle
+          </h1>
+          {/* 右：操作行 */}
           <div className="flex items-center gap-1.5 shrink-0">
             {/* 登录态：未配置 Supabase 时不显示，保持游客模式干净 */}
             {configured && !loading && (
@@ -83,8 +80,14 @@ export default function AppHeader() {
               </button>
             )}
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
+      {/* slogan 横幅：一行中文，不折行 */}
+      <div className="border-y border-slate-800/80 bg-slate-900/40">
+        <p className="px-4 py-2 text-center text-[12px] text-slate-300 tracking-wide whitespace-nowrap overflow-hidden">
+          快乐炒股 <span className="text-slate-600 mx-0.5">·</span> 轻松投资 <span className="text-slate-600 mx-0.5">·</span> 不赌不堵 <span className="text-slate-600 mx-0.5">·</span> 不气不弃
+        </p>
+      </div>
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} />}
       {toolsOpen && <AdminToolsModal onClose={() => setToolsOpen(false)} />}
     </div>
