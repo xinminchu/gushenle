@@ -19,12 +19,34 @@ const PERIODS = [
   { months: 36, label: '3 年' },
 ];
 
+type Regime = 'bull' | 'side' | 'bear' | 'random';
+const REGIMES: { id: Regime; label: string; icon: string }[] = [
+  { id: 'bull', label: '牛市', icon: '🐂' },
+  { id: 'side', label: '震荡', icon: '🦀' },
+  { id: 'bear', label: '熊市', icon: '🐻' },
+  { id: 'random', label: '随机', icon: '🎲' },
+];
+const REGIME_LABEL: Record<Exclude<Regime, 'random'>, string> = {
+  bull: '🐂 牛市窗口',
+  side: '🦀 震荡窗口',
+  bear: '🐻 熊市窗口',
+};
+
+// 按年化涨幅给窗口定市况
+const classify = (ret: number, months: number): Exclude<Regime, 'random'> => {
+  const ann = Math.pow(1 + ret, 12 / months) - 1;
+  if (ann > 0.15) return 'bull';
+  if (ann < -0.1) return 'bear';
+  return 'side';
+};
+
 const MONTHLY = 1000;
 
 interface Race {
   symbol: string;
   name: string;
   months: number;
+  regime: Exclude<Regime, 'random'>;
   lumpVals: number[];
   dcaVals: number[];
   lumpFinal: number;
@@ -38,6 +60,7 @@ const TIPS = [
   '💡 数据里你会发现：定投很少大胜，但也很少大败——它买的是"睡得着觉"。',
   '💡 梭哈本质上是在赌"入场时点"。而择时，是连基金经理都做不好的事。',
   '💡 真实世界里，定投最大的敌人不是市场，是中途断供的那只手。',
+  '💡 牛市里梭哈几乎必赢，熊市里定投才能少亏——选对市况，比赛才有悬念。',
 ];
 
 export default function DcaGame() {
@@ -52,6 +75,7 @@ export default function DcaGame() {
     }
   });
   const [months, setMonths] = useState(24);
+  const [regime, setRegime] = useState<Regime>('random');
   const [race, setRace] = useState<Race | null>(null);
   const [guess, setGuess] = useState<'lump' | 'dca' | 'draw' | null>(null);
   const [step, setStep] = useState(0);
@@ -84,34 +108,45 @@ export default function DcaGame() {
       }
     }
     // 关键机制：随机抽取一段历史，而不是永远"过去 N 年"
-    // ——牛市里梭哈必赢，游戏就没法玩了；随机窗口里有涨有跌，两边都有机会
+    // ——牛市里梭哈必赢，游戏就没法玩了；随机窗口里有涨有跌，两边都有机会。
+    // 玩家还可选市况：想体验梭哈被埋，就去熊市窗口试试。
     const maxStart = monthFirst.length - months;
-    const startIdx = maxStart > 0 ? Math.floor(Math.random() * (maxStart + 1)) : 0;
-    const frames = monthFirst.slice(startIdx, startIdx + months);
-    if (frames.length < 6) return null;
-    const m = frames.length;
-    const lumpShares = (MONTHLY * m) / frames[0].close;
-    const lumpVals: number[] = [];
-    const dcaVals: number[] = [];
-    let dcaShares = 0;
-    for (let i = 0; i < m; i++) {
-      dcaShares += MONTHLY / frames[i].close;
-      lumpVals.push(lumpShares * frames[i].close);
-      dcaVals.push(dcaShares * frames[i].close);
-    }
-    const name = list.find((w) => w.symbol === symbol)?.name || symbol;
-    return {
-      symbol,
-      name,
-      months: m,
-      lumpVals,
-      dcaVals,
-      lumpFinal: lumpVals[m - 1],
-      dcaFinal: dcaVals[m - 1],
-      startDate: frames[0].date,
-      endDate: frames[m - 1].date,
+    const pickStart = () => (maxStart > 0 ? Math.floor(Math.random() * (maxStart + 1)) : 0);
+    const buildFrom = (startIdx: number) => {
+      const frames = monthFirst.slice(startIdx, startIdx + months);
+      if (frames.length < 6) return null;
+      const m = frames.length;
+      const ret = frames[m - 1].close / frames[0].close - 1;
+      const reg = classify(ret, m);
+      if (regime !== 'random' && reg !== regime) return null;
+      const lumpShares = (MONTHLY * m) / frames[0].close;
+      const lumpVals: number[] = [];
+      const dcaVals: number[] = [];
+      let dcaShares = 0;
+      for (let i = 0; i < m; i++) {
+        dcaShares += MONTHLY / frames[i].close;
+        lumpVals.push(lumpShares * frames[i].close);
+        dcaVals.push(dcaShares * frames[i].close);
+      }
+      const name = list.find((w) => w.symbol === symbol)?.name || symbol;
+      return {
+        symbol,
+        name,
+        months: m,
+        regime: reg,
+        lumpVals,
+        dcaVals,
+        lumpFinal: lumpVals[m - 1],
+        dcaFinal: dcaVals[m - 1],
+        startDate: frames[0].date,
+        endDate: frames[m - 1].date,
+      };
     };
-  }, [symbol, months, list]);
+    let race: ReturnType<typeof buildFrom> = null;
+    for (let t = 0; t < 80 && !race; t++) race = buildFrom(pickStart());
+    if (!race) race = buildFrom(pickStart()); // 实在抽不到指定市况就随缘
+    return race;
+  }, [symbol, months, regime, list]);
 
   const startRace = async (g: 'lump' | 'dca' | 'draw') => {
     setPhase('racing');
@@ -221,9 +256,28 @@ export default function DcaGame() {
               ))}
             </div>
           </div>
+          <div>
+            <p className="text-[11px] text-slate-500 mb-1.5">选市况（抽哪种行情比）</p>
+            <div className="flex gap-1.5">
+              {REGIMES.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => setRegime(r.id)}
+                  className={`flex-1 text-xs py-2 rounded-xl border font-medium ${
+                    regime === r.id
+                      ? 'bg-sky-600 text-white border-sky-500'
+                      : 'text-slate-400 border-slate-700'
+                  }`}
+                >
+                  {r.icon} {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <p className="text-[11px] text-slate-500 leading-relaxed px-1">
-            规则：从过去 3 年里<span className="text-slate-200 font-semibold">随机抽一段 {months / 12} 年历史</span>；
+            规则：从过去 3 年里<span className="text-slate-200 font-semibold">随机抽一段 {months / 12} 年{regime === 'random' ? '' : REGIMES.find((r) => r.id === regime)?.label}历史</span>；
             梭哈开局一把投 {fmtMoney(MONTHLY * months)}，定投每月投 {fmtMoney(MONTHLY)}。先猜谁赢，再看比赛！
+            {regime === 'random' && <span className="text-slate-400">（嫌梭哈总赢？选🐻熊市试试）</span>}
           </p>
           <button
             onClick={() => setPhase('guess')}
@@ -300,7 +354,7 @@ export default function DcaGame() {
               >
                 <p className="font-semibold">{resultText}</p>
                 <p className="text-slate-500 mt-1">
-                  本局区间：{race.startDate.slice(0, 7)} ~ {race.endDate.slice(0, 7)}
+                  本局区间：{race.startDate.slice(0, 7)} ~ {race.endDate.slice(0, 7)} · {REGIME_LABEL[race.regime]}
                 </p>
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed px-1">{tip}</p>

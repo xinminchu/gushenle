@@ -18,7 +18,8 @@ export type GameId =
   | 'cutloss'
   | 'holdback'
   | 'newstrap'
-  | 'dca';
+  | 'dca'
+  | 'dart';
 
 export interface GameStat {
   plays: number;
@@ -38,6 +39,7 @@ export const GAME_NAMES: Record<GameId, string> = {
   holdback: '忍住别追高',
   newstrap: '消息面陷阱',
   dca: '定投 vs 梭哈',
+  dart: '飞镖选股',
 };
 
 const emptyStat = (): GameStat => ({ plays: 0, totalScore: 0, best: 0, banked: 0 });

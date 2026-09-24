@@ -16,6 +16,7 @@ const CutLossGame = dynamic(() => import('../games/CutLossGame'), { ssr: false }
 const HoldBackGame = dynamic(() => import('../games/HoldBackGame'), { ssr: false });
 const NewsTrapGame = dynamic(() => import('../games/NewsTrapGame'), { ssr: false });
 const DcaGame = dynamic(() => import('../games/DcaGame'), { ssr: false });
+const DartGame = dynamic(() => import('../games/DartGame'), { ssr: false });
 
 export default function FunTab() {
   const [activeGame, setActiveGame] = useState<string | null>(null);
@@ -109,6 +110,14 @@ export default function FunTab() {
       name: '定投 vs 梭哈',
       icon: '💰',
       level: '🟢 极低',
+    },
+    {
+      id: 'dart',
+      name: '飞镖选股',
+      icon: '🎯',
+      level: '🟢 极低',
+      hot: true,
+      credit: '@大西洋龙虾',
     },
   ];
 
@@ -208,6 +217,7 @@ export default function FunTab() {
               {activeGame === 'holdback' && <HoldBackGame />}
               {activeGame === 'newstrap' && <NewsTrapGame />}
               {activeGame === 'dca' && <DcaGame />}
+              {activeGame === 'dart' && <DartGame />}
             </div>
           </div>
         </div>
