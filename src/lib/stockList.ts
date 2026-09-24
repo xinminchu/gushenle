@@ -88,7 +88,7 @@ export const STOCK_LIST: StockInfo[] = [
   { code: 'QCOM', en: 'Qualcomm', zh: '高通', sector: '半导体', themes: ['芯片'] },
   { code: 'TSM', en: 'TSMC', zh: '台积电', sector: '半导体', themes: ['AI', '芯片'] },
   { code: 'MU', en: 'Micron', zh: '美光', sector: '半导体', themes: ['AI', '芯片'] },
-  { code: '000660.KS', en: 'SK Hynix', zh: 'SK海力士', sector: '半导体', themes: ['芯片'] },
+  { code: 'SKHY', en: 'SK Hynix', zh: 'SK海力士', sector: '半导体', themes: ['芯片'] },
   { code: 'ARM', en: 'Arm', zh: 'Arm', sector: '半导体', themes: ['AI', '芯片'] },
   { code: 'MRVL', en: 'Marvell', zh: '美满', sector: '半导体', themes: ['AI', '芯片'] },
   { code: 'LRCX', en: 'Lam Research', zh: '泛林', sector: '半导体', themes: ['芯片'] },
@@ -268,6 +268,8 @@ export const CODE_CORRECTIONS: Record<string, string> = {
   'APPL': 'AAPL',
   'TESL': 'TSLA',
   'AMZON': 'AMZN',
+  // 000660.KS（韩股韩元计价）已切换为 SKHY（纳斯达克 ADR，美元计价）：老自选自动迁移
+  '000660.KS': 'SKHY',
 };
 
 export function findStock(code: string): StockInfo | undefined {

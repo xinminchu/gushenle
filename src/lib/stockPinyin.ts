@@ -97,7 +97,7 @@ export const STOCK_PINYIN: Record<string, { full: string; initials: string }> = 
     "full": "meiguang",
     "initials": "mg"
   },
-  "000660.KS": {
+  "SKHY": {
     "full": "skhailishi",
     "initials": "shls"
   },

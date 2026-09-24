@@ -37,7 +37,7 @@ export const STOCK_ALIASES: Record<string, string> = {
   '沃尔玛': 'WMT', 'walmart': 'WMT',
   '可口可乐': 'KO', 'coca-cola': 'KO',
   '小火箭': 'RKLB', '火箭实验室': 'RKLB', 'rocket lab': 'RKLB',
-  '海力士': '000660.KS', 'sk海力士': '000660.KS', 'sk hynix': '000660.KS', 'hynix': '000660.KS',
+  '海力士': 'SKHY', 'sk海力士': 'SKHY', 'sk hynix': 'SKHY', 'hynix': 'SKHY', 'skhy': 'SKHY',
   '茅台': '600519', // A股：数据可能没有，提取出来再说，查不到会友好提示
 };
 
