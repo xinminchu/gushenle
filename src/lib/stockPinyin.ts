@@ -695,5 +695,25 @@ export const ALIAS_PINYIN: Record<string, { full: string; initials: string }> = 
   "茅台": {
     "full": "maotai",
     "initials": "mt"
-  }
+  },
+  "RCAT": { "full": "hongmao", "initials": "hm" },
+  "红猫": { "full": "hongmao", "initials": "hm" },
+  "AVAV": { "full": "hangjing", "initials": "hj" },
+  "航境": { "full": "hangjing", "initials": "hj" },
+  "KTOS": { "full": "kelatuosi", "initials": "klts" },
+  "克拉托斯": { "full": "kelatuosi", "initials": "klts" },
+  "ASTS": { "full": "xingkongyidong", "initials": "xkyd" },
+  "星空移动": { "full": "xingkongyidong", "initials": "xkyd" },
+  "LUNR": { "full": "zhijuejiqi", "initials": "zjjq" },
+  "直觉机器": { "full": "zhijuejiqi", "initials": "zjjq" },
+  "GME": { "full": "youxiyizhan", "initials": "yxyz" },
+  "游戏驿站": { "full": "youxiyizhan", "initials": "yxyz" },
+  "AMC": { "full": "amcyuanxian", "initials": "amcyx" },
+  "AMC院线": { "full": "amcyuanxian", "initials": "amcyx" },
+  "DJT": { "full": "telangpumeiti", "initials": "tlpmt" },
+  "特朗普媒体": { "full": "telangpumeiti", "initials": "tlpmt" },
+  "MP": { "full": "mpcailiao", "initials": "mpcl" },
+  "MP材料": { "full": "mpcailiao", "initials": "mpcl" },
+  "LAC": { "full": "meizhouliye", "initials": "mzly" },
+  "美洲锂业": { "full": "meizhouliye", "initials": "mzly" }
 };

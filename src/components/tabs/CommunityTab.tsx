@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useNickname } from '@/hooks/useNickname';
 import LoginModal from '../modals/LoginModal';
 import FamilyNews from '../FamilyNews';
+import DailyBrief from '../DailyBrief';
 import {
   fetchPosts,
   createPost,
@@ -204,9 +205,12 @@ export default function CommunityTab() {
   return (
     <div className="p-4 space-y-5 pb-24 max-w-md mx-auto">
       <header className="pt-2">
-        <h1 className="text-xl font-bold text-slate-100">家人</h1>
+        <h1 className="text-xl font-bold text-slate-100">资讯</h1>
         <p className="text-xs text-slate-400 mt-0.5">独乐乐不如大家乐</p>
       </header>
+
+      {/* 每日两报：盘前瞻 + 盘后总结 */}
+      <DailyBrief />
 
       {/* 今日大事 + 财经日历：免登录可看 */}
       <FamilyNews />
@@ -215,7 +219,7 @@ export default function CommunityTab() {
       <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4 flex items-center gap-3">
         <Users className="w-8 h-8 text-emerald-400 flex-shrink-0" />
         <div className="text-xs text-slate-300 space-y-0.5">
-          <p className="font-semibold text-emerald-400">这里只分享"买入逻辑"与"避坑经验"</p>
+          <p className="font-semibold text-emerald-400">💬 朋友圈 · 只分享"买入逻辑"与"避坑经验"</p>
           <p className="text-slate-400">不喊单、不荐股，理性交流共同成长。</p>
         </div>
       </div>
@@ -229,7 +233,7 @@ export default function CommunityTab() {
 
       {!isSupabaseConfigured() ? (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center">
-          <p className="text-xs text-slate-400">家人圈功能尚未配置，稍后再来看看。</p>
+          <p className="text-xs text-slate-400">朋友圈功能尚未配置，稍后再来看看。</p>
         </div>
       ) : authLoading ? (
         <div className="text-center text-xs text-slate-500 py-8">加载中…</div>
@@ -237,7 +241,7 @@ export default function CommunityTab() {
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center space-y-3">
           <Users className="w-10 h-10 text-slate-600 mx-auto" />
           <p className="text-xs text-slate-400 leading-relaxed">
-            登录后才能看家人的分享、发帖和点赞。<br />一个邮箱就行，不用记密码。
+            登录后才能看朋友圈的分享、发帖和点赞。<br />一个邮箱就行，不用记密码。
           </p>
           <button
             onClick={() => setLoginOpen(true)}
@@ -306,7 +310,7 @@ export default function CommunityTab() {
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value.slice(0, 500))}
-              placeholder={postType === 'thesis' ? '说说这次买入的逻辑…（500字以内）' : '说说这次踩的坑，给家人提个醒…（500字以内）'}
+              placeholder={postType === 'thesis' ? '说说这次买入的逻辑…（500字以内）' : '说说这次踩的坑，给大家提个醒…（500字以内）'}
               className="w-full h-20 bg-slate-800/60 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
             />
             <button
@@ -394,7 +398,7 @@ export default function CommunityTab() {
           <BarChart3 className="w-3.5 h-3.5" /> 做个小调查
         </div>
         <p className="text-xs text-slate-300 leading-relaxed">
-          如果上线「家人持仓总览」（自动汇总家人的持仓和盈亏，每人可单独开关是否公开），你愿意用吗？
+          如果上线「持仓总览」（自动汇总大家的持仓和盈亏，每人可单独开关是否公开），你愿意用吗？
         </p>
         <div className="flex gap-2">
           {(Object.keys(SURVEY_LABEL) as SurveyChoice[]).map((c) => (

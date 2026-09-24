@@ -8,7 +8,7 @@ import { isAdminEmail } from '@/lib/admin';
 import LoginModal from './modals/LoginModal';
 import AdminToolsModal from './modals/AdminToolsModal';
 
-/** 全页面共用顶栏：不论底部切到哪个 tab（今日/持仓/记忆/家人/娱乐）都显示 */
+/** 全页面共用顶栏：不论底部切到哪个 tab（今日/持仓/记忆/资讯/娱乐）都显示 */
 export default function AppHeader() {
   const { user, loading, configured, signOut } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);

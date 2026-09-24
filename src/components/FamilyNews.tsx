@@ -1,4 +1,4 @@
-// 家人页顶部浏览区：今日大事 + 未来7天 + 全年大事记（免登录可看）
+// 资讯页顶部浏览区：今日大事 + 未来7天 + 全年大事记（免登录可看）
 'use client';
 
 import React, { useState, useEffect } from 'react';

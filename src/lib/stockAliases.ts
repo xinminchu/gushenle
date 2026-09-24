@@ -38,6 +38,19 @@ export const STOCK_ALIASES: Record<string, string> = {
   '可口可乐': 'KO', 'coca-cola': 'KO',
   '小火箭': 'RKLB', '火箭实验室': 'RKLB', 'rocket lab': 'RKLB',
   '海力士': 'SKHY', 'sk海力士': 'SKHY', 'sk hynix': 'SKHY', 'hynix': 'SKHY', 'skhy': 'SKHY',
+  '红猫': 'RCAT', 'red cat': 'RCAT', 'rcat': 'RCAT',
+  '航境': 'AVAV', 'avav': 'AVAV', 'aerovironment': 'AVAV',
+  '克拉托斯': 'KTOS', 'ktos': 'KTOS', 'kratos': 'KTOS',
+  '星空移动': 'ASTS', 'asts': 'ASTS', 'ast spacemobile': 'ASTS',
+  '直觉机器': 'LUNR', 'lunr': 'LUNR', 'intuitive machines': 'LUNR',
+  'ionq': 'IONQ', 'rigetti': 'RGTI', 'rgti': 'RGTI', 'd-wave': 'QBTS', 'qbts': 'QBTS', 'd wave': 'QBTS',
+  '游戏驿站': 'GME', 'gme': 'GME', 'gamestop': 'GME',
+  'amc院线': 'AMC', 'amc': 'AMC',
+  '特朗普媒体': 'DJT', 'djt': 'DJT', 'trump media': 'DJT',
+  'oklo': 'OKLO', 'nuscale': 'SMR', 'smr': 'SMR',
+  'joby': 'JOBY', 'archer': 'ACHR', 'achr': 'ACHR',
+  'mp材料': 'MP', 'mp': 'MP',
+  '美洲锂业': 'LAC', 'lac': 'LAC', 'lithium americas': 'LAC',
   '茅台': '600519', // A股：数据可能没有，提取出来再说，查不到会友好提示
 };
 

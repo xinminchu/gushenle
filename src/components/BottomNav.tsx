@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Home, Briefcase, Mic, Users, Gamepad2 } from 'lucide-react';
+import { Home, Briefcase, Mic, Newspaper, Gamepad2 } from 'lucide-react';
 
 interface BottomNavProps {
   activeTab: string;
@@ -13,7 +13,7 @@ export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
     { id: 'today', label: '今日', icon: Home },
     { id: 'portfolio', label: '持仓', icon: Briefcase },
     { id: 'memory', label: '记忆', icon: Mic },
-    { id: 'community', label: '家人', icon: Users },
+    { id: 'community', label: '资讯', icon: Newspaper },
     { id: 'fun', label: '娱乐', icon: Gamepad2 },
   ];
 

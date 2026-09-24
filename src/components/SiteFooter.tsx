@@ -31,7 +31,7 @@ function SiteStatsLine() {
   return (
     <p className="text-center text-[10px] text-slate-600 mt-1">
       已有 {stats.visitors} 位访客{stats.today != null ? ` · 今日 ${stats.today} 位` : ''}
-      {stats.users != null ? ` · ${stats.users} 位家人注册` : ''}
+      {stats.users != null ? ` · ${stats.users} 位用户注册` : ''}
     </p>
   );
 }

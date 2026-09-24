@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-/** 家人分享圈数据层：帖子、点赞、持仓总览意愿投票 */
+/** 资讯朋友圈数据层：帖子、点赞、持仓总览意愿投票 */
 
 export interface FamilyPost {
   id: number;
@@ -25,7 +25,7 @@ export function getNickname(fallbackEmail?: string | null): string {
     const prefix = fallbackEmail.split('@')[0];
     if (prefix) return prefix.slice(0, 12);
   }
-  return '家人';
+  return '股友';
 }
 
 export const NICKNAME_EVENT = 'gushenle:nickname';
@@ -40,7 +40,7 @@ export function setNickname(name: string) {
   } catch {}
 }
 
-/** 改昵称时同步更新自己所有帖子的署名，家人看到的也是新名字 */
+/** 改昵称时同步更新自己所有帖子的署名，股友看到的也是新名字 */
 export async function updateMyPostsNickname(userId: string, nickname: string): Promise<void> {
   const db = needDb();
   const { error } = await db
@@ -51,7 +51,7 @@ export async function updateMyPostsNickname(userId: string, nickname: string): P
 }
 
 function needDb() {
-  if (!supabase) throw new Error('家人圈功能尚未配置');
+  if (!supabase) throw new Error('朋友圈功能尚未配置');
   return supabase;
 }
 

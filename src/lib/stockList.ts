@@ -245,6 +245,24 @@ export const STOCK_LIST: StockInfo[] = [
   { code: 'FCX', en: 'Freeport-McMoRan', zh: '自由港', sector: '原材料', themes: ['铜'] },
   { code: 'NEM', en: 'Newmont', zh: '纽蒙特', sector: '原材料', themes: ['黄金'] },
   { code: 'GOLD', en: 'Barrick', zh: 'Barrick', sector: '原材料', themes: ['黄金'] },
+  // ---- 小众题材 ----
+  { code: 'RCAT', en: 'Red Cat Holdings', zh: '红猫', sector: '工业', themes: ['无人机'] },
+  { code: 'AVAV', en: 'AeroVironment', zh: '航境', sector: '工业', themes: ['无人机'] },
+  { code: 'KTOS', en: 'Kratos Defense', zh: '克拉托斯', sector: '工业', themes: ['无人机'] },
+  { code: 'ASTS', en: 'AST SpaceMobile', zh: '星空移动', sector: '通信', themes: ['太空'] },
+  { code: 'LUNR', en: 'Intuitive Machines', zh: '直觉机器', sector: '工业', themes: ['太空'] },
+  { code: 'IONQ', en: 'IonQ', zh: 'IonQ', sector: '科技', themes: ['量子'] },
+  { code: 'RGTI', en: 'Rigetti Computing', zh: 'Rigetti', sector: '科技', themes: ['量子'] },
+  { code: 'QBTS', en: 'D-Wave Quantum', zh: 'D-Wave', sector: '科技', themes: ['量子'] },
+  { code: 'GME', en: 'GameStop', zh: '游戏驿站', sector: '消费', themes: ['Meme'] },
+  { code: 'AMC', en: 'AMC Entertainment', zh: 'AMC院线', sector: '消费', themes: ['Meme'] },
+  { code: 'DJT', en: 'Trump Media', zh: '特朗普媒体', sector: '通信', themes: ['Meme'] },
+  { code: 'OKLO', en: 'Oklo', zh: 'Oklo', sector: '能源', themes: ['核能'] },
+  { code: 'SMR', en: 'NuScale Power', zh: 'NuScale', sector: '能源', themes: ['核能'] },
+  { code: 'JOBY', en: 'Joby Aviation', zh: 'Joby', sector: '工业', themes: ['eVTOL'] },
+  { code: 'ACHR', en: 'Archer Aviation', zh: 'Archer', sector: '工业', themes: ['eVTOL'] },
+  { code: 'MP', en: 'MP Materials', zh: 'MP材料', sector: '原材料', themes: ['稀土'] },
+  { code: 'LAC', en: 'Lithium Americas', zh: '美洲锂业', sector: '原材料', themes: ['锂'] },
 ];
 
 /** 代码 -> 股票信息 */

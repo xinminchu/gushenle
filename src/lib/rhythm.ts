@@ -20,6 +20,8 @@ export interface RhythmPoint {
   open?: number;
   high?: number;
   low?: number;
+  /** 日成交量（股；筹码分布用；缺失时该日不参与筹码估算） */
+  volume?: number;
 }
 
 /** 展示区间定义 */

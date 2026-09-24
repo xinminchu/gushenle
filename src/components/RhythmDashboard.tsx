@@ -5,6 +5,7 @@ import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 're
 import { Flame, ShieldAlert, Settings2, X, Plus, RotateCcw, TrendingUp } from 'lucide-react';
 import RhythmChart, { type ChartType } from './RhythmChart';
 import AccuracyPanel from './AccuracyPanel';
+import ChipPanel from './ChipPanel';
 import type { RhythmResponse } from '@/lib/rhythm';
 import { RANGE_DEFS, RANGE_MAP, ANCHOR_RANGE_ID, scoreGradient } from '@/lib/rhythm';
 import { getRhythm, invalidateRhythm } from '@/lib/market';
@@ -215,7 +216,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
       setAddError(
         sug.length > 0
           ? `名单里没找到 ${raw}，你是不是想找下面这几个？`
-          : `名单里没找到 ${raw}，检查下拼写，或坚持添加（数据可能不准）`,
+          : `名单里没找到 ${raw}，检查下拼写，或坚持添加`,
       );
       return;
     }
@@ -668,6 +669,9 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               </div>
             </div>
           </div>
+
+          {/* 筹码分布：紧贴价格走势卡下方（手机上全宽展示，不与K线挤在一行） */}
+          <ChipPanel symbol={symbol} />
 
           {/* ③ 判断复盘：历史信号 vs 次日真实结果 */}
           <AccuracyPanel symbol={symbol} />

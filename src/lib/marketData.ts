@@ -72,6 +72,7 @@ interface NasdaqRow {
   open: string; // "$335.28"
   high: string; // "$339.64"
   low: string; // "$333.05"
+  volume?: string; // "13,960,650"
 }
 
 interface NasdaqResponse {
@@ -115,6 +116,7 @@ async function fetchNasdaqFull(symbol: string): Promise<RhythmPoint[]> {
       const open = num(r.open);
       const high = num(r.high);
       const low = num(r.low);
+      const vol = num(r.volume);
       series.push({
         date: `${m[3]}-${m[1]}-${m[2]}`,
         close: Number(close.toFixed(2)),
@@ -122,6 +124,8 @@ async function fetchNasdaqFull(symbol: string): Promise<RhythmPoint[]> {
         open: Number.isFinite(open) ? Number(open.toFixed(2)) : Number(close.toFixed(2)),
         high: Number.isFinite(high) ? Number(high.toFixed(2)) : Number(close.toFixed(2)),
         low: Number.isFinite(low) ? Number(low.toFixed(2)) : Number(close.toFixed(2)),
+        // 筹码分布用：Nasdaq 的 volume 如 "13,960,650"
+        ...(vol > 0 ? { volume: vol } : {}),
       });
     }
   }
@@ -137,6 +141,7 @@ interface YahooChartResult {
       open: (number | null)[];
       high: (number | null)[];
       low: (number | null)[];
+      volume: (number | null)[];
     }>;
   };
 }
@@ -183,6 +188,7 @@ async function fetchYahooFull(symbol: string): Promise<RhythmPoint[]> {
           open: o != null ? Number(o.toFixed(2)) : c,
           high: h != null ? Number(h.toFixed(2)) : c,
           low: l != null ? Number(l.toFixed(2)) : c,
+          ...(quotes.volume?.[i] != null && quotes.volume[i]! > 0 ? { volume: quotes.volume[i]! } : {}),
         });
       }
     }
@@ -227,6 +233,7 @@ interface NaverDayRow {
   openPrice: number;
   highPrice: number;
   lowPrice: number;
+  accumulatedTradingVolume?: number;
 }
 
 /** Naver 韩股多年日线：symbol 如 000660.KS -> Naver 代码 000660 */
@@ -255,6 +262,9 @@ async function fetchNaverFull(symbol: string): Promise<RhythmPoint[]> {
       open: Number.isFinite(r.openPrice) ? r.openPrice : r.closePrice,
       high: Number.isFinite(r.highPrice) ? r.highPrice : r.closePrice,
       low: Number.isFinite(r.lowPrice) ? r.lowPrice : r.closePrice,
+      ...(r.accumulatedTradingVolume != null && r.accumulatedTradingVolume > 0
+        ? { volume: r.accumulatedTradingVolume }
+        : {}),
     });
   }
   if (series.length < 2) throw new Error('Naver returned too few points');

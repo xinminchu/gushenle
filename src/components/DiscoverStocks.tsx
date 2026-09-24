@@ -157,7 +157,20 @@ export default function DiscoverStocks() {
               );
             })}
             {results.length === 0 && (
-              <div className="text-[11px] text-slate-500 text-center py-4">没找到，换个条件试试</div>
+              <div className="text-center py-4 space-y-2">
+                <div className="text-[11px] text-slate-500">没找到，换个条件试试</div>
+                {/^([A-Za-z]{1,8}|\d{6}\.[A-Za-z]{2})$/.test(q.trim()) && !inList.has(q.trim().toUpperCase()) && (
+                  <button
+                    onClick={() => {
+                      const r = addItem(q.trim().toUpperCase());
+                      if (r === 'ok') setQ('');
+                    }}
+                    className="text-[11px] text-blue-400 underline underline-offset-2 hover:text-blue-300"
+                  >
+                    名单里没有，直接添加「{q.trim().toUpperCase()}」到自选
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
