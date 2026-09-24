@@ -48,7 +48,7 @@ export default function FlowPanel({ symbol }: { symbol: string }) {
         <>
           <p className="text-[10px] text-slate-400 mb-1.5">
             近{result.daysCount}日累计{' '}
-            <strong className={result.net >= 0 ? 'text-rose-300' : 'text-emerald-300'}>
+            <strong className={result.net >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
               {result.net >= 0 ? '+' : '−'}
               {fmtCompactMoney(symbol, Math.abs(result.net))}
             </strong>
@@ -58,13 +58,13 @@ export default function FlowPanel({ symbol }: { symbol: string }) {
           <FlowBars result={result} symbol={symbol} />
           <div className="flex gap-2.5 text-[9px] text-slate-600 mt-1.5 mb-1.5">
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-sm bg-rose-500 inline-block" /> 近5日
+              <span className="w-2 h-2 rounded-sm bg-emerald-500 inline-block" /> 近5日
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-sm bg-rose-400 inline-block" /> 6-10日
+              <span className="w-2 h-2 rounded-sm bg-emerald-400 inline-block" /> 6-10日
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-sm bg-rose-300 inline-block" /> 11-20日
+              <span className="w-2 h-2 rounded-sm bg-emerald-300 inline-block" /> 11-20日
             </span>
           </div>
 
@@ -98,8 +98,9 @@ function FlowBars({ result, symbol }: { result: FlowResult; symbol: string }) {
   });
   const totalIn = segs.reduce((a, s) => a + s.inSum, 0);
   const totalOut = segs.reduce((a, s) => a + s.outSum, 0);
-  const inColors = ['bg-rose-600', 'bg-rose-500', 'bg-rose-400'];
-  const outColors = ['bg-emerald-600', 'bg-emerald-500', 'bg-emerald-400'];
+  // 大软件习惯：绿=流入，红=流出
+  const inColors = ['bg-emerald-600', 'bg-emerald-500', 'bg-emerald-400'];
+  const outColors = ['bg-rose-600', 'bg-rose-500', 'bg-rose-400'];
 
   const bar = (isIn: boolean) => {
     const total = isIn ? totalIn : totalOut;
@@ -127,7 +128,7 @@ function FlowBars({ result, symbol }: { result: FlowResult; symbol: string }) {
             );
           })}
         </div>
-        <span className={`text-[10px] mt-1 font-medium ${isIn ? 'text-rose-300' : 'text-emerald-300'}`}>
+        <span className={`text-[10px] mt-1 font-medium ${isIn ? 'text-emerald-300' : 'text-rose-300'}`}>
           {isIn ? '流入' : '流出'}
         </span>
         <span className="text-[9px] text-slate-500 tabular-nums">
