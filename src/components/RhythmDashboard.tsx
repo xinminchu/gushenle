@@ -251,12 +251,16 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     [showFib, fibPts, fibLookback]
   );
   const fibChartLevels = fibSwing ? fibLevels(fibSwing, fibCombo) : null;
-  /** 诊断卡联动：现价贴近推荐组合的参考线时，给一句行为纠偏（常开） */
+  /** 诊断卡联动：现价贴近参考线时给一句行为纠偏（常开）。
+   * 先看推荐组合（扩展目标→拦追高），没贴近再看深回调（→拦割肉）。 */
   const fibHint = useMemo(() => {
     if (!fibPts.length || !data?.price) return null;
     const sw = findSwing(fibPts, RECOMMENDED_FIB_LOOKBACK);
     if (!sw) return null;
-    return fibAdviceHint(sw, RECOMMENDED_FIB_COMBO, data.price);
+    return (
+      fibAdviceHint(sw, RECOMMENDED_FIB_COMBO, data.price) ??
+      fibAdviceHint(sw, 'deep', data.price)
+    );
   }, [fibPts, data?.price]);
 
   // 精选名单代码集合：全市场搜索时排除（精选优先，带中文名）

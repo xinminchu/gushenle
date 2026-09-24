@@ -23,7 +23,7 @@ export interface FibSwing {
   range: number;
 }
 
-export type FibComboId = 'classic' | 'full' | 'minimal' | 'extension';
+export type FibComboId = 'classic' | 'full' | 'minimal' | 'extension' | 'deep';
 
 export interface FibCombo {
   id: FibComboId;
@@ -33,35 +33,48 @@ export interface FibCombo {
   desc: string;
 }
 
-/** 四套组合方案：回测调参后，最靠谱的一套会被标为推荐 */
+/** 五套组合方案。回测结论（2026-09-24，AAPL/NVDA/MSFT/TSLA/COIN/MSTR 近3年，
+ * 无未来函数，5日验证）：
+ * - 窗口：40天 > 60天 > 120天，单调——波段越新鲜越靠谱
+ * - 回调线：0.786(67.7%) > 0.618(59.2%) > 0.5(51.8%) > 0.382(49.9%) > 0.236(41.7%)，
+ *   线越深触及后越容易守住；浅线（0.236/0.382）基本是噪音
+ * - 扩展目标：1.272 触及后5天内不再大涨的概率 77.6%（286次触及），拦追高最有效
+ */
 export const FIB_COMBOS: Record<FibComboId, FibCombo> = {
   classic: {
     id: 'classic',
     name: '经典三线',
     ratios: [0.382, 0.5, 0.618],
     kind: 'retrace',
-    desc: '回调 0.382/0.5/0.618：股民最常用的三个位置',
+    desc: '回调 0.382/0.5/0.618：股民最常用的三个位置（回测触及后守住约50%/52%/59%）',
   },
   full: {
     id: 'full',
     name: '完整五线',
     ratios: [0.236, 0.382, 0.5, 0.618, 0.786],
     kind: 'retrace',
-    desc: '回调全套：浅回调 0.236 到深回调 0.786',
+    desc: '回调全套：浅回调 0.236 到深回调 0.786（浅线多为噪音，深线更靠谱）',
   },
   minimal: {
     id: 'minimal',
     name: '极简两线',
     ratios: [0.382, 0.618],
     kind: 'retrace',
-    desc: '只留最重要的两条：强弱分界看得最清',
+    desc: '只留最重要的两条：强弱分界看得最清（回测触及后守住约50%/59%）',
+  },
+  deep: {
+    id: 'deep',
+    name: '深回调',
+    ratios: [0.618, 0.786],
+    kind: 'retrace',
+    desc: '调参优选：只留触及后最容易守住的两条深线（回测约59%/68%）',
   },
   extension: {
     id: 'extension',
     name: '扩展目标',
     ratios: [1.272, 1.618, 2.0, 2.618],
     kind: 'extension',
-    desc: '突破后的上方目标 / 跌破后的下方目标',
+    desc: '突破后的上方目标 / 跌破后的下方目标（回测：到1.272后约78%在5天内不再大涨）',
   },
 };
 
@@ -76,10 +89,11 @@ export const FIB_LOOKBACKS = [
 
 /**
  * 回测调参后的推荐组合（默认）。
+ * 2026-09-24 调参结论：扩展目标命中率最高（76.9%，edge +16.9），40天窗口最优。
  * 调参结论更新时改这里，UI 的"推荐"徽章和诊断联动自动跟随。
  */
-export const RECOMMENDED_FIB_COMBO: FibComboId = 'classic';
-export const RECOMMENDED_FIB_LOOKBACK = 60;
+export const RECOMMENDED_FIB_COMBO: FibComboId = 'extension';
+export const RECOMMENDED_FIB_LOOKBACK = 40;
 
 export type FibLevelKind = 'support' | 'resistance' | 'target-up' | 'target-down';
 
