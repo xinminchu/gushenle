@@ -80,11 +80,11 @@ export const FIB_COMBOS: Record<FibComboId, FibCombo> = {
 
 export const FIB_COMBO_IDS = Object.keys(FIB_COMBOS) as FibComboId[];
 
-/** 波段窗口（交易日）：近2月 / 近3月 / 近半年 */
+/** 波段窗口（交易日）：近2月 / 近3月 / 近半年；回测结论 40天 > 60天 > 120天 */
 export const FIB_LOOKBACKS = [
-  { days: 40, label: '近2月' },
-  { days: 60, label: '近3月' },
-  { days: 120, label: '近半年' },
+  { days: 40, label: '近2月', desc: '用最近 40 个交易日找波段高低点：最新鲜，调参下来最靠谱' },
+  { days: 60, label: '近3月', desc: '用最近 60 个交易日找波段高低点' },
+  { days: 120, label: '近半年', desc: '用最近 120 个交易日找波段高低点：看大波段用' },
 ] as const;
 
 /**

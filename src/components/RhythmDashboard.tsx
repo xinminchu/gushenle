@@ -42,6 +42,18 @@ import {
 
 const ANCHOR_LABEL = RANGE_MAP[ANCHOR_RANGE_ID]?.label ?? '3月';
 
+/** 悬停气泡：鼠标挪上去，一句话说明这个按钮是干嘛的（桌面端 hover 生效） */
+function Tip({ text, children }: { text: string; children: React.ReactNode }) {
+  return (
+    <span className="relative inline-flex group/tip">
+      {children}
+      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-44 max-w-[70vw] px-2 py-1 rounded-lg bg-slate-900/95 border border-slate-700 text-[10px] leading-relaxed text-slate-300 shadow-xl opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-20 text-center">
+        {text}
+      </span>
+    </span>
+  );
+}
+
 /** 沉思乐弹窗的持仓感知内容：看持仓说话 */
 interface ZenHoldings {
   kind: 'holding' | 'other' | 'none';
@@ -752,27 +764,31 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               {chartType !== 'ohlc' && (
                 <div className="flex gap-1.5">
                   {fibRangeOk && (
+                    <Tip text="在图上画黄金分割参考线（金色虚线），只标大家都在看的位置，不算命">
+                      <button
+                        onClick={() => setShowFib((v) => !v)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                          showFib
+                            ? 'border-yellow-600/50 text-yellow-400 bg-yellow-500/10'
+                            : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                        }`}
+                      >
+                        黄金分割
+                      </button>
+                    </Tip>
+                  )}
+                  <Tip text="显示 / 隐藏当前区间最高价和最低价的虚线">
                     <button
-                      onClick={() => setShowFib((v) => !v)}
+                      onClick={() => setShowRangeHL((v) => !v)}
                       className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
-                        showFib
-                          ? 'border-yellow-600/50 text-yellow-400 bg-yellow-500/10'
+                        showRangeHL
+                          ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10'
                           : 'border-slate-700 text-slate-500 hover:text-slate-300'
                       }`}
                     >
-                      黄金分割
+                      区间高低点
                     </button>
-                  )}
-                  <button
-                    onClick={() => setShowRangeHL((v) => !v)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
-                      showRangeHL
-                        ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10'
-                        : 'border-slate-700 text-slate-500 hover:text-slate-300'
-                    }`}
-                  >
-                    区间高低点
-                  </button>
+                  </Tip>
                 </div>
               )}
             </div>
@@ -788,41 +804,46 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
             {/* 黄金分割：组合方案切换 + 价位列表（调参用），只在 1 个月以上区间显示 */}
             {showFib && fibRangeOk && (
               <div className="mt-3 bg-slate-800/40 border border-slate-700/50 rounded-xl p-3">
-                <div className="flex flex-wrap gap-1.5 mb-2">
+                <div className="flex flex-wrap gap-1.5 mb-1.5">
                   {FIB_COMBO_IDS.map((id) => (
-                    <button
-                      key={id}
-                      onClick={() => setFibCombo(id)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
-                        fibCombo === id
-                          ? 'border-yellow-600/50 text-yellow-300 bg-yellow-500/10'
-                          : 'border-slate-700 text-slate-500 hover:text-slate-300'
-                      }`}
-                    >
-                      {FIB_COMBOS[id].name}
-                      {id === RECOMMENDED_FIB_COMBO && (
-                        <span className="ml-1 text-[9px] px-1 rounded bg-yellow-500/20 text-yellow-400">
-                          推荐
-                        </span>
-                      )}
-                    </button>
+                    <Tip key={id} text={FIB_COMBOS[id].desc}>
+                      <button
+                        onClick={() => setFibCombo(id)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                          fibCombo === id
+                            ? 'border-yellow-600/50 text-yellow-300 bg-yellow-500/10'
+                            : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                        }`}
+                      >
+                        {FIB_COMBOS[id].name}
+                        {id === RECOMMENDED_FIB_COMBO && (
+                          <span className="ml-1 text-[9px] px-1 rounded bg-yellow-500/20 text-yellow-400">
+                            推荐
+                          </span>
+                        )}
+                      </button>
+                    </Tip>
                   ))}
                   <div className="flex gap-1.5 ml-1">
                     {FIB_LOOKBACKS.map((lb) => (
-                      <button
-                        key={lb.days}
-                        onClick={() => setFibLookback(lb.days)}
-                        className={`px-2 py-1 rounded-lg text-[10px] transition-colors ${
-                          fibLookback === lb.days
-                            ? 'bg-slate-700 text-slate-200'
-                            : 'text-slate-500 hover:text-slate-300'
-                        }`}
-                      >
-                        {lb.label}
-                      </button>
+                      <Tip key={lb.days} text={lb.desc}>
+                        <button
+                          onClick={() => setFibLookback(lb.days)}
+                          className={`px-2 py-1 rounded-lg text-[10px] transition-colors ${
+                            fibLookback === lb.days
+                              ? 'bg-slate-700 text-slate-200'
+                              : 'text-slate-500 hover:text-slate-300'
+                          }`}
+                        >
+                          {lb.label}
+                        </button>
+                      </Tip>
                     ))}
                   </div>
                 </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed mb-2">
+                  {FIB_COMBOS[fibCombo].desc}
+                </p>
                 {fibSwing && fibChartLevels ? (
                   <>
                     <div className="text-[10px] text-slate-500 mb-1.5">
