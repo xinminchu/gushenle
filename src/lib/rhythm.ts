@@ -291,6 +291,30 @@ export function judgeFromScore(
   };
 }
 
+/**
+ * 建议按持仓盈亏自适应：只有通用话术会跟持仓状态"打架"时才改写，否则原样返回。
+ * pnlPct: 相对成本的盈亏（%，如 -12.5）；null = 没持仓，不改。
+ * 口径跟沉思乐"看持仓说话"一致：盈利照常，套牢不说"止盈"、不劝割肉。
+ */
+export function adviceWithPosition(
+  statusKey: StatusKey | undefined,
+  advice: string,
+  pnlPct: number | null,
+): string {
+  if (pnlPct == null || statusKey == null || pnlPct >= 0) return advice;
+  const pct = Math.abs(pnlPct).toFixed(1).replace(/\.0$/, '');
+  if (statusKey === 'overheated') {
+    if (pnlPct >= -10)
+      return `涨是涨了，可你还亏 ${pct}%，这波是回本的好机会——别追高，也别急着全走。`;
+    return `还套着 ${pct}%，反弹是难得的减亏窗口——分批走一点，别等涨回去又舍不得。`;
+  }
+  if (statusKey === 'weakLow')
+    return `还在往下跌，你套着 ${pct}%，割在半山腰最亏，再忍一忍。`;
+  if (statusKey === 'oversoldBottom')
+    return `跌过头了，你套着 ${pct}%，割在地板上最亏。`;
+  return advice;
+}
+
 /** 基于全量日线做主判断（锚定近 3 月；阈值按最新 trailing 波动率自适应） */
 export function buildJudgment(closes: number[]): Judgment {
   const s = closes.length > 0 ? scoreAt(closes, closes.length - 1) : null;

@@ -91,6 +91,7 @@ export const STOCK_LIST: StockInfo[] = [
   { code: 'TSM', en: 'TSMC', zh: '台积电', sector: '半导体', themes: ['AI', '芯片'], blurb: '全球最大芯片代工厂，苹果英伟达都找它' },
   { code: 'MU', en: 'Micron', zh: '美光', sector: '半导体', themes: ['AI', '芯片'], blurb: '内存（DRAM和NAND）巨头，HBM受益' },
   { code: 'SKHY', en: 'SK Hynix', zh: 'SK海力士', sector: '半导体', themes: ['芯片'], blurb: '韩国存储芯片巨头，HBM龙头' },
+  { code: 'SNDK', en: 'Sandisk Corporation', zh: '闪迪', sector: '半导体', themes: ['AI', '芯片'], blurb: '闪存（NAND）大厂，AI存储需求受益' },
   { code: 'ARM', en: 'Arm', zh: 'Arm', sector: '半导体', themes: ['AI', '芯片'], blurb: '芯片架构授权，手机芯片都用它' },
   { code: 'MRVL', en: 'Marvell', zh: '美满', sector: '半导体', themes: ['AI', '芯片'], blurb: '数据中心网络芯片' },
   { code: 'LRCX', en: 'Lam Research', zh: '泛林', sector: '半导体', themes: ['芯片'], blurb: '刻蚀机巨头（泛林）' },

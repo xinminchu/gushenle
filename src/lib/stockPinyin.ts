@@ -117,6 +117,10 @@ export const STOCK_PINYIN: Record<string, { full: string; initials: string }> = 
     "full": "asimai",
     "initials": "asm"
   },
+  "SNDK": {
+    "full": "shandi",
+    "initials": "sd"
+  },
   "SNPS": {
     "full": "xinsi",
     "initials": "xs"

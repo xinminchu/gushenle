@@ -9,6 +9,7 @@ import ChipPanel from './ChipPanel';
 import FlowPanel from './FlowPanel';
 import type { RhythmResponse } from '@/lib/rhythm';
 import { RANGE_DEFS, RANGE_MAP, ANCHOR_RANGE_ID, scoreGradient } from '@/lib/rhythm';
+import { adviceWithPosition } from '@/lib/rhythm';
 import { getRhythm, invalidateRhythm } from '@/lib/market';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 import { useWatchlist } from './WatchlistContext';
@@ -239,6 +240,21 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
 
   const judgment = data?.judgment ?? null;
   const overHeat = !!judgment?.overheated;
+  /** 当前标的的持仓（有就按盈亏说话，没有就问一句）：tab 切换会重挂载，数据天然新鲜 */
+  const myPosition = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    return (
+      loadPositions().find((p) => p.symbol.toUpperCase() === symbol.toUpperCase()) ?? null
+    );
+  }, [symbol]);
+  const myPnlPct =
+    myPosition && myPosition.avgCost > 0 && data
+      ? ((data.price - myPosition.avgCost) / myPosition.avgCost) * 100
+      : null;
+  /** 持仓感知的建议：套牢时不说"止盈"、不劝割肉（口径跟沉思乐"看持仓说话"一致） */
+  const displayAdvice = judgment
+    ? adviceWithPosition(judgment.statusKey, judgment.advice, myPnlPct)
+    : '';
   // 韩股（.KS）：韩元计价，大数字加千分位、无小数；美股：美元保留两位
   const fmtPrice = (p: number) => fmtMoney(symbol, p);
   const strongHigh =
@@ -300,6 +316,22 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     const sym = CODE_CORRECTIONS[raw] || raw;
     const known = findStock(sym);
     if (!known && !(forceAdd || force)) {
+      const inputRaw = newSymbol.trim();
+      // 先走本地联想：中文名/拼音/英文名都认，代码框里输中文也能找到
+      const sug = suggestStocks(inputRaw);
+      if (sug.length > 0) {
+        setUniverseHit(null);
+        setSuggestions(sug);
+        setAddError(`找到 ${sug.length} 个相关的，点一个填入`);
+        return;
+      }
+      if (/[\u4e00-\u9fff]/.test(inputRaw)) {
+        // 中文但精选名单没有：全市场库只有英文名，搜了也白搜
+        setUniverseHit(null);
+        setSuggestions([]);
+        setAddError(`没找到「${inputRaw}」，换个名字或拼音试试，也可坚持添加`);
+        return;
+      }
       // 精选名单没有 → 去全市场库（约 7000 只）找，第一次搜才加载
       setUniverseSearching(true);
       const all = await loadUniverse();
@@ -311,13 +343,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
         setSuggestions([]);
         return;
       }
-      const sug = suggestStocks(raw);
-      setSuggestions(sug);
-      setAddError(
-        sug.length > 0
-          ? `名单里没找到 ${raw}，你是不是想找下面这几个？`
-          : `全市场也没找到 ${raw}，检查下拼写，或坚持添加`,
-      );
+      setSuggestions([]);
+      setAddError(`全市场也没找到 ${sym}，检查下拼写，或坚持添加`);
       return;
     }
     const r = addItem(sym, newName || known?.zh);
@@ -678,7 +705,15 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                 位置 {judgment.pos} · 趋势 {judgment.trend} · 速度 {judgment.vel}
               </div>
 
-              <div className="mt-2 text-xs text-slate-400 leading-relaxed">{judgment.advice}</div>
+              <div className="mt-2 text-xs text-slate-400 leading-relaxed">{displayAdvice}</div>
+              {!myPosition && onGoPortfolio && (
+                <button
+                  onClick={onGoPortfolio}
+                  className="mt-1.5 text-left text-[10px] text-slate-500 hover:text-slate-300 leading-relaxed"
+                >
+                  💡 持有这只？去持仓记一笔成本，下次建议按你的盈亏来说 →
+                </button>
+              )}
               {fibHint && (
                 <div className="mt-2 text-[11px] text-amber-300/80 leading-relaxed">
                   {fibHint}
@@ -1057,7 +1092,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               记一笔 · {symbol} {nameOf(symbol) ? ` ${nameOf(symbol)}` : ''}
             </h3>
             <div className="text-[11px] text-slate-500 bg-slate-900/60 rounded-lg px-3 py-2">
-              当时建议：{judgment.status}（{judgment.score}分）· {judgment.advice}
+              当时建议：{judgment.status}（{judgment.score}分）· {displayAdvice}
             </div>
             {opSaved ? (
               <div className="text-center py-4 text-sm text-emerald-400 font-medium">
@@ -1128,7 +1163,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                         qty: qty && qty > 0 ? qty : undefined,
                         date: todayStr(),
                         source: 'one-tap',
-                        adviceSnapshot: `${judgment.status}：${judgment.advice}`,
+                        adviceSnapshot: `${judgment.status}：${displayAdvice}`,
                         adviceScore: judgment.score,
                       });
                       setOpSaved(true);

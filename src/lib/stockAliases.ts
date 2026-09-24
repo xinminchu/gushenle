@@ -20,6 +20,7 @@ export const STOCK_ALIASES: Record<string, string> = {
   '台积电': 'TSM', 'tsmc': 'TSM',
   '阿里': 'BABA', '阿里巴巴': 'BABA', 'alibaba': 'BABA',
   '美光': 'MU', 'micron': 'MU',
+  '闪迪': 'SNDK', 'sandisk': 'SNDK',
   '币基': 'COIN', 'coinbase': 'COIN',
   '微策略': 'MSTR', 'microstrategy': 'MSTR',
   '甲骨文': 'ORCL', 'oracle': 'ORCL',
