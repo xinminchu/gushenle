@@ -43,6 +43,7 @@ export const STOCK_ALIASES: Record<string, string> = {
   '克拉托斯': 'KTOS', 'ktos': 'KTOS', 'kratos': 'KTOS',
   '星空移动': 'ASTS', 'asts': 'ASTS', 'ast spacemobile': 'ASTS',
   '直觉机器': 'LUNR', 'lunr': 'LUNR', 'intuitive machines': 'LUNR',
+  '太空探索': 'SPCX', 'spcx': 'SPCX', 'spacex': 'SPCX', '马斯克火箭': 'SPCX',
   'ionq': 'IONQ', 'rigetti': 'RGTI', 'rgti': 'RGTI', 'd-wave': 'QBTS', 'qbts': 'QBTS', 'd wave': 'QBTS',
   '游戏驿站': 'GME', 'gme': 'GME', 'gamestop': 'GME',
   'amc院线': 'AMC', 'amc': 'AMC',

@@ -251,6 +251,7 @@ export const STOCK_LIST: StockInfo[] = [
   { code: 'KTOS', en: 'Kratos Defense', zh: '克拉托斯', sector: '工业', themes: ['无人机'] },
   { code: 'ASTS', en: 'AST SpaceMobile', zh: '星空移动', sector: '通信', themes: ['太空'] },
   { code: 'LUNR', en: 'Intuitive Machines', zh: '直觉机器', sector: '工业', themes: ['太空'] },
+  { code: 'SPCX', en: 'SpaceX', zh: '太空探索', sector: '工业', themes: ['太空'] },
   { code: 'IONQ', en: 'IonQ', zh: 'IonQ', sector: '科技', themes: ['量子'] },
   { code: 'RGTI', en: 'Rigetti Computing', zh: 'Rigetti', sector: '科技', themes: ['量子'] },
   { code: 'QBTS', en: 'D-Wave Quantum', zh: 'D-Wave', sector: '科技', themes: ['量子'] },

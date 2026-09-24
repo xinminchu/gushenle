@@ -684,6 +684,18 @@ export const ALIAS_PINYIN: Record<string, { full: string; initials: string }> = 
     "full": "huojianshiyanshi",
     "initials": "hjsys"
   },
+  "SPCX": {
+    "full": "taikongtansuo",
+    "initials": "tkts"
+  },
+  "太空探索": {
+    "full": "taikongtansuo",
+    "initials": "tkts"
+  },
+  "马斯克火箭": {
+    "full": "masikehuojian",
+    "initials": "mskhj"
+  },
   "海力士": {
     "full": "hailishi",
     "initials": "hls"
