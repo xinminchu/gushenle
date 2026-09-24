@@ -47,7 +47,7 @@ function positionAdvice(statusKey: string | undefined, pnlPct: number | null): s
 export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: string) => void }) {
   // 涨跌配色跟随今日页的全局选择
   const { scheme } = useColorScheme();
-  const { items: watchlist, nameOf } = useWatchlist();
+  const { items: watchlist, nameOf, addItem } = useWatchlist();
   const [positions, setPositions] = useState<Position[]>([]);
   const [quotes, setQuotes] = useState<Record<string, RhythmResponse | null>>({});
   const [refreshing, setRefreshing] = useState(false);
@@ -297,6 +297,10 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
       ...focus,
       items: [...focus.items, { symbol: code, addedAt: Date.now(), name: displayName }],
     });
+    // 关注的股票自动进自选：自选 = 持仓 ∪ 本周关注 ∪ 其他手动添加
+    if (!watchlist.some((i) => i.symbol === code)) {
+      addItem(code, displayName);
+    }
     setFocusAddCode('');
     setFocusAddError('');
     setShowFocusAdd(false);
