@@ -20,6 +20,39 @@ export interface FlowResult {
 
 const DAYS = 20;
 
+export interface FlowBucket {
+  label: string;
+  inSum: number;
+  outSum: number;
+}
+
+/** 按 近5日 / 6-10日 / 11-20日 分桶（days 老->新） */
+export function bucketizeFlows(days: DayFlow[]): FlowBucket[] {
+  const defs = [
+    { label: '近5日', from: -5 },
+    { label: '6-10日', from: -10, to: -5 },
+    { label: '11-20日', from: -20, to: -10 },
+  ];
+  return defs.map((d) => {
+    const slice = d.to == null ? days.slice(d.from) : days.slice(d.from, d.to);
+    let inSum = 0;
+    let outSum = 0;
+    for (const x of slice) {
+      if (x.flow > 0) inSum += x.flow;
+      else outSum -= x.flow;
+    }
+    return { label: d.label, inSum, outSum };
+  });
+}
+
+/** 一句"怎么用"：行为纠偏口吻，不预测 */
+export function flowUsage(totalIn: number, totalOut: number): string {
+  if (totalIn <= 0 && totalOut <= 0) return '数据不足，先不动';
+  if (totalOut > totalIn * 1.5) return '红柱高出一截：卖盘更用力，先别急着买';
+  if (totalIn > totalOut * 1.5) return '绿柱高出一截：买盘更主动，拿着的别慌着卖';
+  return '两边差不多：多空僵持，看不懂就先不动';
+}
+
 /**
  * 日线资金流向估算（确定性本地算法，非逐笔大单数据）：
  * 每日资金 = 典型价((H+L+C)/3) × 成交量；
