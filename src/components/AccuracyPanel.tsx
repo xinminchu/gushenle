@@ -81,6 +81,7 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
         <h2 className="text-base font-semibold mb-2 text-slate-200 flex items-center gap-2">
           <History className="w-4 h-4 text-slate-400" /> 判断复盘
+          <span className="text-[10px] font-normal text-slate-500">{symbol}</span>
         </h2>
         <p className="text-xs text-slate-500">{data?.reason ?? '暂无复盘数据'}</p>
       </div>
@@ -95,6 +96,7 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
       <h2 className="text-base font-semibold mb-3 text-slate-200 flex items-center gap-2">
         <History className="w-4 h-4 text-slate-400" /> 判断复盘
+        <span className="text-[10px] font-normal text-slate-500">{symbol}</span>
         <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
           近一年信号 · 次日验证
         </span>

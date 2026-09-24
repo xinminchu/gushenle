@@ -158,11 +158,16 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     }
   }, [focusSymbol, setFocusSymbol]);
 
-  // 自选变化后，当前标的若被删则回到第一只
+  // 自选变化后，当前标的若被删则回到第一只。
+  // 注意：从持仓/关注跳过来的标的可能根本不在自选里（手动加的关注），
+  // 这种"从没进过自选"的不算被删，不能弹回第一只——只在"曾经在、现在没了"时回弹。
+  const wasInWatchlist = useRef(false);
   useEffect(() => {
-    if (watchlist.length > 0 && !watchlist.some((i) => i.symbol === symbol)) {
+    const inList = watchlist.some((i) => i.symbol === symbol);
+    if (wasInWatchlist.current && !inList && watchlist.length > 0) {
       setSymbol(watchlist[0].symbol);
     }
+    wasInWatchlist.current = inList;
   }, [watchlist, symbol]);
 
   // 收盘后自动刷新：页面开着过夜，第二天自动拉取最新收盘价
@@ -630,7 +635,9 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
           {/* ② 价格走势图：区间只控制展示，是多空对照，不下结论 */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-semibold text-slate-200">价格走势</h2>
+              <h2 className="text-base font-semibold text-slate-200">
+                价格走势 <span className="text-[10px] font-normal text-slate-500 ml-1">{symbol}</span>
+              </h2>
               <div className="flex items-center gap-2">
                 <span
                   className={`text-xs font-medium ${

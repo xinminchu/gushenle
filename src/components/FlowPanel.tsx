@@ -40,6 +40,7 @@ export default function FlowPanel({ symbol }: { symbol: string }) {
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-3">
       <div className="flex items-center gap-1.5">
         <span className="text-xs font-semibold text-slate-200">资金流向</span>
+        <span className="text-[10px] font-normal text-slate-500">{symbol}</span>
         <span className="text-[10px] font-normal text-slate-500 border border-slate-700 rounded px-1">
           日线估算
         </span>

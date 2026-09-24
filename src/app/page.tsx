@@ -32,10 +32,11 @@ function HomeInner() {
   const { setFocusSymbol } = useWatchlist();
   const { openSection, modal } = useSiteInfo();
 
-  // 持仓页点某只 -> 跳到今日页看它的律动诊断
+  // 持仓页点某只 -> 跳到今日页看它的律动诊断，并回到顶部对准诊断卡
   const viewSymbol = (symbol: string) => {
     setFocusSymbol(symbol);
     setActiveTab('today');
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 80);
   };
 
   return (

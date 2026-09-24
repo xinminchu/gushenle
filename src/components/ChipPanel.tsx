@@ -43,6 +43,7 @@ export default function ChipPanel({ symbol, compact = false }: { symbol: string;
       >
         <span className={`flex items-center gap-1.5 font-semibold text-slate-200 ${compact ? 'text-xs' : 'text-sm'}`}>
           筹码分布
+          <span className="text-[10px] font-normal text-slate-500">{symbol}</span>
           <span className="text-[10px] font-normal text-slate-500 border border-slate-700 rounded px-1">
             估算
           </span>
