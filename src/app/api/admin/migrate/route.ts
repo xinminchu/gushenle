@@ -19,11 +19,11 @@ import { MIGRATIONS } from '@/lib/migrations';
 
 const DB_URL = process.env.SUPABASE_DB_URL;
 
-async function db(): Promise<Client | null> {
-  if (!DB_URL) return null;
+async function db(): Promise<Client> {
   const client = new Client({
     connectionString: DB_URL,
     ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 15000,
   });
   await client.connect();
   return client;
@@ -52,9 +52,16 @@ export async function GET(req: NextRequest) {
       migrations: MIGRATIONS.map((m) => ({ version: m.version, name: m.name, applied: null })),
     });
   }
-  const client = await db();
-  if (!client) {
-    return NextResponse.json({ error: '数据库连接失败' }, { status: 500 });
+  let client: Client;
+  try {
+    client = await db();
+  } catch (e: unknown) {
+    return NextResponse.json(
+      {
+        error: `数据库连接失败：${e instanceof Error ? e.message : String(e)}。请检查 Vercel 的 SUPABASE_DB_URL：密码对吗？拷贝的是 Transaction pooler 的 URI 吗？`,
+      },
+      { status: 500 }
+    );
   }
   try {
     const done = await appliedVersions(client);
@@ -66,8 +73,13 @@ export async function GET(req: NextRequest) {
         applied: done.has(m.version),
       })),
     });
+  } catch (e) {
+    return NextResponse.json(
+      { error: `读取迁移状态失败：${e instanceof Error ? e.message : String(e)}` },
+      { status: 500 }
+    );
   } finally {
-    await client.end();
+    await client.end().catch(() => {});
   }
 }
 
@@ -79,9 +91,16 @@ export async function POST(req: NextRequest) {
   if (!DB_URL) {
     return NextResponse.json({ error: '服务端未配置 SUPABASE_DB_URL' }, { status: 500 });
   }
-  const client = await db();
-  if (!client) {
-    return NextResponse.json({ error: '数据库连接失败' }, { status: 500 });
+  let client: Client;
+  try {
+    client = await db();
+  } catch (e: unknown) {
+    return NextResponse.json(
+      {
+        error: `数据库连接失败：${e instanceof Error ? e.message : String(e)}。请检查 Vercel 的 SUPABASE_DB_URL：密码对吗？拷贝的是 Transaction pooler 的 URI 吗？`,
+      },
+      { status: 500 }
+    );
   }
   const results: Array<{ version: string; name: string; status: string; error?: string }> = [];
   try {
@@ -115,7 +134,12 @@ export async function POST(req: NextRequest) {
       }
     }
     return NextResponse.json({ results });
+  } catch (e) {
+    return NextResponse.json(
+      { error: `执行失败：${e instanceof Error ? e.message : String(e)}` },
+      { status: 500 }
+    );
   } finally {
-    await client.end();
+    await client.end().catch(() => {});
   }
 }

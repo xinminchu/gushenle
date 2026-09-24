@@ -21,6 +21,7 @@ interface RunResult {
 export default function AdminMigrateModal({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [hint, setHint] = useState('');
   const [list, setList] = useState<MigStatus[]>([]);
   const [running, setRunning] = useState(false);
@@ -35,16 +36,18 @@ export default function AdminMigrateModal({ onClose }: { onClose: () => void }) 
   async function refresh() {
     setLoading(true);
     setError('');
+    setLoadFailed(false);
     try {
       const res = await fetch('/api/admin/migrate', {
         headers: { Authorization: `Bearer ${await token()}` },
       });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || '读取失败');
+      const j = await res.json().catch(() => null);
+      if (!res.ok || !j) throw new Error((j && j.error) || `读取失败（${res.status}）`);
       setConfigured(j.configured !== false);
       setHint(j.hint || '');
       setList(j.migrations || []);
     } catch (e) {
+      setLoadFailed(true);
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
@@ -65,8 +68,8 @@ export default function AdminMigrateModal({ onClose }: { onClose: () => void }) 
         method: 'POST',
         headers: { Authorization: `Bearer ${await token()}` },
       });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || '执行失败');
+      const j = await res.json().catch(() => null);
+      if (!res.ok || !j) throw new Error((j && j.error) || `执行失败（${res.status}）`);
       setResults(j.results || []);
       await refresh();
     } catch (e) {
@@ -104,7 +107,7 @@ export default function AdminMigrateModal({ onClose }: { onClose: () => void }) 
             </div>
           )}
 
-          {!loading && configured && (
+          {!loading && configured && !loadFailed && (
             <>
               <div className="space-y-1.5 mb-3">
                 {list.map((m) => (
@@ -147,15 +150,25 @@ export default function AdminMigrateModal({ onClose }: { onClose: () => void }) 
                 </div>
               )}
 
-              {error && <p className="text-red-400 text-xs mb-3 break-words">{error}</p>}
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-xs text-red-300 leading-relaxed mb-3 break-words">
+                  {error}
+                </div>
+              )}
 
               <button
                 onClick={run}
-                disabled={running || pending === 0}
+                disabled={running || loadFailed || pending === 0}
                 className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-semibold rounded-xl py-2.5 flex items-center justify-center gap-2 active:scale-[0.98] transition"
               >
                 <Play className="w-4 h-4" />
-                {running ? '执行中…' : pending === 0 ? '全部已是最新' : `一键运行（${pending} 条待执行）`}
+                {running
+                  ? '执行中…'
+                  : loadFailed
+                    ? '状态读取失败，重试'
+                    : pending === 0
+                      ? '全部已是最新'
+                      : `一键运行（${pending} 条待执行）`}
               </button>
               <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
                 只执行仓库自带的迁移脚本，按顺序逐条跑，出错即停。每条成功后会记账，下次不再重复跑。
