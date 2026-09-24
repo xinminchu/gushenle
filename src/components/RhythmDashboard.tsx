@@ -37,6 +37,8 @@ import {
   nearestFibLevel,
   FIB_COMBOS,
   FIB_COMBO_IDS,
+  dirComboId,
+  fibComboDesc,
   RECOMMENDED_FIB_COMBO,
   RECOMMENDED_FIB_LOOKBACK,
   type FibComboId,
@@ -308,7 +310,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     [showFib, fibPts]
   );
   const fibChartLevels = useMemo(
-    () => (fibSwing ? fibLevels(fibSwing, fibCombo) : null),
+    () => (fibSwing ? fibLevels(fibSwing, dirComboId(fibCombo, fibSwing.uptrend)) : null),
     [fibSwing, fibCombo]
   );
   /** 诊断卡联动：现价贴近推荐视图（上方 1.272/1.618 拦追高，
@@ -901,7 +903,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
             {showFib && fibRangeOk && (
               <div className="mt-3 bg-slate-800/40 border border-slate-700/50 rounded-xl p-3">
                     <p className="text-[10px] text-slate-500 leading-relaxed mb-2">
-                      {FIB_COMBOS[fibCombo].name}：{FIB_COMBOS[fibCombo].desc}
+                      {FIB_COMBOS[fibCombo].name}：{fibSwing ? fibComboDesc(fibCombo, fibSwing.uptrend) : FIB_COMBOS[fibCombo].desc}
                     </p>
                 {fibSwing && fibChartLevels ? (
                   <>

@@ -91,6 +91,33 @@ export const FIB_COMBO_IDS = Object.keys(FIB_COMBOS) as FibComboId[];
  */
 export const RECOMMENDED_FIB_COMBO: FibComboId = 'smart';
 /**
+ * "跌到哪里 / 涨到哪里"按字面意思恒指下方 / 上方：
+ * 上涨波段：跌到哪里=深回调支撑（0.618/0.786），涨到哪里=扩展上行目标；
+ * 下跌波段：两者互换——跌到哪里=跌破低点后的下行目标，涨到哪里=反弹阻力（0.618/0.786）。
+ * 其余三个组合是标准集合，不随方向变。
+ */
+export function dirComboId(id: FibComboId, uptrend: boolean): FibComboId {
+  if (!uptrend) {
+    if (id === 'deep') return 'extension';
+    if (id === 'extension') return 'deep';
+  }
+  return id;
+}
+
+/** 组合说明文字（随波段方向自适应，默认按上涨波段写） */
+export function fibComboDesc(id: FibComboId, uptrend: boolean): string {
+  if (!uptrend) {
+    if (id === 'deep')
+      return '往下看：跌破波段低点后看这里（空头下行目标），割肉前先看一眼';
+    if (id === 'extension')
+      return '往上看：反弹到这两条线附近容易遇到阻力（回测触及后守住约59%/68%），追高前先看一眼';
+    if (id === 'smart')
+      return '调参收敛：下方 1.272/1.618 看跌破目标，上方 0.618/0.786 看反弹阻力，近3月窗口';
+  }
+  return FIB_COMBOS[id].desc;
+}
+
+/**
  * 波段窗口（交易日）：固定近3月（60 个交易日），与律动诊断锚定一致。
  * 2026-09-24 用户拍板：面板不再给窗口切换。回测曾显示 40 天略优（40>60>120），
  * 供日后调参参考；回测接口 /api/fib-accuracy 仍保留三档做离线对比。
