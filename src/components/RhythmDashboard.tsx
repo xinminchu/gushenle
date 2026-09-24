@@ -1,7 +1,7 @@
 // src/components/RhythmDashboard.tsx
 'use client';
 
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { Flame, ShieldAlert, Settings2, X, Plus, RotateCcw, TrendingUp } from 'lucide-react';
 import RhythmChart, { type ChartType } from './RhythmChart';
 import AccuracyPanel from './AccuracyPanel';
@@ -15,11 +15,69 @@ import { STOCK_NAMES } from '@/lib/stockAliases';
 import { CODE_CORRECTIONS, findStock, suggestStocks, type StockInfo } from '@/lib/stockList';
 import { fmtMoney } from '@/lib/currency';
 import { saveOperation, todayStr, type OpAction } from '@/lib/operations';
+import { loadPositions } from '@/lib/positions';
 import { useColorScheme, schemeLabel, upText, downText } from '@/lib/colorScheme';
 
 const ANCHOR_LABEL = RANGE_MAP[ANCHOR_RANGE_ID]?.label ?? '3月';
 
-export default function RhythmDashboard() {
+/** 沉思乐弹窗的持仓感知内容：看持仓说话 */
+interface ZenHoldings {
+  kind: 'holding' | 'other' | 'none';
+  shares?: number;
+  avgCost?: number;
+  price?: number;
+  pnl?: number;
+  pnlPct?: number;
+  advice: string;
+  heldSummary?: string;
+}
+
+function buildZenHoldings(symbol: string, price: number | null): ZenHoldings | null {
+  if (typeof window === 'undefined') return null;
+  const positions = loadPositions();
+  const pos = positions.find((p) => p.symbol.toUpperCase() === symbol.toUpperCase());
+  if (pos) {
+    if (price == null || price <= 0) {
+      return {
+        kind: 'holding',
+        shares: pos.shares,
+        avgCost: pos.avgCost,
+        advice: `你手里有 ${pos.shares} 股，成本 ${fmtMoney(symbol, pos.avgCost)}——涨这么猛，先别急着动手，看看要不要分批止盈？`,
+      };
+    }
+    const pnl = (price - pos.avgCost) * pos.shares;
+    const pnlPct = pos.avgCost > 0 ? ((price - pos.avgCost) / pos.avgCost) * 100 : 0;
+    let advice: string;
+    if (pnlPct >= 20) {
+      advice = `已经赚了 ${pnlPct.toFixed(0)}%，涨这么猛，追高的人正在接盘——要不要先卖一部分，把利润装进口袋？`;
+    } else if (pnlPct >= 0) {
+      advice = `小赚 ${pnlPct.toFixed(1)}%，现在这个涨法拿着容易心态飘——可以考虑分批止盈，涨也有份、跌也不慌。`;
+    } else if (pnlPct >= -10) {
+      advice = `还亏 ${Math.abs(pnlPct).toFixed(1)}%，这波大涨是回本的好机会——要不要趁热减点仓？`;
+    } else {
+      advice = `还套着 ${Math.abs(pnlPct).toFixed(1)}%，反弹是难得的减亏窗口——别等涨回去又舍不得，分批走一点？`;
+    }
+    return { kind: 'holding', shares: pos.shares, avgCost: pos.avgCost, price, pnl, pnlPct, advice };
+  }
+  if (positions.length > 0) {
+    const heldSummary = positions
+      .slice(0, 3)
+      .map((p) => p.symbol)
+      .join('、');
+    return {
+      kind: 'other',
+      advice: `你手里还没有 ${symbol}。涨成这样现在追进去，容易替别人站岗——真看好它，等它冷静下来再建仓也不迟。`,
+      heldSummary,
+    };
+  }
+  return {
+    kind: 'none',
+    advice:
+      '我还不知道你手里有啥——去持仓页把持仓加上吧，有的话快去添加，好让我下次直接告诉你这只该卖该留，而不是说空话。',
+  };
+}
+
+export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () => void }) {
   const {
     items: watchlist,
     isDefault,
@@ -43,6 +101,12 @@ export default function RhythmDashboard() {
   const [data, setData] = useState<RhythmResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showZenModal, setShowZenModal] = useState(false);
+  // 沉思乐弹窗打开时：按当前标的查持仓，组织"看持仓说话"的内容
+  const zenHoldings = useMemo(
+    () => (showZenModal ? buildZenHoldings(symbol, data?.price ?? null) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [showZenModal, symbol, data],
+  );
   // 「记一笔」操作记录弹窗
   const [showOpModal, setShowOpModal] = useState(false);
   const [opAction, setOpAction] = useState<OpAction>('sell');
@@ -614,7 +678,7 @@ export default function RhythmDashboard() {
         </div>
       )}
 
-      {/* 沉思乐：涨太猛了时点击诊断卡弹出的冷静拦截 */}
+      {/* 沉思乐：涨太猛了时点击诊断卡弹出的冷静拦截（看持仓说话） */}
       {showZenModal && data && judgment && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-800 border border-amber-500/40 rounded-2xl p-6 max-w-sm w-full space-y-4 text-center shadow-2xl">
@@ -627,6 +691,53 @@ export default function RhythmDashboard() {
               这几天涨得有点猛（律动 {judgment.score}{' '}
               分），要不要先深呼吸一下再决定？
             </p>
+            {zenHoldings && (
+              <div className="bg-slate-900/60 p-3 rounded-lg text-xs text-slate-300 text-left space-y-1.5 leading-relaxed">
+                {zenHoldings.kind === 'holding' && zenHoldings.shares != null && (
+                  <>
+                    <p>
+                      你手里有{' '}
+                      <span className="font-semibold text-slate-100">
+                        {zenHoldings.shares} 股
+                      </span>
+                      {zenHoldings.avgCost != null && (
+                        <> · 成本 {fmtMoney(symbol, zenHoldings.avgCost)}</>
+                      )}
+                      {zenHoldings.price != null && (
+                        <> · 现价 {fmtMoney(symbol, zenHoldings.price)}</>
+                      )}
+                    </p>
+                    {zenHoldings.pnl != null && zenHoldings.pnlPct != null && (
+                      <p>
+                        浮动{zenHoldings.pnl >= 0 ? '盈利' : '亏损'}{' '}
+                        <span
+                          className={`font-semibold ${
+                            zenHoldings.pnl >= 0 ? upText(scheme) : downText(scheme)
+                          }`}
+                        >
+                          {zenHoldings.pnl >= 0 ? '+' : ''}
+                          {fmtMoney(symbol, zenHoldings.pnl)}（
+                          {zenHoldings.pnlPct >= 0 ? '+' : ''}
+                          {zenHoldings.pnlPct.toFixed(1)}%）
+                        </span>
+                      </p>
+                    )}
+                    <p className="text-amber-300/90">{zenHoldings.advice}</p>
+                  </>
+                )}
+                {zenHoldings.kind === 'other' && (
+                  <>
+                    <p className="text-amber-300/90">{zenHoldings.advice}</p>
+                    {zenHoldings.heldSummary && (
+                      <p className="text-slate-500">你现在持有：{zenHoldings.heldSummary}</p>
+                    )}
+                  </>
+                )}
+                {zenHoldings.kind === 'none' && (
+                  <p className="text-amber-300/90">{zenHoldings.advice}</p>
+                )}
+              </div>
+            )}
             <div className="bg-slate-900/60 p-3 rounded-lg text-xs text-slate-400 text-left space-y-1">
               <p className="font-medium text-slate-300">动手前，不妨问问自己：</p>
               <p>• 是不是怕错过，才想追进去？</p>
@@ -634,6 +745,17 @@ export default function RhythmDashboard() {
               <p>• 如果明天跌 5%，今晚还睡得着吗？</p>
             </div>
             <div className="flex gap-2 pt-2">
+              {zenHoldings?.kind === 'none' && onGoPortfolio && (
+                <button
+                  onClick={() => {
+                    setShowZenModal(false);
+                    onGoPortfolio();
+                  }}
+                  className="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2.5 rounded-xl text-xs font-medium"
+                >
+                  去持仓页添加
+                </button>
+              )}
               <button
                 onClick={() => setShowZenModal(false)}
                 className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2.5 rounded-xl text-xs font-medium"

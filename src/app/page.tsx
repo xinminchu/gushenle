@@ -47,7 +47,7 @@ function HomeInner() {
       <div className="w-full">
         {activeTab === 'today' && (
           <section className="p-4 max-w-md mx-auto">
-            <RhythmDashboard />
+            <RhythmDashboard onGoPortfolio={() => setActiveTab('portfolio')} />
           </section>
         )}
         {activeTab === 'portfolio' && <PortfolioTab onViewSymbol={viewSymbol} />}
