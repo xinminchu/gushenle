@@ -105,7 +105,35 @@ export default function MemoryTab() {
     typeof window !== 'undefined' &&
     ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
-  const handleAnalyze = async (textToAnalyze: string) => {
+  const ttsSupported =
+    typeof window !== 'undefined' && 'speechSynthesis' in window;
+
+  /** 语音回读：把解析出的一笔念出来，耳朵比眼睛更容易发现数字错了 */
+  const speakTrade = (action: string, symbol: string, qty: string, price: string, date: string) => {
+    if (!ttsSupported) return;
+    try {
+      window.speechSynthesis.cancel();
+      const actionWord = action === 'buy' ? '买入' : '卖出';
+      const spell = symbol.split('').join(' '); // I B M，避免连读
+      const dateWord = /^\d{4}-\d{2}-\d{2}$/.test(date)
+        ? `${parseInt(date.slice(5, 7), 10)}月${parseInt(date.slice(8, 10), 10)}日`
+        : date;
+      const parts = [`${actionWord} ${spell}`];
+      if (qty) parts.push(`${qty}股`);
+      if (price) parts.push(`单价${price}`);
+      parts.push(dateWord);
+      const u = new SpeechSynthesisUtterance(parts.join('，') + '，对吗？');
+      u.lang = 'zh-CN';
+      u.rate = 0.95;
+      window.speechSynthesis.speak(u);
+    } catch {}
+  };
+
+  const stopSpeak = () => {
+    try { if (ttsSupported) window.speechSynthesis.cancel(); } catch {}
+  };
+
+  const handleAnalyze = async (textToAnalyze: string, fromVoice = false) => {
     if (!textToAnalyze.trim()) return;
     setLoading(true);
     setParsedResult(null);
@@ -129,6 +157,16 @@ export default function MemoryTab() {
         setQtyEdit(d.qty != null ? String(d.qty) : '');
         setDateEdit(d.opDate || todayStr());
         setActionEdit(normalizeAction(d.action) ?? 'sell');
+        // 语音来的：一遍回读，数字错了耳朵先发现（iOS 可能拦截自动朗读，确认卡上有"再听一遍"按钮兜底）
+        if (fromVoice) {
+          speakTrade(
+            normalizeAction(d.action) ?? 'sell',
+            String(d.symbol || '').toUpperCase(),
+            d.qty != null ? String(d.qty) : '',
+            d.price != null ? String(d.price) : '',
+            d.opDate || todayStr(),
+          );
+        }
         // 记一笔确认前：15 分钟内有没有疑似同一笔（防语音重说、手滑点两次）
         const similar = findSimilarRecord(
           {
@@ -245,7 +283,7 @@ export default function MemoryTab() {
     recog.onend = () => {
       setIsRecording(false);
       const t = speechTextRef.current.trim();
-      if (t) handleAnalyze(t);
+      if (t) handleAnalyze(t, true);
     };
     recog.onerror = () => setIsRecording(false);
     recogRef.current = recog;
@@ -259,6 +297,7 @@ export default function MemoryTab() {
 
   const handleSave = () => {
     if (!parsedResult) return;
+    stopSpeak();
     const symbol = String(parsedResult.symbol || '').toUpperCase();
     if (!symbol || symbol === 'UNKNOWN') {
       setNotice({ type: 'error', text: '没识别出股票代码，请说出或输入代码，例如 AAPL' });
@@ -291,6 +330,7 @@ export default function MemoryTab() {
   };
 
   const handleCancel = () => {
+    stopSpeak();
     setParsedResult(null);
     setDupWarning(null);
   };
@@ -651,11 +691,30 @@ export default function MemoryTab() {
             <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5" /> AI 整理结果，确认后存入
             </span>
-            {parsedResult.emotion && (
-              <span className="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded">
-                情绪：{parsedResult.emotion}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {ttsSupported && (
+                <button
+                  onClick={() =>
+                    speakTrade(
+                      actionEdit,
+                      String(parsedResult.symbol || '').toUpperCase(),
+                      qtyEdit,
+                      priceEdit,
+                      dateEdit,
+                    )
+                  }
+                  className="text-[10px] bg-slate-700 text-slate-200 px-2 py-0.5 rounded flex items-center gap-1"
+                  title="把这笔念出来再核对一遍"
+                >
+                  🔊 再听一遍
+                </button>
+              )}
+              {parsedResult.emotion && (
+                <span className="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded">
+                  情绪：{parsedResult.emotion}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="text-xs text-slate-100 font-medium">
