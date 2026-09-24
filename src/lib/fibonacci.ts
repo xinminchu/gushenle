@@ -39,8 +39,8 @@ export interface FibCombo {
  * - 回调线：0.786(67.7%) > 0.618(59.2%) > 0.5(51.8%) > 0.382(49.9%) > 0.236(41.7%)，
  *   线越深触及后越容易守住；浅线（0.236/0.382）基本是噪音
  * - 扩展目标：1.272 触及后5天内不再大涨的概率 77.6%（286次触及），拦追高最有效
- * - 收敛（2026-09-24）：用户默认只看"推荐视图"——上方 1.272/1.618 拦追高，
- *   下方 0.618/0.786 拦割肉，窗口锁 40 天；其余五套退到"换组合"二级入口
+ * - 收敛（2026-09-24）：诊断卡联动用"推荐视图"（smart）——上方 1.272/1.618 拦追高，
+ *   下方 0.618/0.786 拦割肉，窗口 40 天；面板默认给"完整五线"（别处常见），六套组合按钮直接展示
  */
 export const FIB_COMBOS: Record<FibComboId, FibCombo> = {
   smart: {
@@ -48,7 +48,7 @@ export const FIB_COMBOS: Record<FibComboId, FibCombo> = {
     name: '推荐视图',
     ratios: [1.272, 1.618, 0.618, 0.786],
     kind: 'mixed',
-    desc: '调参收敛：上方 1.272/1.618 拦追高，下方 0.618/0.786 拦割肉，40天窗口',
+    desc: '调参收敛：上方 1.272/1.618 拦追高，下方 0.618/0.786 拦割肉，近3月窗口',
   },
   classic: {
     id: 'classic',
@@ -89,21 +89,18 @@ export const FIB_COMBOS: Record<FibComboId, FibCombo> = {
 
 export const FIB_COMBO_IDS = Object.keys(FIB_COMBOS) as FibComboId[];
 
-/** 波段窗口（交易日）：近2月 / 近3月 / 近半年；回测结论 40天 > 60天 > 120天 */
-export const FIB_LOOKBACKS = [
-  { days: 40, label: '近2月', desc: '用最近 40 个交易日找波段高低点：最新鲜，调参下来最靠谱' },
-  { days: 60, label: '近3月', desc: '用最近 60 个交易日找波段高低点' },
-  { days: 120, label: '近半年', desc: '用最近 120 个交易日找波段高低点：看大波段用' },
-] as const;
-
 /**
- * 回测调参后的推荐组合（默认）。
- * 2026-09-24 收敛为混搭视图：扩展取最靠谱的 1.272/1.618（拦追高），
- * 回调取最靠谱的深线 0.618/0.786（拦割肉），窗口 40 天。
+ * 回测调参后的推荐组合：诊断卡联动用"推荐视图"（smart）——上方 1.272/1.618 拦追高，
+ * 下方 0.618/0.786 拦割肉。面板默认给"完整五线"（别处常见），六套组合按钮直接展示。
  * 调参结论更新时改这里，UI 的"推荐"徽章和诊断联动自动跟随。
  */
 export const RECOMMENDED_FIB_COMBO: FibComboId = 'smart';
-export const RECOMMENDED_FIB_LOOKBACK = 40;
+/**
+ * 波段窗口（交易日）：固定近3月（60 个交易日），与律动诊断锚定一致。
+ * 2026-09-24 用户拍板：面板不再给窗口切换。回测曾显示 40 天略优（40>60>120），
+ * 供日后调参参考；回测接口 /api/fib-accuracy 仍保留三档做离线对比。
+ */
+export const RECOMMENDED_FIB_LOOKBACK = 60;
 
 export type FibLevelKind = 'support' | 'resistance' | 'target-up' | 'target-down';
 

@@ -37,7 +37,6 @@ import {
   nearestFibLevel,
   FIB_COMBOS,
   FIB_COMBO_IDS,
-  FIB_LOOKBACKS,
   RECOMMENDED_FIB_COMBO,
   RECOMMENDED_FIB_LOOKBACK,
   type FibComboId,
@@ -138,10 +137,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const [showRangeHL, setShowRangeHL] = useState(true);
   /** 黄金分割参考线：开关 + 组合方案 + 波段窗口（调参用） */
   const [showFib, setShowFib] = useState(false);
-  const [fibCombo, setFibCombo] = useState<FibComboId>(RECOMMENDED_FIB_COMBO);
-  const [fibLookback, setFibLookback] = useState<number>(RECOMMENDED_FIB_LOOKBACK);
-  // 换组合二级入口：默认收起，用户只看推荐视图
-  const [showFibAdvanced, setShowFibAdvanced] = useState(false);
+  /** 黄金分割组合：默认完整五线（别处常见），点开面板直接选组合 */
+  const [fibCombo, setFibCombo] = useState<FibComboId>('full');
   const [data, setData] = useState<RhythmResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showZenModal, setShowZenModal] = useState(false);
@@ -307,8 +304,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     [data?.series]
   );
   const fibSwing = useMemo(
-    () => (showFib ? findSwing(fibPts, fibLookback) : null),
-    [showFib, fibPts, fibLookback]
+    () => (showFib ? findSwing(fibPts, RECOMMENDED_FIB_LOOKBACK) : null),
+    [showFib, fibPts]
   );
   const fibChartLevels = useMemo(
     () => (fibSwing ? fibLevels(fibSwing, fibCombo) : null),
@@ -875,12 +872,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               fibLevels={fibChartLevels}
               prevCloseLabel={prevCloseLabel}
             />
-            {/* 黄金分割：默认只看推荐视图，组合切换收进"换组合" */}
+            {/* 黄金分割：点开直接给组合按钮，默认完整五线 */}
             {showFib && fibRangeOk && (
               <div className="mt-3 bg-slate-800/40 border border-slate-700/50 rounded-xl p-3">
-                {showFibAdvanced && (
-                  <>
-                    <div className="flex flex-wrap gap-1.5 mb-1.5">
+                <div className="flex flex-wrap gap-1.5 mb-1.5">
                       {FIB_COMBO_IDS.map((id) => (
                         <Tip key={id} text={FIB_COMBOS[id].desc}>
                           <button
@@ -900,28 +895,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                           </button>
                         </Tip>
                       ))}
-                      <div className="flex gap-1.5 ml-1">
-                        {FIB_LOOKBACKS.map((lb) => (
-                          <Tip key={lb.days} text={lb.desc}>
-                            <button
-                              onClick={() => setFibLookback(lb.days)}
-                              className={`px-2 py-1 rounded-lg text-[10px] transition-colors ${
-                                fibLookback === lb.days
-                                  ? 'bg-slate-700 text-slate-200'
-                                  : 'text-slate-500 hover:text-slate-300'
-                              }`}
-                            >
-                              {lb.label}
-                            </button>
-                          </Tip>
-                        ))}
-                      </div>
                     </div>
                     <p className="text-[10px] text-slate-500 leading-relaxed mb-2">
                       {FIB_COMBOS[fibCombo].desc}
                     </p>
-                  </>
-                )}
                 {fibSwing && fibChartLevels ? (
                   <>
                     <div className="text-[10px] text-slate-500 mb-1.5">
@@ -997,12 +974,6 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                     该区间点数不足，画不出可靠波段（换个长一点的展示区间试试）
                   </div>
                 )}
-                <button
-                  onClick={() => setShowFibAdvanced((v) => !v)}
-                  className="mt-2 text-[10px] text-slate-500 hover:text-slate-300"
-                >
-                  {showFibAdvanced ? '收起组合 ▴' : '换组合 ▸'}
-                </button>
                 <p className="text-[10px] text-slate-600 mt-1.5">
                   参考线，不是算命：只标大家都在看的位置，不构成预测
                 </p>
