@@ -57,6 +57,22 @@ export function deleteOperation(id: string): void {
   window.localStorage.setItem(KEY, JSON.stringify(list));
 }
 
+/** 按 id 更新一条操作记录（说错了更正单价/数量/日期/方向用） */
+export function updateOperation(
+  id: string,
+  patch: Partial<
+    Pick<OperationRecord, 'symbol' | 'action' | 'price' | 'qty' | 'date' | 'thesis' | 'emotion'>
+  >,
+): OperationRecord | null {
+  if (typeof window === 'undefined') return null;
+  const list = safeParse(window.localStorage.getItem(KEY));
+  const rec = list.find((r) => r.id === id);
+  if (!rec) return null;
+  Object.assign(rec, patch);
+  window.localStorage.setItem(KEY, JSON.stringify(list));
+  return rec;
+}
+
 /** 把 AI 解析的动作字符串归一化为 buy/sell */
 export function normalizeAction(a: string | undefined): OpAction | null {
   if (!a) return null;

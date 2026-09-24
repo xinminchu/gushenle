@@ -9,6 +9,7 @@ import {
   loadOperations,
   saveOperation,
   deleteOperation,
+  updateOperation,
   normalizeAction,
   ACTION_LABEL,
   verdictFor,
@@ -127,6 +128,8 @@ export default function MemoryTab() {
         } else {
           await fetchAdvice();
         }
+      } else if (json.success && json.intent === 'correct') {
+        applyCorrection(json.data);
       } else if (json.success && json.intent === 'chat') {
         setChatReply(json.reply || '这句话记不了一笔，换个说法试试。');
       } else {
@@ -265,6 +268,66 @@ export default function MemoryTab() {
     setParsedResult(null);
   };
 
+  /** 更正意图：说错了，直接改最近一条（或点名股票的最近一条） */
+  const applyCorrection = (c: {
+    field: 'price' | 'qty' | 'date' | 'action';
+    value: number | string | null;
+    symbol?: string | null;
+  }) => {
+    if (ops.length === 0) {
+      setNotice({ type: 'error', text: '还没有操作记录，先记一笔吧' });
+      return;
+    }
+    const sym = c.symbol ? String(c.symbol).toUpperCase() : null;
+    const target = (sym ? ops.find((o) => o.symbol === sym) : undefined) || ops[0];
+    const patch: Partial<OperationRecord> = {};
+    let label = '';
+    if (c.field === 'price' && typeof c.value === 'number' && c.value > 0) {
+      patch.price = c.value;
+      label = `单价改成 $${c.value}`;
+    } else if (c.field === 'qty' && typeof c.value === 'number' && c.value > 0) {
+      patch.qty = Math.round(c.value);
+      label = `数量改成 ${Math.round(c.value)} 股`;
+    } else if (
+      c.field === 'date' &&
+      typeof c.value === 'string' &&
+      /^\d{4}-\d{2}-\d{2}$/.test(c.value)
+    ) {
+      patch.date = c.value;
+      label = `日期改成 ${c.value}`;
+    } else if (c.field === 'action' && (c.value === 'buy' || c.value === 'sell')) {
+      patch.action = c.value;
+      label = `方向改成${ACTION_LABEL[c.value]}`;
+    } else {
+      setNotice({
+        type: 'error',
+        text: '没听清要改成什么，再说一遍吧（例如：刚才那笔单价改成 227.92）',
+      });
+      return;
+    }
+    const updated = updateOperation(target.id, patch);
+    if (!updated) {
+      setNotice({ type: 'error', text: '没找到那条记录' });
+      return;
+    }
+    setOps(loadOperations());
+    setInputText('');
+    setNotice({
+      type: 'info',
+      text: `已更正：${target.symbol}（${target.date}）${label}`,
+    });
+    // 改了日期会影响复盘，重拉这条的 forward-return
+    if (c.field === 'date') {
+      const newDate = (patch.date as string) || target.date;
+      fetch(`/api/forward-return?symbol=${encodeURIComponent(target.symbol)}&date=${newDate}`)
+        .then((r) => r.json())
+        .then((j) =>
+          setReviews((prev) => ({ ...prev, [target.id]: { r5: j.r5 ?? null, r20: j.r20 ?? null } })),
+        )
+        .catch(() => {});
+    }
+  };
+
   const handleDelete = (id: string) => {
     if (!confirm('删除这条操作记录？')) return;
     deleteOperation(id);
@@ -321,7 +384,7 @@ export default function MemoryTab() {
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="例如：今天 235 卖了 100 股苹果 AAPL… 也可以问：现在买什么好？/ 今天可以卖IBM吗？"
+            placeholder="例如：今天 235 卖了 100 股苹果 AAPL… 说错了直接讲：刚才那笔单价说错了是 227.92"
             className="w-full h-20 bg-slate-800/60 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
           />
           <button

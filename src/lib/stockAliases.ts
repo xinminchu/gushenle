@@ -73,9 +73,14 @@ const KNOWN_TICKERS = new Set<string>([
  * 先找大写代码（如 IBM），再找中文别名（如 英特尔），找不到返回 null。
  */
 export function extractSymbol(text: string): string | null {
-  // 1) 大写代码：2~5 个字母，且在已知集合里
-  const tickers = text.match(/\b[A-Z]{2,5}\b/g) || [];
+  // 1) 大写代码：2~5 个字母，且在已知集合里（先整体转大写，兼容语音"i b m"→"ibm"这类小写）
+  const tickers = text.toUpperCase().match(/\b[A-Z]{2,5}\b/g) || [];
   for (const t of tickers) {
+    if (KNOWN_TICKERS.has(t)) return t;
+  }
+  // 1a) 代码和数字粘在一起："IBM217块" / "买入AAPL100股" -> 先取字母前缀再校验
+  const glued = text.toUpperCase().match(/\b[A-Z]{2,5}(?=\d)/g) || [];
+  for (const t of glued) {
     if (KNOWN_TICKERS.has(t)) return t;
   }
   // 1b) 数字代码（如韩股 000660.KS）
