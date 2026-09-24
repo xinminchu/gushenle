@@ -23,7 +23,7 @@ export interface FibSwing {
   range: number;
 }
 
-export type FibComboId = 'smart' | 'classic' | 'full' | 'extension';
+export type FibComboId = 'smart' | 'classic' | 'full' | 'deep' | 'extension';
 
 export interface FibCombo {
   id: FibComboId;
@@ -33,14 +33,14 @@ export interface FibCombo {
   desc: string;
 }
 
-/** 四套组合。回测结论（2026-09-24，AAPL/NVDA/MSFT/TSLA/COIN/MSTR 近3年，
+/** 五套组合。回测结论（2026-09-24，AAPL/NVDA/MSFT/TSLA/COIN/MSTR 近3年，
  * 无未来函数，5日验证）：
  * - 窗口：40天 > 60天 > 120天，单调——波段越新鲜越靠谱
  * - 回调线：0.786(67.7%) > 0.618(59.2%) > 0.5(51.8%) > 0.382(49.9%) > 0.236(41.7%)，
  *   线越深触及后越容易守住；浅线（0.236/0.382）基本是噪音
  * - 扩展目标：1.272 触及后5天内不再大涨的概率 77.6%（286次触及），拦追高最有效
  * - 收敛（2026-09-24）：诊断卡联动用"推荐视图"（smart）——上方 1.272/1.618 拦追高，
- *   下方 0.618/0.786 拦割肉，窗口 40 天；面板默认给"完整五线"（别处常见），四套组合按钮直接展示
+ *   下方 0.618/0.786 拦割肉，窗口 40 天；面板默认给"完整五线"（别处常见），五套组合按钮一排展示
  */
 export const FIB_COMBOS: Record<FibComboId, FibCombo> = {
   smart: {
@@ -64,12 +64,19 @@ export const FIB_COMBOS: Record<FibComboId, FibCombo> = {
     kind: 'retrace',
     desc: '回调全套：浅回调 0.236 到深回调 0.786（浅线多为噪音，深线更靠谱）',
   },
+  deep: {
+    id: 'deep',
+    name: '跌到哪里',
+    ratios: [0.618, 0.786],
+    kind: 'retrace',
+    desc: '往下看：跌到这两条线附近最容易撑住（回测触及后守住约59%/68%），割肉前先看一眼',
+  },
   extension: {
     id: 'extension',
-    name: '扩展目标',
+    name: '涨到哪里',
     ratios: [1.272, 1.618, 2.0, 2.618],
     kind: 'extension',
-    desc: '突破后的上方目标 / 跌破后的下方目标（回测：到1.272后约78%在5天内不再大涨）',
+    desc: '往上看：涨破波段高点后看这里，冲到1.272附近约78%会歇一歇（回测），追高前先看一眼',
   },
 };
 
@@ -77,9 +84,9 @@ export const FIB_COMBO_IDS = Object.keys(FIB_COMBOS) as FibComboId[];
 
 /**
  * 回测调参后的推荐组合：诊断卡联动用"推荐视图"（smart）——上方 1.272/1.618 拦追高，
- * 下方 0.618/0.786 拦割肉。面板默认给"完整五线"（别处常见），四套组合按钮直接展示。
- * 2026-09-24 精简：去掉"极简两线"（经典三线的纯子集）、"深回调"（推荐视图与完整五线的纯子集），
- * 被删的两个组合没有一条独立线条。
+ * 下方 0.618/0.786 拦割肉。面板默认给"完整五线"（别处常见），五套组合按钮一排展示。
+ * 2026-09-24 精简：去掉"极简两线"（经典三线的纯子集）；"深回调"改名"跌到哪里"、
+ * "扩展目标"改名"涨到哪里"，说人话。
  * 调参结论更新时改这里，UI 的"推荐"徽章和诊断联动自动跟随。
  */
 export const RECOMMENDED_FIB_COMBO: FibComboId = 'smart';

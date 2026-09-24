@@ -865,12 +865,12 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
 
             {/* 黄金分割组合：一排按钮紧跟在开关下方 */}
             {showFib && fibRangeOk && chartType !== 'ohlc' && (
-              <div className="flex gap-1.5 mb-2">
+              <div className="flex gap-1 mb-2">
                 {FIB_COMBO_IDS.map((id) => (
                   <Tip key={id} text={FIB_COMBOS[id].desc}>
                     <button
                       onClick={() => setFibCombo(id)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                      className={`px-2 py-1 rounded-lg text-[11px] border transition-colors whitespace-nowrap ${
                         fibCombo === id
                           ? 'border-yellow-600/50 text-yellow-300 bg-yellow-500/10'
                           : 'border-slate-700 text-slate-500 hover:text-slate-300'
