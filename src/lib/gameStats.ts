@@ -54,6 +54,7 @@ function blank(): Record<GameId, GameStat> {
     holdback: emptyStat(),
     newstrap: emptyStat(),
     dca: emptyStat(),
+    dart: emptyStat(),
   };
 }
 
@@ -94,7 +95,7 @@ function saveStats(s: Record<GameId, GameStat>): void {
 export function recordPlay(id: GameId, score: number): void {
   if (id === 'kline') return;
   const s = loadStats();
-  const g = s[id];
+  const g = s[id] ?? (s[id] = emptyStat());
   g.totalScore += Math.max(0, Math.round(score));
   if (score > g.best) g.best = Math.round(score);
   saveStats(s);
@@ -103,7 +104,8 @@ export function recordPlay(id: GameId, score: number): void {
 /** 打开一次游戏弹窗即记一次游玩（统一口径：玩了 N 次 = 打开次数）。 */
 export function recordSession(id: GameId): void {
   const s = loadStats();
-  s[id].plays += 1;
+  const g = s[id] ?? (s[id] = emptyStat());
+  g.plays += 1;
   saveStats(s);
 }
 
