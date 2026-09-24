@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Home, Briefcase, Mic, Newspaper, Gamepad2 } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface BottomNavProps {
   activeTab: string;
@@ -9,12 +10,13 @@ interface BottomNavProps {
 }
 
 export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
+  const { t } = useLanguage();
   const navItems = [
-    { id: 'today', label: '今日', icon: Home },
-    { id: 'portfolio', label: '持仓', icon: Briefcase },
-    { id: 'memory', label: '记忆', icon: Mic },
-    { id: 'community', label: '资讯', icon: Newspaper },
-    { id: 'fun', label: '娱乐', icon: Gamepad2 },
+    { id: 'today', label: t('navToday'), icon: Home },
+    { id: 'portfolio', label: t('navPortfolio'), icon: Briefcase },
+    { id: 'memory', label: t('navMemory'), icon: Mic },
+    { id: 'community', label: t('navCommunity'), icon: Newspaper },
+    { id: 'fun', label: t('navFun'), icon: Gamepad2 },
   ];
 
   return (

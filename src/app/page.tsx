@@ -15,13 +15,16 @@ import RhythmDashboard from '@/components/RhythmDashboard';
 import AppHeader from '@/components/AppHeader';
 import { WatchlistProvider, useWatchlist } from '@/components/WatchlistContext';
 import { AuthProvider } from '@/context/AuthContext';
+import { LanguageProvider } from '@/context/LanguageContext';
 
 export default function Home() {
   return (
     <AuthProvider>
-      <WatchlistProvider>
-        <HomeInner />
-      </WatchlistProvider>
+      <LanguageProvider>
+        <WatchlistProvider>
+          <HomeInner />
+        </WatchlistProvider>
+      </LanguageProvider>
     </AuthProvider>
   );
 }

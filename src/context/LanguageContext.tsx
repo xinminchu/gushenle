@@ -1,92 +1,69 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { STRINGS, LEGACY_WORDS, type Lang } from '@/lib/i18n';
 
-type Language = 'zh' | 'en';
-
-// 1. 定义全站字典文本
-const translations = {
-  zh: {
-    // 通用
-    title: '股神乐 (Gushenle)',
-    subtitle: '理性投资与情绪调节助手',
-    testConnection: '点击开始测试连通性',
-    testing: '测试运行中...',
-    supabaseDb: '1. Supabase 数据库',
-    geminiApi: '2. Gemini Flash API',
-    
-    // 咯咯乐小游戏
-    gameTitle: '🎮 沉思乐：【韭菜咯咯乐】',
-    slicedCount: '🌱 已割韭菜情绪',
-    timeLeft: '⏱️ 冷静倒计时',
-    speedLabel: '韭菜飘升速度',
-    speedSlow: '🐢 悠闲',
-    speedNormal: '🚶 标准',
-    speedFast: '⚡ 暴走',
-    calmTitle: '理性已回归！',
-    calmDesc: '你成功切碎了 {count} 株冲动韭菜！\n“市场永远不缺机会，冷静才是最大的红利。”',
-    playAgain: '🔄 再割一把',
-    returnDecision: '🚀 返回决策',
-    gameTip: '划动光标/手指割断韭菜气泡，冷静 20 秒',
-    
-    // 情绪词汇
-    words: ['追高梭哈', '听小道消息', '割肉离场', '加杠杆', '恐慌抛售', '凭感觉买入', '频繁交易', '盲目跟风'],
-  },
-  en: {
-    // Common
-    title: 'Gushenle',
-    subtitle: 'Objective Rhythm Analysis & Emotional Regulation Companion',
-    testConnection: 'Run Connectivity Test',
-    testing: 'Testing...',
-    supabaseDb: '1. Supabase DB',
-    geminiApi: '2. Gemini Flash API',
-    
-    // Game
-    gameTitle: '🎮 Meditation Zone: Clipper Party',
-    slicedCount: '🌱 FOMO Cleared',
-    timeLeft: '⏱️ Cool-down',
-    speedLabel: 'Rising Speed',
-    speedSlow: '🐢 Relaxed',
-    speedNormal: '🚶 Normal',
-    speedFast: '⚡ Rush',
-    calmTitle: 'Rationality Restored!',
-    calmDesc: 'You successfully cleared {count} impulsive thoughts!\n"The market never lacks opportunity; remaining calm is your true alpha."',
-    playAgain: '🔄 Play Again',
-    returnDecision: '🚀 Back to Dashboard',
-    gameTip: 'Slash floating FOMO bubbles to enter a 20s calm zone',
-    
-    // Emotional Words
-    words: ['FOMO All-In', 'Rumor Trading', 'Panic Selling', 'Over-Leverage', 'Panic Dump', 'Gut-Buying', 'Over-Trading', 'Blind Herd'],
-  },
-};
+const KEY = 'gushenle_lang_v1';
 
 interface LanguageContextType {
-  lang: Language;
+  lang: Lang;
+  /** 旧 API（/test 调试页在用）：中英互切 */
   toggleLanguage: () => void;
-  t: (key: keyof typeof translations['zh'], params?: Record<string, any>) => any;
+  setLang: (l: Lang) => void;
+  /** t('login')，支持 {s} 占位：t('resendIn', { s: 60 })；未知 key 原样返回 */
+  t: (key: string, params?: Record<string, string | number>) => string;
+  /** 旧 API：情绪词数组（/test 调试页在用） */
+  words: string[];
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLang] = useState<Language>('zh');
+  const [lang, setLangState] = useState<Lang>('zh');
 
-  const toggleLanguage = () => {
-    setLang((prev) => (prev === 'zh' ? 'en' : 'zh'));
+  useEffect(() => {
+    try {
+      const v = window.localStorage.getItem(KEY);
+      if (v === 'en' || v === 'zh') setLangState(v);
+    } catch {
+      /* 忽略 */
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    } catch {
+      /* 忽略 */
+    }
+  }, [lang]);
+
+  const setLang = (l: Lang) => {
+    setLangState(l);
+    try {
+      window.localStorage.setItem(KEY, l);
+    } catch {
+      /* 忽略 */
+    }
   };
 
-  const t = (key: keyof typeof translations['zh'], params?: Record<string, any>) => {
-    let text = translations[lang][key] || translations['zh'][key] || key;
-    if (typeof text === 'string' && params) {
-      Object.keys(params).forEach((p) => {
-        text = (text as string).replace(`{${p}}`, params[p]);
-      });
+  const toggleLanguage = () => setLang(lang === 'zh' ? 'en' : 'zh');
+
+  const t = (key: string, params?: Record<string, string | number>) => {
+    const dict = STRINGS[lang] as Record<string, string>;
+    let text: string = dict[key] ?? (STRINGS.zh as Record<string, string>)[key] ?? key;
+    if (params) {
+      for (const p of Object.keys(params)) {
+        text = text.replace(`{${p}}`, String(params[p]));
+      }
     }
     return text;
   };
 
   return (
-    <LanguageContext.Provider value={{ lang, toggleLanguage, t }}>
+    <LanguageContext.Provider
+      value={{ lang, toggleLanguage, setLang, t, words: LEGACY_WORDS[lang] }}
+    >
       {children}
     </LanguageContext.Provider>
   );
