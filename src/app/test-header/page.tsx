@@ -78,7 +78,7 @@ function V1() {
   );
 }
 
-/** V2：logo 行干净；下方横幅居中，中上英下成对（新翻译） */
+/** V2：logo 行干净；下方横幅居中，两行——上：4 句中文，下：4 句英文 */
 function V2() {
   return (
     <div className="bg-slate-950">
@@ -90,10 +90,12 @@ function V2() {
       </div>
       <div className="border-y border-slate-800/80 bg-slate-900/40">
         <div className="max-w-md mx-auto px-4 py-2.5 text-center">
-          <p className="text-[12px] text-slate-200 tracking-wide">{ZH[0]}</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">Happy trading, easy investing</p>
-          <p className="text-[12px] text-slate-200 tracking-wide mt-2">{ZH[1]}</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">Don&rsquo;t gamble, don&rsquo;t get stuck; don&rsquo;t tilt, don&rsquo;t quit</p>
+          <p className="text-[12px] text-slate-200 tracking-wide">
+            快乐炒股 <span className="text-slate-600 mx-0.5">·</span> 轻松投资 <span className="text-slate-600 mx-0.5">·</span> 不赌不堵 <span className="text-slate-600 mx-0.5">·</span> 不气不弃
+          </p>
+          <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+            Happy trading <span className="mx-0.5">·</span> easy investing <span className="mx-0.5">·</span> don&rsquo;t gamble, don&rsquo;t get stuck <span className="mx-0.5">·</span> don&rsquo;t tilt, don&rsquo;t quit
+          </p>
         </div>
       </div>
     </div>
@@ -136,7 +138,7 @@ export default function TestHeaderPage() {
       <Label v="V1" name="横幅居中 · 双语各一行" desc="logo 行只剩 logo + 登录/语言；下方整幅细横幅，两句 slogan 各占一行、中文在前英文在后。" />
       <V1 />
 
-      <Label v="V2" name="横幅居中 · 中上英下（新翻译）" desc="中文在上、英文在下成对排。新翻译：Happy trading, easy investing / Don't gamble, don't get stuck; don't tilt, don't quit。" />
+      <Label v="V2" name="横幅居中 · 两行（中文上·英文下）" desc="第一行：快乐炒股 · 轻松投资 · 不赌不堵 · 不气不弃；第二行：Happy trading · easy investing · don't gamble, don't get stuck · don't tilt, don't quit。" />
       <V2 />
 
       <Label v="V3" name="居中大气" desc="logo 居中放大，slogan 居中两行在其下；登录/语言绝对定位右上。" />
