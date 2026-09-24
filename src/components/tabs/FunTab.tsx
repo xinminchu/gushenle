@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Play, Flame, X, Trophy } from 'lucide-react';
+import { Flame, X, Trophy } from 'lucide-react';
 import { loadStats, recordPlay, recordSession, type GameId, type GameStat } from '@/lib/gameStats';
 import { useAuth } from '@/context/AuthContext';
+import WishPool from '../games/WishPool';
 
 // 游戏按需加载：点开哪个才下载哪个，不拖慢首页
 const ClipperGame = dynamic(() => import('../games/ClipperGame'), { ssr: false });
@@ -52,54 +53,54 @@ export default function FunTab() {
   const games = [
     {
       id: 'clipper',
-      name: '韭菜咯咯乐 (Clipper Party)',
-      desc: '划线切碎“追高”、“梭哈”等冲动情绪词汇，30秒强行解压。',
+      name: '韭菜咯咯乐',
+      icon: '✂️',
       level: '🟢 极低',
       hot: true,
     },
     {
       id: 'cool30',
       name: '沉思撞球 30 秒',
-      desc: '经典 H5 弹砖块解压小游戏，过热/追高冲动时的冷静降温神器。',
+      icon: '🎱',
       level: '🟢 极低',
       hot: true,
     },
     {
       id: 'bigtech',
       name: '美股巨头大乱斗',
-      desc: '5x5 / 7x7 / 9x9 三档难度，边消边看美股巨头冷知识。',
+      icon: '🏢',
       level: '🟡 中等',
     },
     {
       id: 'kline',
       name: '历史 K 线盲盒',
-      desc: '抽取真实历史 K 线，盲猜涨跌测试投资定力。',
+      icon: '📦',
       level: '🟡 中等',
     },
     {
       id: 'cutloss',
       name: '割肉还是卧倒',
-      desc: '大跌中途定格，真实历史揭晓：割在地板还是卧倒回血？',
+      icon: '🔪',
       level: '🟡 中等',
       hot: true,
     },
     {
       id: 'holdback',
       name: '忍住别追高',
-      desc: '追高模拟器：买入真能赚钱，但拿得越久越可能闪崩。跑得快还是贪到被埋？',
+      icon: '🚫',
       level: '🟡 中等',
       hot: true,
     },
     {
       id: 'newstrap',
       name: '消息面陷阱',
-      desc: '真实历史大事件，猜大盘 5 日涨跌，体会消息与走势反着来。',
+      icon: '📰',
       level: '🟡 中等',
     },
     {
       id: 'dca',
       name: '定投 vs 梭哈',
-      desc: '同一只股票、同一段时间，两种策略赛跑，谁笑到最后？',
+      icon: '💰',
       level: '🟢 极低',
     },
   ];
@@ -124,50 +125,46 @@ export default function FunTab() {
         )}
       </header>
 
-      {/* 游戏列表 */}
-      <div className="space-y-3">
-        {games.map((game) => (
-          <div
-            key={game.id}
-            className="bg-slate-800/80 border border-slate-700 hover:border-emerald-500/50 rounded-xl p-4 space-y-3 transition-all"
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-slate-100 text-sm">{game.name}</h3>
-                  {game.hot && (
-                    <span className="bg-amber-500/20 text-amber-400 text-[9px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                      <Flame className="w-3 h-3" /> 热门
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-400 mt-1">{game.desc}</p>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center gap-2 pt-1 border-t border-slate-700/40">
-              <div className="flex items-center gap-x-2 gap-y-0.5 flex-wrap min-w-0 text-[10px]">
-                <span className="text-slate-500 whitespace-nowrap">AI 难度: {game.level}</span>
-                {stats && stats[game.id as GameId] && stats[game.id as GameId].plays > 0 && (
-                  <span className="text-slate-400 flex items-center gap-1 whitespace-nowrap">
+      {/* 游戏小方块 */}
+      <div className="grid grid-cols-2 gap-2.5">
+        {games.map((game) => {
+          const st = stats?.[game.id as GameId];
+          return (
+            <button
+              key={game.id}
+              onClick={() => openGame(game.id)}
+              className="relative bg-slate-800/80 border border-slate-700 hover:border-emerald-500/50 active:scale-[0.97] rounded-xl p-3 text-left transition-all"
+            >
+              {game.hot && (
+                <span className="absolute top-2 right-2 bg-amber-500/20 text-amber-400 text-[9px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                  <Flame className="w-3 h-3" /> 热门
+                </span>
+              )}
+              <div className="text-2xl mb-1.5">{game.icon}</div>
+              <div className="font-bold text-slate-100 text-xs leading-snug pr-8">{game.name}</div>
+              <div className="text-[10px] text-slate-500 mt-1">
+                {st && st.plays > 0 ? (
+                  <span className="flex items-center gap-1">
                     <Trophy className="w-3 h-3 text-amber-400 shrink-0" />
-                    玩了 {stats[game.id as GameId].plays} 次 · 累计 {stats[game.id as GameId].totalScore} 分
-                    {game.id === 'kline' && stats.kline.banked > 0 && (
-                      <span className="text-amber-300">（已落袋 {stats.kline.banked}）</span>
-                    )}
+                    玩了 {st.plays} 次 · {st.totalScore} 分
                   </span>
+                ) : (
+                  '还没玩过，来试试'
                 )}
               </div>
-              <button
-                onClick={() => openGame(game.id)}
-                className="shrink-0 whitespace-nowrap bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-all"
-              >
-                <Play className="w-3 h-3 fill-current" /> 立即开始
-              </button>
-            </div>
-          </div>
-        ))}
+            </button>
+          );
+        })}
       </div>
+
+      {/* 敬请期待 */}
+      <div className="border border-dashed border-slate-700 rounded-xl py-4 px-3 text-center">
+        <p className="text-xs text-slate-400">🌊 一大波精彩股票主题游戏正在赶来……</p>
+        <p className="text-[10px] text-slate-600 mt-1">等不及？去下面的许愿池点一个，我们优先开发</p>
+      </div>
+
+      {/* 游戏许愿池 */}
+      <WishPool />
 
       {/* 游戏全屏/Modal 弹窗容器 */}
       {activeGame && (
