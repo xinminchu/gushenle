@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, X, RefreshCw, Briefcase, GripVertical, Pencil } from 'lucide-react';
+import { Plus, X, RefreshCw, Briefcase, GripVertical, Pencil, BookOpen } from 'lucide-react';
 import { useWatchlist } from '@/components/WatchlistContext';
 import { loadPositions, savePositions, holdingDays, sectorOf, type Position } from '@/lib/positions';
 import { loadFocus, saveFocus, weekStartStr, FOCUS_MAX, concentrationAdvice, type FocusState } from '@/lib/focus';
@@ -11,6 +11,7 @@ import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
 import type { RhythmResponse } from '@/lib/rhythm';
 import { useColorScheme, upText, downText } from '@/lib/colorScheme';
 import CostCalculator from '@/components/CostCalculator';
+import StockStory from '@/components/portfolio/StockStory';
 import { fmtMoney } from '@/lib/currency';
 
 /**
@@ -61,6 +62,8 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
   const [showBudgetAsk, setShowBudgetAsk] = useState(false);
   const [budgetInput, setBudgetInput] = useState('');
   const [typicalAmt] = useState<number | null>(() => typicalBuyAmount(loadOperations()));
+  // 持仓故事展开：一次只展开一只
+  const [storySymbol, setStorySymbol] = useState<string | null>(null);
 
   /* ---------- 手动拖放排序（手机可用：拖动手柄 + pointer 事件） ---------- */
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -460,6 +463,26 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      setStorySymbol((cur) => (cur === p.symbol ? null : p.symbol));
+                    }}
+                    className={`p-0.5 ${storySymbol === p.symbol ? 'text-blue-400' : 'text-slate-600 hover:text-blue-400'}`}
+                    aria-label={`${storySymbol === p.symbol ? '收起' : '展开'} ${p.symbol} 持仓故事`}
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setStorySymbol((cur) => (cur === p.symbol ? null : p.symbol));
+                    }}
+                    className={`p-0.5 ${storySymbol === p.symbol ? 'text-blue-400' : 'text-slate-600 hover:text-blue-400'}`}
+                    aria-label={`${storySymbol === p.symbol ? '收起' : '展开'} ${p.symbol} 持仓故事`}
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
                       editPosition(p);
                     }}
                     className="text-slate-600 hover:text-blue-400 p-0.5"
@@ -539,6 +562,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                   </div>
                 </div>
               )}
+              {storySymbol === p.symbol && <StockStory symbol={p.symbol} quote={q ?? null} />}
             </div>
           );
         })}
