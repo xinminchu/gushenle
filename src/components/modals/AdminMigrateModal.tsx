@@ -107,6 +107,20 @@ export default function AdminMigrateModal({ onClose }: { onClose: () => void }) 
             </div>
           )}
 
+          {!loading && loadFailed && (
+            <div>
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-xs text-red-300 leading-relaxed break-words mb-3">
+                {error || '读取迁移状态失败'}
+              </div>
+              <button
+                onClick={refresh}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-semibold rounded-xl py-2.5 active:scale-[0.98] transition"
+              >
+                重试
+              </button>
+            </div>
+          )}
+
           {!loading && configured && !loadFailed && (
             <>
               <div className="space-y-1.5 mb-3">
