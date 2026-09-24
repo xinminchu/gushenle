@@ -7,14 +7,20 @@ import type { RhythmResponse } from './rhythm';
 const cache = new Map<string, { data: RhythmResponse; fetchedAt: number }>();
 const inflight = new Map<string, Promise<RhythmResponse>>();
 
-/** 缓存有效期：5 分钟（与服务端 Vercel 缓存对齐） */
-const TTL_MS = 5 * 60 * 1000;
+/** 缓存有效期：盘中实时价 60 秒（跟轮询对齐），收盘后 5 分钟 */
+const TTL_LIVE_MS = 60 * 1000;
+const TTL_CLOSED_MS = 5 * 60 * 1000;
 
-export function getRhythm(symbol: string, range: string): Promise<RhythmResponse> {
+export function getRhythm(
+  symbol: string,
+  range: string,
+  opts?: { force?: boolean },
+): Promise<RhythmResponse> {
   const key = `${symbol}:${range}`;
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.fetchedAt < TTL_MS) {
-    return Promise.resolve(hit.data);
+  if (!opts?.force && hit) {
+    const ttl = hit.data.priceLive ? TTL_LIVE_MS : TTL_CLOSED_MS;
+    if (Date.now() - hit.fetchedAt < ttl) return Promise.resolve(hit.data);
   }
   const ongoing = inflight.get(key);
   if (ongoing) return ongoing;

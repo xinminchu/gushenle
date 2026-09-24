@@ -231,6 +231,18 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     };
   }, [symbol, range, autoTick]);
 
+  // 盘中每 60 秒静默刷新一次实时价（页面切到后台时不拉；收盘后自动停）
+  useEffect(() => {
+    if (!data?.priceLive) return;
+    const id = setInterval(() => {
+      if (document.hidden) return;
+      getRhythm(symbol, range, { force: true })
+        .then((json) => setData(json))
+        .catch((err) => console.error('盘中刷新失败:', err));
+    }, 60000);
+    return () => clearInterval(id);
+  }, [data?.priceLive, symbol, range]);
+
   // 若当前区间对该标的不可用（如上市不足），切回主判断区间
   useEffect(() => {
     if (data && data.availableRanges.length > 0 && !data.availableRanges.includes(range)) {
@@ -257,6 +269,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     : '';
   // 韩股（.KS）：韩元计价，大数字加千分位、无小数；美股：美元保留两位
   const fmtPrice = (p: number) => fmtMoney(symbol, p);
+  /** 报价时间短式："Sep 24, 2026 3:42 PM ET" -> "3:42PM"，让新鲜度看得见 */
+  const quoteTimeShort = data?.priceTime
+    ? (data.priceTime.match(/(\d{1,2}:\d{2})\s?([AP]M)/)?.[1] ?? null)
+    : null;
   const strongHigh =
     !!judgment && judgment.score >= judgment.thresholds.hot && !judgment.overheated;
   const rangeLabel = RANGE_MAP[range]?.label ?? range;
@@ -673,9 +689,11 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   {fmtPrice(data.price)}
                 </span>
                 {data.priceLive ? (
-                  <span className="flex items-center gap-1 shrink-0 text-[9px]">
+                  <span className="flex items-center gap-1 shrink-0 text-[9px]" title={data.priceTime ?? undefined}>
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-emerald-400">实时</span>
+                    <span className="text-emerald-400">
+                      实时{quoteTimeShort ? ` ${quoteTimeShort}` : ''}
+                    </span>
                     {data.dayChangePct != null && (
                       <span className={data.dayChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
                         {data.dayChangePct >= 0 ? '+' : ''}

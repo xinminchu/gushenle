@@ -297,7 +297,7 @@ async function getNaverLiveQuote(code: string): Promise<LiveQuote | null> {
       `?startDateTime=${day}000000&endDateTime=${day}235959&timeframe=minute`;
     const res = await fetch(url, {
       headers: { 'User-Agent': UA },
-      next: { revalidate: 60 },
+      next: { revalidate: 30 },
     });
     if (!res.ok) return null;
     const arr = (await res.json()) as NaverMinRow[];
@@ -399,7 +399,7 @@ export async function getLiveQuote(symbol: string): Promise<LiveQuote | null> {
         Accept: 'application/json',
         'Accept-Language': 'en-US,en;q=0.9',
       },
-      next: { revalidate: 60 },
+      next: { revalidate: 30 },
     });
     if (!res.ok) return null;
     const json = await res.json();
