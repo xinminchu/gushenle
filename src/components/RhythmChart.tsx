@@ -105,12 +105,16 @@ export default function RhythmChart({
     }) => {
       if (!fibLevels || fibLevels.length === 0) return;
       for (const lv of fibLevels) {
+        // 上方（压力/上行目标）用涨色块，下方（支撑/下行目标）用跌色块；
+        // 线保持金色虚线（黄金分割的身份），只给轴标签方块按方向上色。
+        const pill = lv.kind === 'resistance' || lv.kind === 'target-up' ? UP : DOWN;
         s.createPriceLine({
           price: lv.price,
           color: 'rgba(212, 160, 23, 0.6)',
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
           axisLabelVisible: true,
+          axisLabelColor: pill,
           title: fibRatioLabel(lv),
         });
       }

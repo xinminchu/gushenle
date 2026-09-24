@@ -967,6 +967,16 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                             ? ((data.price - lv.price) / lv.price) * 100
                             : null;
                           const isNear = near?.level === lv;
+                          // 左边分位：方向色小 pill（上方=涨色，下方=跌色，随全站配色走）；
+                          // 右边股价：亮白加粗，和左边一眼区分开。
+                          const isUp = lv.kind === 'resistance' || lv.kind === 'target-up';
+                          const pillCls = isUp
+                            ? scheme === 'cn'
+                              ? 'bg-red-500/15 text-red-300'
+                              : 'bg-green-500/15 text-green-300'
+                            : scheme === 'cn'
+                              ? 'bg-green-500/15 text-green-300'
+                              : 'bg-red-500/15 text-red-300';
                           return (
                             <div
                               key={lv.ratio}
@@ -974,11 +984,11 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                                 isNear ? 'bg-yellow-500/10' : ''
                               }`}
                             >
-                              <span className="text-yellow-300/90 font-mono">
+                              <span className={`font-mono px-1.5 py-0.5 rounded ${pillCls}`}>
                                 {isNear ? '📍 ' : ''}
                                 {fibRatioLabel(lv)} · {fibKindLabel(lv.kind)}
                               </span>
-                              <span className="text-slate-300 font-mono">${lv.price}</span>
+                              <span className="text-slate-100 font-mono font-semibold">${lv.price}</span>
                               <span className="text-slate-500 font-mono text-[10px]">
                                 {dist == null
                                   ? ''
