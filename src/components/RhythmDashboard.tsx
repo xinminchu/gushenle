@@ -31,6 +31,7 @@ import {
   findSwing,
   fibLevels,
   fibAdviceHint,
+  fibPlainAdvice,
   fibKindLabel,
   nearestFibLevel,
   FIB_COMBOS,
@@ -922,6 +923,37 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                       波段：{fibSwing.lowDate} 低 ${fibSwing.low} → {fibSwing.highDate} 高 $
                       {fibSwing.high}（{fibSwing.uptrend ? '上涨波段' : '下跌波段'}）
                     </div>
+                    {/* 说人话：现价在哪 + 按持仓给行动句，每句带数字，不说空话 */}
+                    {(() => {
+                      const advice = fibPlainAdvice({
+                        price: data.price,
+                        levels: fibChartLevels,
+                        swing: fibSwing,
+                        pnlPct: myPnlPct,
+                        fmt: fmtPrice,
+                      });
+                      if (!advice) return null;
+                      return (
+                        <div className="mb-2 rounded-xl bg-amber-500/10 border border-amber-600/30 px-2.5 py-2">
+                          {advice.map((s, i) => (
+                            <p
+                              key={i}
+                              className="text-[11px] text-amber-100/90 leading-relaxed mb-1 last:mb-0"
+                            >
+                              {s}
+                            </p>
+                          ))}
+                          {myPnlPct == null && onGoPortfolio && (
+                            <button
+                              onClick={onGoPortfolio}
+                              className="mt-1 text-left text-[10px] text-amber-300/70 hover:text-amber-200 leading-relaxed"
+                            >
+                              💡 持有这只？去持仓记一笔成本，下次按你的盈亏来说 →
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div className="space-y-1">
                       {(() => {
                         const near = data.price

@@ -203,6 +203,109 @@ export function fibKindLabel(kind: FibLevelKind): string {
   return KIND_LABEL[kind];
 }
 
+export interface FibPlainAdviceInput {
+  price: number;
+  levels: FibLevel[];
+  swing: FibSwing;
+  /** 持仓盈亏百分比（%），null = 没查到持仓 */
+  pnlPct: number | null;
+  fmt: (n: number) => string;
+}
+
+/**
+ * 黄金分割"说人话"：现价在哪（已有多少、离上下线多远）+ 按持仓给行动句。
+ * 口径：每句都带数字或动作，不说空话；拦追高 / 拦割肉，不预测。
+ */
+export function fibPlainAdvice(input: FibPlainAdviceInput): string[] | null {
+  const { price, levels, swing, pnlPct, fmt } = input;
+  if (!(price > 0) || levels.length === 0) return null;
+  const r1 = (n: number) => Math.round(n * 10) / 10;
+  const above = levels
+    .filter((l) => l.price > price)
+    .sort((a, b) => a.price - b.price);
+  const below = levels
+    .filter((l) => l.price < price)
+    .sort((a, b) => b.price - a.price);
+  const up = above[0] ?? null;
+  const dn = below[0] ?? null;
+  const distUp = up ? ((up.price - price) / price) * 100 : null;
+  const distDn = dn ? ((price - dn.price) / price) * 100 : null;
+  const name = (lv: FibLevel) => `${lv.ratio}${fibKindLabel(lv.kind)}`;
+  const has = pnlPct != null;
+  const pnl = pnlPct ?? 0;
+  const pnlTxt =
+    pnl > 0.05 ? `赚 ${r1(pnl)}%` : pnl < -0.05 ? `亏 ${r1(Math.abs(pnl))}%` : '没赚没亏';
+
+  const lines: string[] = [];
+
+  // 第一句：在哪（已有多少、离上下多远）
+  if (!up && !dn) {
+    lines.push(`现价 ${fmt(price)}，上下都没有参考线了。`);
+  } else if (!up) {
+    lines.push(`现价 ${fmt(price)} 已经站在所有参考线之上——上面没有线，是最容易追高的位置。`);
+  } else if (!dn) {
+    lines.push(`现价 ${fmt(price)} 已经跌破所有参考线——下面没有支撑可看，别伸手接。`);
+  } else {
+    const swingGain =
+      swing.uptrend && swing.low > 0 ? ((price - swing.low) / swing.low) * 100 : null;
+    const gainTxt =
+      swingGain != null && swingGain > 0.05 ? `这一波从 ${fmt(swing.low)} 已涨 ${r1(swingGain)}%，` : '';
+    lines.push(
+      `现价 ${fmt(price)}，${gainTxt}离上方${name(up)} ${fmt(up.price)}还有 ${r1(distUp!)}%，` +
+        `离下方${name(dn)} ${fmt(dn.price)}有 ${r1(distDn!)}% 空间。`
+    );
+  }
+
+  // 第二句：怎么办（按持仓）
+  const NEAR = 2; // 贴近阈值 %
+  if (has) {
+    if (!up) {
+      lines.push(
+        pnl >= 0
+          ? `你${pnlTxt}，上面没线了，别再加仓——分批走一点，落袋为安。`
+          : `你还${pnlTxt}，趁高把仓位降一降，别等回落。`
+      );
+    } else if (distUp! <= NEAR) {
+      lines.push(
+        pnl >= 0
+          ? `摸到${name(up)}了，别再追了——你${pnlTxt}，分批走一点。`
+          : `反弹到${name(up)}，你还${pnlTxt}——这是减亏窗口，分批走，别等跌回去。`
+      );
+    } else if (dn && distDn! <= NEAR) {
+      lines.push(
+        pnl >= 0
+          ? `跌到${name(dn)}附近了，拿住别慌，等它站稳再说。`
+          : `跌到${name(dn)}附近，你${pnlTxt}——割在地板上最亏，拿住等企稳。`
+      );
+    } else if (pnl >= 15) {
+      lines.push(`离${name(up)}还有 ${r1(distUp!)}%，${pnlTxt}垫着，拿得住；到 ${fmt(up.price)} 一带再分批。`);
+    } else if (pnl >= 0) {
+      lines.push(`${pnlTxt}，离${name(up)}还有 ${r1(distUp!)}%，继续拿，但别加仓。`);
+    } else {
+      lines.push(`还${pnlTxt}，离${name(up)}还有 ${r1(distUp!)}%，拿着等反弹，到 ${fmt(up.price)} 一带是减亏机会。`);
+    }
+  } else {
+    if (!up) {
+      lines.push(`已经涨过所有参考线了，现在追=接飞刀，按兵不动。`);
+    } else if (distUp! <= NEAR) {
+      lines.push(
+        dn
+          ? `已经涨到${name(up)}了，现在追=接飞刀；按兵不动，等回调到${name(dn)} ${fmt(dn.price)} 一带再看。`
+          : `已经涨到${name(up)}了，现在追=接飞刀，按兵不动。`
+      );
+    } else if (dn && distDn! <= NEAR) {
+      lines.push(`跌到${name(dn)}附近，别急着抄底，等它站稳 2-3 天再动手。`);
+    } else if (dn) {
+      lines.push(
+        `不上不下，按兵不动；真要动手，等回调到${name(dn)} ${fmt(dn.price)}附近，或者放量站上${name(up)} ${fmt(up.price)} 再说。`
+      );
+    } else {
+      lines.push(`按兵不动；真要动手，等放量站上${name(up)} ${fmt(up.price)} 再说。`);
+    }
+  }
+  return lines;
+}
+
 /**
  * 诊断卡联动：现价贴近（≤1.5%）某条参考线时，给一句行为纠偏提示。
  * 口径：拦追高 / 拦割肉，不预测。
