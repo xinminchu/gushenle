@@ -102,6 +102,9 @@ export async function GET(req: NextRequest) {
           if (close5 >= pts[t - 1].close * 0.99) baseHits++;
 
           for (const comboId of FIB_COMBO_IDS) {
+            // smart 是混搭视图（扩展 1.272/1.618 + 深回调 0.618/0.786），
+            // 零件在各自组合里都已回测，不重复测
+            if (comboId === 'smart') continue;
             const levels = fibLevels(swing, comboId);
             for (const lv of levels) {
               const key = `${comboId}|${lookback}`;
@@ -130,6 +133,7 @@ export async function GET(req: NextRequest) {
     const baseline = baseTests > 0 ? baseHits / baseTests : null;
     const combos: ComboStat[] = [];
     for (const comboId of FIB_COMBO_IDS) {
+      if (comboId === 'smart') continue; // 混搭视图不参与回测，见上
       for (const lookback of LOOKBACKS) {
         const key = `${comboId}|${lookback}`;
         const a = agg.get(key);

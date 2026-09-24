@@ -23,24 +23,33 @@ export interface FibSwing {
   range: number;
 }
 
-export type FibComboId = 'classic' | 'full' | 'minimal' | 'extension' | 'deep';
+export type FibComboId = 'smart' | 'classic' | 'full' | 'minimal' | 'deep' | 'extension';
 
 export interface FibCombo {
   id: FibComboId;
   name: string;
   ratios: number[];
-  kind: 'retrace' | 'extension';
+  kind: 'retrace' | 'extension' | 'mixed';
   desc: string;
 }
 
-/** 五套组合方案。回测结论（2026-09-24，AAPL/NVDA/MSFT/TSLA/COIN/MSTR 近3年，
+/** 六套组合。回测结论（2026-09-24，AAPL/NVDA/MSFT/TSLA/COIN/MSTR 近3年，
  * 无未来函数，5日验证）：
  * - 窗口：40天 > 60天 > 120天，单调——波段越新鲜越靠谱
  * - 回调线：0.786(67.7%) > 0.618(59.2%) > 0.5(51.8%) > 0.382(49.9%) > 0.236(41.7%)，
  *   线越深触及后越容易守住；浅线（0.236/0.382）基本是噪音
  * - 扩展目标：1.272 触及后5天内不再大涨的概率 77.6%（286次触及），拦追高最有效
+ * - 收敛（2026-09-24）：用户默认只看"推荐视图"——上方 1.272/1.618 拦追高，
+ *   下方 0.618/0.786 拦割肉，窗口锁 40 天；其余五套退到"换组合"二级入口
  */
 export const FIB_COMBOS: Record<FibComboId, FibCombo> = {
+  smart: {
+    id: 'smart',
+    name: '推荐视图',
+    ratios: [1.272, 1.618, 0.618, 0.786],
+    kind: 'mixed',
+    desc: '调参收敛：上方 1.272/1.618 拦追高，下方 0.618/0.786 拦割肉，40天窗口',
+  },
   classic: {
     id: 'classic',
     name: '经典三线',
@@ -89,10 +98,11 @@ export const FIB_LOOKBACKS = [
 
 /**
  * 回测调参后的推荐组合（默认）。
- * 2026-09-24 调参结论：扩展目标命中率最高（76.9%，edge +16.9），40天窗口最优。
+ * 2026-09-24 收敛为混搭视图：扩展取最靠谱的 1.272/1.618（拦追高），
+ * 回调取最靠谱的深线 0.618/0.786（拦割肉），窗口 40 天。
  * 调参结论更新时改这里，UI 的"推荐"徽章和诊断联动自动跟随。
  */
-export const RECOMMENDED_FIB_COMBO: FibComboId = 'extension';
+export const RECOMMENDED_FIB_COMBO: FibComboId = 'smart';
 export const RECOMMENDED_FIB_LOOKBACK = 40;
 
 export type FibLevelKind = 'support' | 'resistance' | 'target-up' | 'target-down';
@@ -128,6 +138,15 @@ export function findSwing(points: FibPoint[], lookback: number): FibSwing | null
 
 /** 按组合算参考线价位（保留 2 位小数） */
 export function fibLevels(swing: FibSwing, comboId: FibComboId): FibLevel[] {
+  // 推荐视图是混搭：扩展只取最靠谱的 1.272/1.618（拦追高），
+  // 回调只取最靠谱的深线 0.618/0.786（拦割肉），按价格从上到下排。
+  if (comboId === 'smart') {
+    const ext = fibLevels(swing, 'extension').filter(
+      (l) => l.ratio === 1.272 || l.ratio === 1.618
+    );
+    const deep = fibLevels(swing, 'deep');
+    return [...ext, ...deep].sort((a, b) => b.price - a.price);
+  }
   const combo = FIB_COMBOS[comboId];
   const { high, low, range, uptrend } = swing;
   const r2 = (n: number) => Math.round(n * 100) / 100;

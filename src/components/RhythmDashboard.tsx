@@ -136,6 +136,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const [showFib, setShowFib] = useState(false);
   const [fibCombo, setFibCombo] = useState<FibComboId>(RECOMMENDED_FIB_COMBO);
   const [fibLookback, setFibLookback] = useState<number>(RECOMMENDED_FIB_LOOKBACK);
+  // 换组合二级入口：默认收起，用户只看推荐视图
+  const [showFibAdvanced, setShowFibAdvanced] = useState(false);
   const [data, setData] = useState<RhythmResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showZenModal, setShowZenModal] = useState(false);
@@ -268,16 +270,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     () => (fibSwing ? fibLevels(fibSwing, fibCombo) : null),
     [fibSwing, fibCombo]
   );
-  /** 诊断卡联动：现价贴近参考线时给一句行为纠偏（常开）。
-   * 先看推荐组合（扩展目标→拦追高），没贴近再看深回调（→拦割肉）。 */
+  /** 诊断卡联动：现价贴近推荐视图（上方 1.272/1.618 拦追高，
+   * 下方 0.618/0.786 拦割肉）时给一句行为纠偏（常开）。 */
   const fibHint = useMemo(() => {
     if (!fibPts.length || !data?.price) return null;
     const sw = findSwing(fibPts, RECOMMENDED_FIB_LOOKBACK);
     if (!sw) return null;
-    return (
-      fibAdviceHint(sw, RECOMMENDED_FIB_COMBO, data.price) ??
-      fibAdviceHint(sw, 'deep', data.price)
-    );
+    return fibAdviceHint(sw, RECOMMENDED_FIB_COMBO, data.price);
   }, [fibPts, data?.price]);
 
   // 精选名单代码集合：全市场搜索时排除（精选优先，带中文名）
@@ -804,49 +803,53 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               scheme={scheme}
               fibLevels={fibChartLevels}
             />
-            {/* 黄金分割：组合方案切换 + 价位列表（调参用），只在 1 个月以上区间显示 */}
+            {/* 黄金分割：默认只看推荐视图，组合切换收进"换组合" */}
             {showFib && fibRangeOk && (
               <div className="mt-3 bg-slate-800/40 border border-slate-700/50 rounded-xl p-3">
-                <div className="flex flex-wrap gap-1.5 mb-1.5">
-                  {FIB_COMBO_IDS.map((id) => (
-                    <Tip key={id} text={FIB_COMBOS[id].desc}>
-                      <button
-                        onClick={() => setFibCombo(id)}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
-                          fibCombo === id
-                            ? 'border-yellow-600/50 text-yellow-300 bg-yellow-500/10'
-                            : 'border-slate-700 text-slate-500 hover:text-slate-300'
-                        }`}
-                      >
-                        {FIB_COMBOS[id].name}
-                        {id === RECOMMENDED_FIB_COMBO && (
-                          <span className="ml-1 text-[9px] px-1 rounded bg-yellow-500/20 text-yellow-400">
-                            推荐
-                          </span>
-                        )}
-                      </button>
-                    </Tip>
-                  ))}
-                  <div className="flex gap-1.5 ml-1">
-                    {FIB_LOOKBACKS.map((lb) => (
-                      <Tip key={lb.days} text={lb.desc}>
-                        <button
-                          onClick={() => setFibLookback(lb.days)}
-                          className={`px-2 py-1 rounded-lg text-[10px] transition-colors ${
-                            fibLookback === lb.days
-                              ? 'bg-slate-700 text-slate-200'
-                              : 'text-slate-500 hover:text-slate-300'
-                          }`}
-                        >
-                          {lb.label}
-                        </button>
-                      </Tip>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-[10px] text-slate-500 leading-relaxed mb-2">
-                  {FIB_COMBOS[fibCombo].desc}
-                </p>
+                {showFibAdvanced && (
+                  <>
+                    <div className="flex flex-wrap gap-1.5 mb-1.5">
+                      {FIB_COMBO_IDS.map((id) => (
+                        <Tip key={id} text={FIB_COMBOS[id].desc}>
+                          <button
+                            onClick={() => setFibCombo(id)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                              fibCombo === id
+                                ? 'border-yellow-600/50 text-yellow-300 bg-yellow-500/10'
+                                : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                            }`}
+                          >
+                            {FIB_COMBOS[id].name}
+                            {id === RECOMMENDED_FIB_COMBO && (
+                              <span className="ml-1 text-[9px] px-1 rounded bg-yellow-500/20 text-yellow-400">
+                                推荐
+                              </span>
+                            )}
+                          </button>
+                        </Tip>
+                      ))}
+                      <div className="flex gap-1.5 ml-1">
+                        {FIB_LOOKBACKS.map((lb) => (
+                          <Tip key={lb.days} text={lb.desc}>
+                            <button
+                              onClick={() => setFibLookback(lb.days)}
+                              className={`px-2 py-1 rounded-lg text-[10px] transition-colors ${
+                                fibLookback === lb.days
+                                  ? 'bg-slate-700 text-slate-200'
+                                  : 'text-slate-500 hover:text-slate-300'
+                              }`}
+                            >
+                              {lb.label}
+                            </button>
+                          </Tip>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-relaxed mb-2">
+                      {FIB_COMBOS[fibCombo].desc}
+                    </p>
+                  </>
+                )}
                 {fibSwing && fibChartLevels ? (
                   <>
                     <div className="text-[10px] text-slate-500 mb-1.5">
@@ -891,7 +894,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                     该区间点数不足，画不出可靠波段（换个长一点的展示区间试试）
                   </div>
                 )}
-                <p className="text-[10px] text-slate-600 mt-2">
+                <button
+                  onClick={() => setShowFibAdvanced((v) => !v)}
+                  className="mt-2 text-[10px] text-slate-500 hover:text-slate-300"
+                >
+                  {showFibAdvanced ? '收起组合 ▴' : '换组合 ▸'}
+                </button>
+                <p className="text-[10px] text-slate-600 mt-1.5">
                   参考线，不是算命：只标大家都在看的位置，不构成预测
                 </p>
               </div>
