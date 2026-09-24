@@ -64,6 +64,10 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
   const [typicalAmt] = useState<number | null>(() => typicalBuyAmount(loadOperations()));
   // 持仓故事展开：一次只展开一只
   const [storySymbol, setStorySymbol] = useState<string | null>(null);
+  // 本周关注手动加码
+  const [showFocusAdd, setShowFocusAdd] = useState(false);
+  const [focusAddCode, setFocusAddCode] = useState('');
+  const [focusAddError, setFocusAddError] = useState('');
 
   /* ---------- 手动拖放排序（手机可用：拖动手柄 + pointer 事件） ---------- */
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -238,6 +242,40 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
     const v = Number(budgetInput);
     persistFocus({ ...focus, budget: Number.isFinite(v) && v > 0 ? Math.round(v) : null });
     setShowBudgetAsk(false);
+  };
+
+  /** 手动加一只关注：输代码直接加，不必先去自选 */
+  const confirmFocusAdd = () => {
+    const code = focusAddCode.trim().toUpperCase();
+    if (!code) {
+      setFocusAddError('先填个股票代码');
+      return;
+    }
+    if (!/^[A-Z.]{1,10}$/.test(code) && !/^\d{6}\.[A-Z]{2}$/.test(code)) {
+      setFocusAddError('代码格式不对，如 NVDA、TSLA，或 000660.KS');
+      return;
+    }
+    if (positions.some((p) => p.symbol === code)) {
+      setFocusAddError('这只已在持仓里，不用关注了');
+      return;
+    }
+    if (focus.items.some((i) => i.symbol === code)) {
+      setFocusAddError('这只已经在关注里了');
+      return;
+    }
+    if (focus.items.length >= FOCUS_MAX) {
+      setFocusAddError(`关注已满 ${FOCUS_MAX} 只，先删一只再加`);
+      return;
+    }
+    const firstOfWeek = focus.items.length === 0;
+    persistFocus({ ...focus, items: [...focus.items, { symbol: code, addedAt: Date.now() }] });
+    setFocusAddCode('');
+    setFocusAddError('');
+    setShowFocusAdd(false);
+    if (firstOfWeek && focus.budget == null) {
+      setBudgetInput(typicalAmt != null ? String(typicalAmt) : '');
+      setShowBudgetAsk(true);
+    }
   };
 
   // 汇总（只统计已拿到行情的）
@@ -466,16 +504,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                       setStorySymbol((cur) => (cur === p.symbol ? null : p.symbol));
                     }}
                     className={`p-0.5 ${storySymbol === p.symbol ? 'text-blue-400' : 'text-slate-600 hover:text-blue-400'}`}
-                    aria-label={`${storySymbol === p.symbol ? '收起' : '展开'} ${p.symbol} 持仓故事`}
-                  >
-                    <BookOpen className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setStorySymbol((cur) => (cur === p.symbol ? null : p.symbol));
-                    }}
-                    className={`p-0.5 ${storySymbol === p.symbol ? 'text-blue-400' : 'text-slate-600 hover:text-blue-400'}`}
+                    title={storySymbol === p.symbol ? '收起持仓故事' : '看我的持仓故事'}
                     aria-label={`${storySymbol === p.symbol ? '收起' : '展开'} ${p.symbol} 持仓故事`}
                   >
                     <BookOpen className="w-3.5 h-3.5" />
@@ -594,7 +623,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
         {showBudgetAsk ? (
           <div className="bg-slate-800/70 border border-blue-500/30 rounded-lg p-3 space-y-2">
             <div className="text-xs text-slate-200">
-              这周准备投多少？
+              这周准备投多少（美元）？
               {typicalAmt != null && (
                 <span className="text-slate-400">（你过去单笔通常 ${typicalAmt.toLocaleString()} 左右）</span>
               )}
@@ -604,7 +633,7 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                 value={budgetInput}
                 onChange={(e) => setBudgetInput(e.target.value)}
                 inputMode="numeric"
-                placeholder="如 10000"
+                placeholder="如 10000（美元）"
                 className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
               />
               <button
@@ -714,6 +743,44 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
             还没关注。看中哪只但拿不准的，先放这里冷静几天，再决定买不买。
           </div>
         )}
+
+        {/* 手动加一只：不经过自选，输代码直接加 */}
+        {focus.items.length < FOCUS_MAX &&
+          (showFocusAdd ? (
+            <div className="space-y-1.5">
+              <div className="flex gap-2">
+                <input
+                  value={focusAddCode}
+                  onChange={(e) => {
+                    setFocusAddCode(e.target.value.toUpperCase());
+                    setFocusAddError('');
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') confirmFocusAdd();
+                  }}
+                  placeholder="输代码，如 NVDA"
+                  className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 uppercase"
+                />
+                <button
+                  onClick={confirmFocusAdd}
+                  className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg"
+                >
+                  加关注
+                </button>
+                <button onClick={() => setShowFocusAdd(false)} className="text-slate-400 text-xs px-1">
+                  取消
+                </button>
+              </div>
+              {focusAddError && <div className="text-[11px] text-rose-400">{focusAddError}</div>}
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowFocusAdd(true)}
+              className="w-full border border-dashed border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 rounded-lg py-2 text-[11px]"
+            >
+              ＋ 手动加一只（自选里没有也能加）
+            </button>
+          ))}
       </div>
 
       {/* 添加持仓 */}
