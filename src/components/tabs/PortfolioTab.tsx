@@ -4,6 +4,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Plus, X, RefreshCw, Briefcase, GripVertical, Pencil } from 'lucide-react';
 import { useWatchlist } from '@/components/WatchlistContext';
 import { loadPositions, savePositions, holdingDays, sectorOf, type Position } from '@/lib/positions';
+import { loadFocus, saveFocus, weekStartStr, FOCUS_MAX, concentrationAdvice, type FocusState } from '@/lib/focus';
+import { typicalBuyAmount } from '@/lib/portrait';
+import { loadOperations } from '@/lib/operations';
 import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
 import type { RhythmResponse } from '@/lib/rhythm';
 import { useColorScheme, upText, downText } from '@/lib/colorScheme';
@@ -52,6 +55,12 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
   const [addCost, setAddCost] = useState('');
   const [addSince, setAddSince] = useState('');
   const [addError, setAddError] = useState('');
+  // 本周关注：最多 6 只，周一自动清空；预算一周问一次，画像反填
+  const [focus, setFocus] = useState<FocusState>(() => loadFocus());
+  const [focusQuotes, setFocusQuotes] = useState<Record<string, RhythmResponse | null>>({});
+  const [showBudgetAsk, setShowBudgetAsk] = useState(false);
+  const [budgetInput, setBudgetInput] = useState('');
+  const [typicalAmt] = useState<number | null>(() => typicalBuyAmount(loadOperations()));
 
   /* ---------- 手动拖放排序（手机可用：拖动手柄 + pointer 事件） ---------- */
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -172,6 +181,61 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
     fetchQuotes(positions);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [[...positions.map((p) => p.symbol)].sort().join(',')]); // 排序后不重拉行情
+
+  /* ---------- 本周关注 ---------- */
+  const focusSymbols = focus.items.map((i) => i.symbol);
+  useEffect(() => {
+    if (focusSymbols.length === 0) {
+      setFocusQuotes({});
+      return;
+    }
+    (async () => {
+      const entries = await Promise.all(
+        focusSymbols.map(async (s) => {
+          try {
+            return [s, await getRhythm(s, '1M')] as const;
+          } catch {
+            return [s, null] as const;
+          }
+        }),
+      );
+      const map: Record<string, RhythmResponse | null> = {};
+      entries.forEach(([s, q]) => {
+        map[s] = q;
+      });
+      setFocusQuotes(map);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusSymbols.sort().join(',')]);
+
+  const persistFocus = (next: FocusState) => {
+    setFocus(next);
+    saveFocus(next);
+  };
+
+  const addFocus = (symbol: string) => {
+    const s = symbol.toUpperCase();
+    if (positions.some((p) => p.symbol === s)) return; // 已持有就不进关注
+    if (focus.items.some((i) => i.symbol === s)) return;
+    if (focus.items.length >= FOCUS_MAX) return;
+    const firstOfWeek = focus.items.length === 0;
+    persistFocus({ ...focus, items: [...focus.items, { symbol: s, addedAt: Date.now() }] });
+    // 本周第一次加关注且还没定预算：问一次，画像反填默认值
+    if (firstOfWeek && focus.budget == null) {
+      setBudgetInput(typicalAmt != null ? String(typicalAmt) : '');
+      setShowBudgetAsk(true);
+    }
+  };
+
+  const removeFocus = (symbol: string) => {
+    persistFocus({ ...focus, items: focus.items.filter((i) => i.symbol !== symbol) });
+  };
+
+  const confirmBudget = () => {
+    const v = Number(budgetInput);
+    persistFocus({ ...focus, budget: Number.isFinite(v) && v > 0 ? Math.round(v) : null });
+    setShowBudgetAsk(false);
+  };
 
   // 汇总（只统计已拿到行情的）
   let totalValue = 0;
@@ -489,6 +553,141 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
             >
               添加第一笔持仓
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* 本周关注：冷静池——想买先放着，最多 6 只，周一自动清空 */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-semibold text-slate-200">
+            👀 本周关注 <span className="text-slate-500 font-normal">({focus.items.length}/{FOCUS_MAX})</span>
+          </div>
+          <div className="text-[10px] text-slate-600">周一自动刷新 · 想买先冷静</div>
+        </div>
+
+        {/* 预算：一周问一次，画像反填 */}
+        {showBudgetAsk ? (
+          <div className="bg-slate-800/70 border border-blue-500/30 rounded-lg p-3 space-y-2">
+            <div className="text-xs text-slate-200">
+              这周准备投多少？
+              {typicalAmt != null && (
+                <span className="text-slate-400">（你过去单笔通常 ${typicalAmt.toLocaleString()} 左右）</span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={budgetInput}
+                onChange={(e) => setBudgetInput(e.target.value)}
+                inputMode="numeric"
+                placeholder="如 10000"
+                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              />
+              <button
+                onClick={confirmBudget}
+                className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg"
+              >
+                确认
+              </button>
+              <button
+                onClick={() => setShowBudgetAsk(false)}
+                className="text-slate-400 text-xs px-2"
+              >
+                跳过
+              </button>
+            </div>
+          </div>
+        ) : (
+          focus.budget != null && (
+            <div className="text-[11px] text-slate-400 leading-relaxed">
+              本周预算 <span className="font-bold text-slate-200">${focus.budget.toLocaleString()}</span>
+              {concentrationAdvice(focus.budget) && (
+                <span className="text-slate-500"> · 💡 {concentrationAdvice(focus.budget)}</span>
+              )}
+            </div>
+          )
+        )}
+
+        {/* 关注列表 */}
+        {focus.items.length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            {focus.items.map((f) => {
+              const q = focusQuotes[f.symbol];
+              const price = q?.price ?? null;
+              const dayChg = q ? dayChangePct(q) : null;
+              const statusKey = q?.judgment.statusKey;
+              const cooling = statusKey === 'overheated';
+              return (
+                <div
+                  key={f.symbol}
+                  onClick={() => onViewSymbol(f.symbol)}
+                  className="bg-slate-800/60 border border-slate-700/60 rounded-lg p-2.5 cursor-pointer hover:border-slate-500"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-100">{f.symbol}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFocus(f.symbol);
+                      }}
+                      className="text-slate-600 hover:text-rose-400 p-0.5"
+                      aria-label={`移除关注 ${f.symbol}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <div className="text-[10px] text-slate-500 truncate">{nameOf(f.symbol)}</div>
+                  <div className="mt-1 flex items-baseline justify-between">
+                    <span className="text-xs text-slate-200 font-semibold">
+                      {price != null ? fmtMoney(f.symbol, price) : '…'}
+                    </span>
+                    {dayChg != null && (
+                      <span className={`text-[10px] ${dayChg >= 0 ? upText(scheme) : downText(scheme)}`}>
+                        {dayChg >= 0 ? '+' : ''}{dayChg}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 text-[10px]">
+                    {cooling ? (
+                      <span className="text-sky-300">🧊 涨太猛了，先冷静</span>
+                    ) : (
+                      <span className="text-slate-500">{q ? q.judgment.status : '律动加载中…'}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* 从自选加关注 */}
+        {(() => {
+          const candidates = watchlist.filter(
+            (w) =>
+              !positions.some((p) => p.symbol === w.symbol) &&
+              !focus.items.some((i) => i.symbol === w.symbol),
+          );
+          if (candidates.length === 0 || focus.items.length >= FOCUS_MAX) return null;
+          return (
+            <div>
+              <div className="text-[10px] text-slate-500 mb-1.5">从自选里挑（已持有的不会出现在这里）</div>
+              <div className="flex flex-wrap gap-1.5">
+                {candidates.slice(0, 12).map((c) => (
+                  <button
+                    key={c.symbol}
+                    onClick={() => addFocus(c.symbol)}
+                    className="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700"
+                  >
+                    + {c.symbol}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+        {focus.items.length === 0 && (
+          <div className="text-[11px] text-slate-500 leading-relaxed">
+            还没关注。看中哪只但拿不准的，先放这里冷静几天，再决定买不买。
           </div>
         )}
       </div>

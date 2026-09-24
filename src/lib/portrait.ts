@@ -82,3 +82,24 @@ export function portraitSummary(p: Portrait): string | null {
   }
   return bits.join('；') + '。';
 }
+
+/**
+ * 画像反哺：从买入操作里统计单笔投入金额的中位数。
+ * 本周关注问预算时直接反填——"你过去单笔通常 X 元左右"，越用越准。
+ * 返回 null 表示样本不足（买入笔数 < 1）。
+ */
+export function typicalBuyAmount(ops: OperationRecord[]): number | null {
+  const amounts: number[] = [];
+  for (const op of ops) {
+    if (op.action !== 'buy') continue;
+    if (!(op.price > 0)) continue;
+    const qty = op.qty && op.qty > 0 ? op.qty : 1;
+    amounts.push(op.price * qty);
+  }
+  if (amounts.length === 0) return null;
+  amounts.sort((a, b) => a - b);
+  const mid = Math.floor(amounts.length / 2);
+  const median =
+    amounts.length % 2 === 1 ? amounts[mid] : (amounts[mid - 1] + amounts[mid]) / 2;
+  return Math.round(median);
+}
