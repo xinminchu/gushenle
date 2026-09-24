@@ -198,7 +198,7 @@ export default function MoleGame() {
                 >
                   <span className="text-5xl leading-none">{m.face}</span>
                   <span
-                    className={`text-xs font-bold tabular-nums ${
+                    className={`text-sm font-bold tabular-nums ${
                       m.kind === 'short'
                         ? 'text-rose-300'
                         : m.kind === 'gold'
