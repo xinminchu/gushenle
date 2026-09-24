@@ -17,6 +17,7 @@ const HoldBackGame = dynamic(() => import('../games/HoldBackGame'), { ssr: false
 const NewsTrapGame = dynamic(() => import('../games/NewsTrapGame'), { ssr: false });
 const DcaGame = dynamic(() => import('../games/DcaGame'), { ssr: false });
 const DartGame = dynamic(() => import('../games/DartGame'), { ssr: false });
+const MoleGame = dynamic(() => import('../games/MoleGame'), { ssr: false });
 const EncyclopediaGame = dynamic(() => import('../games/EncyclopediaGame'), { ssr: false });
 
 export default function FunTab() {
@@ -119,6 +120,14 @@ export default function FunTab() {
       level: '🟢 极低',
       hot: true,
       credit: '@大西洋龙虾',
+    },
+    {
+      id: 'mole',
+      name: '高管打地鼠',
+      icon: '🔨',
+      level: '🟢 极低',
+      hot: true,
+      credit: '@麻牛',
     },
     {
       id: 'encyclopedia',
@@ -248,6 +257,7 @@ export default function FunTab() {
               {activeGame === 'newstrap' && <NewsTrapGame />}
               {activeGame === 'dca' && <DcaGame />}
               {activeGame === 'dart' && <DartGame />}
+              {activeGame === 'mole' && <MoleGame />}
               {activeGame === 'encyclopedia' && <EncyclopediaGame />}
             </div>
           </div>

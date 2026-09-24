@@ -20,6 +20,7 @@ export type GameId =
   | 'newstrap'
   | 'dca'
   | 'dart'
+  | 'mole'
   | 'encyclopedia';
 
 export interface GameStat {
@@ -41,6 +42,7 @@ export const GAME_NAMES: Record<GameId, string> = {
   newstrap: '消息面陷阱',
   dca: '定投 vs 梭哈',
   dart: '飞镖选股',
+  mole: '高管打地鼠',
   encyclopedia: '股票大百科',
 };
 
@@ -57,6 +59,7 @@ function blank(): Record<GameId, GameStat> {
     newstrap: emptyStat(),
     dca: emptyStat(),
     dart: emptyStat(),
+    mole: emptyStat(),
     encyclopedia: emptyStat(),
   };
 }

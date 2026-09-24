@@ -86,7 +86,7 @@ const htmlContent = `<!DOCTYPE html>
       }
     }
 
-    // 挡板反弹时：把之前撞掉的砖块补满（词重新打乱），30 秒内砖块无限续上
+    // 球掉出底边（没接住）时：把之前撞掉的砖块补满（词重新打乱），给一次重来的机会
     function refillBricks() {
       let missing = false;
       for (let r = 0; r < rows; r++)
@@ -145,8 +145,9 @@ const htmlContent = `<!DOCTYPE html>
       else if (ball.x + ball.r > canvas.width) { ball.x = canvas.width - ball.r; ball.vx = -Math.abs(ball.vx); }
       if (ball.y - ball.r < 0) { ball.y = ball.r; ball.vy = Math.abs(ball.vy); }
 
-      // 掉出底边：重置到挡板上方
+      // 掉出底边：没接住，砖块回满，球重置到挡板上方
       if (ball.y - ball.r > canvas.height) {
+        refillBricks(); // 只有漏球才回满：接住了就靠本事清版
         resetBall();
         return;
       }
@@ -161,7 +162,6 @@ const htmlContent = `<!DOCTYPE html>
         const c = Math.max(-1, Math.min(1, rel));
         ball.vx = c * 6; // 中间衰减、边缘加大，最多 ±6
         ball.vy = -Math.sqrt(Math.max(speed * speed - ball.vx * ball.vx, 4)); // 保持球速，vy 至少为 2
-        refillBricks(); // 挡板反弹：补满之前撞掉的砖块
       }
 
       // 砖块碰撞：按 x/y 轴侵入量，侵入小的轴翻转对应速度分量
