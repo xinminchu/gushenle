@@ -1,11 +1,22 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus, Check, Search, ChevronDown, Compass } from 'lucide-react';
-import { SECTORS, allThemes, filterStocks, CODE_CORRECTIONS, type StockInfo } from '@/lib/stockList';
+import {
+  SECTORS,
+  STOCK_LIST,
+  allThemes,
+  filterStocks,
+  CODE_CORRECTIONS,
+  type StockInfo,
+} from '@/lib/stockList';
 import { STOCK_PINYIN, ALIAS_PINYIN } from '@/lib/stockPinyin';
 import { STOCK_ALIASES } from '@/lib/stockAliases';
+import { loadUniverse, searchUniverse, type UniverseEntry } from '@/lib/universe';
 import { useWatchlist } from './WatchlistContext';
+
+/** 精选名单代码集合：全市场搜索时排除，精选优先 */
+const CURATED_CODES = new Set(STOCK_LIST.map((s) => s.code));
 
 /** 别名按代码分组：小火箭 -> RKLB 这类昵称也能搜到 */
 const ALIASES_BY_CODE = new Map<string, string[]>();
@@ -54,6 +65,18 @@ export default function DiscoverStocks() {
     if (!q.trim()) return r;
     return r.filter((s) => matchStock(s, q));
   }, [sector, theme, q]);
+
+  /** 精选搜不到时，懒加载全市场库兜底（约 7000 只） */
+  const [universe, setUniverse] = useState<UniverseEntry[] | null>(null);
+  useEffect(() => {
+    if (open && q.trim() && results.length === 0 && universe === null) {
+      loadUniverse().then(setUniverse);
+    }
+  }, [open, q, results.length, universe]);
+  const uniResults = useMemo(
+    () => (universe && results.length === 0 ? searchUniverse(universe, q, CURATED_CODES, 5) : []),
+    [universe, results.length, q],
+  );
 
   /** 打错自动纠正提示，如输入 TESLA 显示"已自动纠正为 TSLA" */
   const correctedHint = useMemo(() => {
@@ -157,18 +180,57 @@ export default function DiscoverStocks() {
               );
             })}
             {results.length === 0 && (
-              <div className="text-center py-4 space-y-2">
-                <div className="text-[11px] text-slate-500">没找到，换个条件试试</div>
-                {/^([A-Za-z]{1,8}|\d{6}\.[A-Za-z]{2})$/.test(q.trim()) && !inList.has(q.trim().toUpperCase()) && (
-                  <button
-                    onClick={() => {
-                      const r = addItem(q.trim().toUpperCase());
-                      if (r === 'ok') setQ('');
-                    }}
-                    className="text-[11px] text-blue-400 underline underline-offset-2 hover:text-blue-300"
-                  >
-                    名单里没有，直接添加「{q.trim().toUpperCase()}」到自选
-                  </button>
+              <div className="py-4 space-y-2">
+                {uniResults.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] text-slate-500 text-center">
+                      精选名单没有，全市场找到这几只：
+                    </div>
+                    {uniResults.map((u) => {
+                      const added = inList.has(u.code);
+                      return (
+                        <div
+                          key={u.code}
+                          className="flex items-center justify-between bg-slate-800/60 rounded-lg px-2.5 py-1.5"
+                        >
+                          <div className="min-w-0">
+                            <span className="text-[11px] font-semibold text-slate-100">
+                              {u.code}
+                            </span>
+                            <div className="text-[10px] text-slate-500 truncate">{u.en}</div>
+                          </div>
+                          {added ? (
+                            <span className="flex items-center gap-1 text-[11px] text-slate-500 shrink-0 ml-2">
+                              <Check className="w-3.5 h-3.5" /> 已在自选
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => addItem(u.code, u.en)}
+                              className="flex items-center gap-1 text-[11px] bg-blue-600 hover:bg-blue-500 text-white rounded-full px-2.5 py-1 shrink-0 ml-2"
+                            >
+                              <Plus className="w-3 h-3" /> 加入
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center space-y-2">
+                    <div className="text-[11px] text-slate-500">没找到，换个条件试试</div>
+                    {/^([A-Za-z]{1,8}|\d{6}\.[A-Za-z]{2})$/.test(q.trim()) &&
+                      !inList.has(q.trim().toUpperCase()) && (
+                        <button
+                          onClick={() => {
+                            const r = addItem(q.trim().toUpperCase());
+                            if (r === 'ok') setQ('');
+                          }}
+                          className="text-[11px] text-blue-400 underline underline-offset-2 hover:text-blue-300"
+                        >
+                          名单里没有，直接添加「{q.trim().toUpperCase()}」到自选
+                        </button>
+                      )}
+                  </div>
                 )}
               </div>
             )}

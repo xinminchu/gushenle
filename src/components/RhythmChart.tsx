@@ -36,6 +36,9 @@ const OHLC_COLORS = {
 
 /**
  * 谷峰律动价格走势图（lightweight-charts）
+ * Attribution: charting library © TradingView (https://www.tradingview.com/),
+ * lightweight-charts v5, Apache License 2.0.
+ * 图内 attribution logo 已按库选项关闭，署名见页脚「版权与法律」。
  * K线：每天一根蜡烛，实体=开→收，影线=高低点；收盘线：面积图；
  * 四线：开/高/低/收四条曲线，看每天波动区间的变化。
  * 深色主题，随容器宽度自适应。
@@ -60,9 +63,9 @@ export default function RhythmChart({
     const chart = createChart(el, {
       width: el.clientWidth,
       height,
-      // 关掉库自带的 TradingView 小图标跳转（MIT 协议不强制挂它）
-      attributionLogo: false,
       layout: {
+        // 关掉图内 TradingView 小图标跳转；署名按库许可要求放到页脚（版权与法律）
+        attributionLogo: false,
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: '#64748b',
         fontSize: 11,

@@ -87,7 +87,8 @@ function Legal() {
         <li className={li}><span>·</span><span>行情：Nasdaq 官方接口（Yahoo Finance 备用），盘中为实时或延迟报价，仅供参考；</span></li>
         <li className={li}><span>·</span><span>快讯：华尔街见闻 7×24；</span></li>
         <li className={li}><span>·</span><span>财经日程：美联储 / BLS 官方日程、Nasdaq 财报日历；</span></li>
-        <li className={li}><span>·</span><span>券商费率、监管费：公开资料整理的参考约数，券商随时可能调整，下单前以官方最新公布为准。</span></li>
+        <li className={li}><span>·</span><span>券商费率、监管费：公开资料整理的参考约数，券商随时可能调整，下单前以官方最新公布为准；</span></li>
+        <li className={li}><span>·</span><span>图表组件：<a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline underline-offset-2">TradingView 轻量图表库</a>（Apache 2.0）。</span></li>
       </ul>
       <h4 className={h4}>隐私</h4>
       <p className={p}>

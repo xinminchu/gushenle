@@ -14,7 +14,14 @@ import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 import { useWatchlist } from './WatchlistContext';
 import DiscoverStocks from './DiscoverStocks';
 import { STOCK_NAMES } from '@/lib/stockAliases';
-import { CODE_CORRECTIONS, findStock, suggestStocks, type StockInfo } from '@/lib/stockList';
+import {
+  CODE_CORRECTIONS,
+  STOCK_LIST,
+  findStock,
+  suggestStocks,
+  type StockInfo,
+} from '@/lib/stockList';
+import { loadUniverse, findInUniverse, type UniverseEntry } from '@/lib/universe';
 import { fmtMoney } from '@/lib/currency';
 import { saveOperation, todayStr, type OpAction } from '@/lib/operations';
 import { loadPositions } from '@/lib/positions';
@@ -135,6 +142,9 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const [nameEdited, setNameEdited] = useState(false);
   /** 未知代码时的联想建议 */
   const [suggestions, setSuggestions] = useState<StockInfo[]>([]);
+  /** 全市场库命中的条目（精选名单里没有，但真实存在） */
+  const [universeHit, setUniverseHit] = useState<UniverseEntry | null>(null);
+  const [universeSearching, setUniverseSearching] = useState(false);
   /** 名单里没有也坚持添加（二次确认后） */
   const [forceAdd, setForceAdd] = useState(false);
   /** 成功提示（如自动纠正），绿色显示 */
@@ -202,7 +212,18 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const isShortRange = (RANGE_MAP[range]?.points ?? 66) <= 66;
   const chartType: ChartType = chartTypeOverride ?? (isShortRange ? 'candle' : 'line');
 
-  const handleAdd = (force = false) => {
+  // 精选名单代码集合：全市场搜索时排除（精选优先，带中文名）
+  const curatedCodes = useMemo(() => new Set(STOCK_LIST.map((s) => s.code)), []);
+
+  const resetAddTips = () => {
+    setAddError('');
+    setSuggestions([]);
+    setUniverseHit(null);
+    setForceAdd(false);
+    setAddNote('');
+  };
+
+  const handleAdd = async (force = false) => {
     const raw = newSymbol.trim().toUpperCase();
     if (!raw) {
       setAddError('先输入代码，例如 AAPL');
@@ -212,12 +233,23 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     const sym = CODE_CORRECTIONS[raw] || raw;
     const known = findStock(sym);
     if (!known && !(forceAdd || force)) {
+      // 精选名单没有 → 去全市场库（约 7000 只）找，第一次搜才加载
+      setUniverseSearching(true);
+      const all = await loadUniverse();
+      setUniverseSearching(false);
+      const hit = findInUniverse(all, sym, curatedCodes);
+      if (hit) {
+        setUniverseHit(hit);
+        setAddError('');
+        setSuggestions([]);
+        return;
+      }
       const sug = suggestStocks(raw);
       setSuggestions(sug);
       setAddError(
         sug.length > 0
           ? `名单里没找到 ${raw}，你是不是想找下面这几个？`
-          : `名单里没找到 ${raw}，检查下拼写，或坚持添加`,
+          : `全市场也没找到 ${raw}，检查下拼写，或坚持添加`,
       );
       return;
     }
@@ -227,11 +259,33 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
       setNewName('');
       setNameEdited(false);
       setSuggestions([]);
+      setUniverseHit(null);
       setForceAdd(false);
       setAddNote(CODE_CORRECTIONS[raw] ? `已自动纠正为 ${sym}` : '');
       setAddError('');
     } else if (r === 'exists') {
       setAddError('这只已在自选里');
+    } else {
+      setAddError('代码格式不对，例如 AAPL 或 000660.KS');
+    }
+  };
+
+  /** 全市场命中的条目一键添加：用英文名做备注名 */
+  const handleAddUniverseHit = () => {
+    if (!universeHit) return;
+    const r = addItem(universeHit.code, universeHit.en);
+    if (r === 'ok') {
+      setNewSymbol('');
+      setNewName('');
+      setNameEdited(false);
+      setSuggestions([]);
+      setUniverseHit(null);
+      setForceAdd(false);
+      setAddError('');
+      setAddNote(`已添加 ${universeHit.code}`);
+    } else if (r === 'exists') {
+      setAddError('这只已在自选里');
+      setUniverseHit(null);
     } else {
       setAddError('代码格式不对，例如 AAPL 或 000660.KS');
     }
@@ -296,6 +350,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   setNewSymbol(sym);
                   setAddError('');
                   setSuggestions([]);
+                  setUniverseHit(null);
                   setForceAdd(false);
                   setAddNote('');
                   // 名称没被手动改过就跟随代码自动更新
@@ -308,6 +363,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   setNewSymbol(sym);
                   setAddError('');
                   setSuggestions([]);
+                  setUniverseHit(null);
                   setForceAdd(false);
                   setAddNote('');
                   // 名称没被手动改过就跟随代码自动更新
@@ -334,6 +390,26 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
             </div>
             {addError && <div className="text-[11px] text-rose-400">{addError}</div>}
             {addNote && <div className="text-[11px] text-emerald-400">{addNote}</div>}
+            {universeSearching && (
+              <div className="text-[11px] text-slate-500">正在全市场查找…</div>
+            )}
+            {universeHit && (
+              <div className="flex items-center gap-2 bg-slate-800/70 border border-slate-700 rounded-lg px-2.5 py-2">
+                <div className="min-w-0 flex-1">
+                  <span className="text-[11px] text-slate-400">全市场找到 </span>
+                  <span className="text-[11px] font-semibold text-slate-100">
+                    {universeHit.code}
+                  </span>
+                  <div className="text-[10px] text-slate-500 truncate">{universeHit.en}</div>
+                </div>
+                <button
+                  onClick={handleAddUniverseHit}
+                  className="shrink-0 bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-2.5 py-1.5 text-[11px] font-medium"
+                >
+                  直接添加
+                </button>
+              </div>
+            )}
             {suggestions.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {suggestions.map((s) => (
