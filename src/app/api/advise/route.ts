@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { buildJudgment, STATUS_LABELS, type StatusKey } from '@/lib/rhythm';
 import { getFullSeries } from '@/lib/marketData';
 import { symbolToName } from '@/lib/stockAliases';
+import { findStock } from '@/lib/stockList';
 
 /**
  * 按谷峰律动给"买什么"建议。
@@ -156,6 +157,7 @@ export async function POST(req: NextRequest) {
           status: judged.status,
           side,
           verdict: singleVerdict(side, judged.statusKey, judged.score),
+          blurb: findStock(symbol)?.blurb ?? null,
         },
         asOf: new Date().toISOString().slice(0, 10),
       });
@@ -221,6 +223,7 @@ export async function POST(req: NextRequest) {
         score: Math.round(r.score),
         status: r.status,
         reason: r.statusKey ? excludedReason(r.statusKey, r.score) : '数据不足，无法判断。',
+        blurb: findStock(r.symbol)?.blurb ?? null,
       }));
 
     const candidates = fresh
@@ -239,6 +242,7 @@ export async function POST(req: NextRequest) {
         score: Math.round(r.score),
         status: r.status,
         reason: candidateReason(r.statusKey as StatusKey, r.score, r.hot),
+        blurb: findStock(r.symbol)?.blurb ?? null,
       }));
 
     return NextResponse.json({

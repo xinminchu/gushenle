@@ -160,8 +160,7 @@ export default function DiscoverStocks() {
                       {s.code} <span className="font-normal text-slate-300">{s.zh}</span>
                     </div>
                     <div className="text-[10px] text-slate-500 truncate">
-                      {s.en} · {s.sector}
-                      {s.themes.length > 0 && ` · ${s.themes.join(' ')}`}
+                      {s.blurb ?? `${s.en} · ${s.sector}${s.themes.length > 0 ? ` · ${s.themes.join(' ')}` : ''}`}
                     </div>
                   </div>
                   {added ? (

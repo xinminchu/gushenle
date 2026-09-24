@@ -33,6 +33,7 @@ interface AdviceCandidate {
   score: number;
   status: string;
   reason: string;
+  blurb?: string | null;
 }
 
 interface AdviceResult {
@@ -50,6 +51,7 @@ interface SingleAdvice {
   status: string;
   side: 'buy' | 'sell';
   verdict: string;
+  blurb?: string | null;
 }
 
 export default function MemoryTab() {
@@ -620,6 +622,9 @@ export default function MemoryTab() {
                       <span className="text-emerald-400 font-bold">{c.score}分</span>
                     </span>
                   </div>
+                  {c.blurb && (
+                    <div className="text-[10px] text-slate-500 mb-1">🏢 {c.blurb}</div>
+                  )}
                   <div className="text-[10px] text-slate-500 mb-1">律动诊断：{c.status}</div>
                   <p className="text-[11px] text-slate-300 leading-relaxed">{c.reason}</p>
                 </div>
@@ -670,6 +675,9 @@ export default function MemoryTab() {
                 <span className="text-emerald-400 font-bold">{singleAdvice.score}分</span>
               </span>
             </div>
+            {singleAdvice.blurb && (
+              <div className="text-[10px] text-slate-500 mb-1">🏢 {singleAdvice.blurb}</div>
+            )}
             <div className="text-[10px] text-slate-500 mb-1">律动诊断：{singleAdvice.status}</div>
             <p className="text-[11px] text-slate-300 leading-relaxed">{singleAdvice.verdict}</p>
           </div>
