@@ -9,6 +9,7 @@ import {
   type RhythmPoint, type RhythmResponse,
 } from '@/lib/rhythm';
 import { loadOperations, type OperationRecord } from '@/lib/operations';
+import { findStock } from '@/lib/stockList';
 import { computePortrait, PORTRAIT_MIN_SAMPLE } from '@/lib/portrait';
 import { fmtMoney } from '@/lib/currency';
 
@@ -85,9 +86,11 @@ export default function StockStory({
   }, [ops, quote, simulated]);
 
   if (ops.length === 0) {
+    const blurb = findStock(symbol)?.blurb;
     return (
-      <div className="mt-3 pt-3 border-t border-slate-700/60 text-[11px] text-slate-500">
-        📖 这只还没有操作记录，去记忆页记一笔，故事就从这里开始。
+      <div className="mt-3 pt-3 border-t border-slate-700/60 text-[11px] text-slate-500 space-y-1.5">
+        {blurb && <div className="leading-relaxed">🏢 {blurb}</div>}
+        <div>📖 这只还没有操作记录，去记忆页记一笔，故事就从这里开始。</div>
       </div>
     );
   }
@@ -99,6 +102,9 @@ export default function StockStory({
   return (
     <div className="mt-3 pt-3 border-t border-slate-700/60 space-y-2.5" onClick={(e) => e.stopPropagation()}>
       <div className="text-[11px] font-semibold text-slate-300">📖 我的持仓故事</div>
+      {findStock(symbol)?.blurb && (
+        <div className="text-[11px] text-slate-500 leading-relaxed">🏢 {findStock(symbol)?.blurb}</div>
+      )}
 
       {/* 操作流水：买入带当天律动快照 */}
       <div className="space-y-1.5">
