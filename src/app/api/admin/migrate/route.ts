@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
   if (!DB_URL) {
     return NextResponse.json({
       configured: false,
-      hint: '服务端未配置 SUPABASE_DB_URL：去 Supabase Dashboard → Project Settings → Database，复制 Connection string（URI），加到 Vercel 环境变量后重新部署。',
+      hint: '服务端未配置 SUPABASE_DB_URL：去 Supabase Dashboard → Project Settings → Database → Connect，对话框里选 Transaction pooler（serverless 适用）、Type 选 URI，拷贝连接串并把 [YOUR-PASSWORD] 换成你的数据库密码，加到 Vercel 环境变量后重新部署。',
       migrations: MIGRATIONS.map((m) => ({ version: m.version, name: m.name, applied: null })),
     });
   }
@@ -94,7 +94,9 @@ export async function POST(req: NextRequest) {
       try {
         await client.query('BEGIN');
         await client.query(m.sql);
-        await client.query('insert into public.schema_migrations (version) values ($1);', [m.version]);
+        // 版本号为仓库硬编码（字母/数字/下划线），直接拼串以兼容事务连接池
+        const v = m.version.replace(/'/g, "''");
+        await client.query(`insert into public.schema_migrations (version) values ('${v}');`);
         await client.query('COMMIT');
         results.push({ version: m.version, name: m.name, status: 'applied' });
       } catch (e) {
