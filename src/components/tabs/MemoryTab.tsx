@@ -54,8 +54,12 @@ interface SingleAdvice {
   blurb?: string | null;
 }
 
-export default function MemoryTab() {
+export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | null }) {
   const [inputText, setInputText] = useState('');
+  // 从持仓故事"补一笔"跳过来：输入框预填"买入XXX"，用户补个数和价即可
+  useEffect(() => {
+    if (prefillSymbol) setInputText((t) => (t ? t : `买入${prefillSymbol} `));
+  }, [prefillSymbol]);
   const [isRecording, setIsRecording] = useState(false);
   const [parsedResult, setParsedResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);

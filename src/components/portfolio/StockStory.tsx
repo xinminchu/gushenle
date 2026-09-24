@@ -50,9 +50,11 @@ function fmtDay(d: string): string {
 export default function StockStory({
   symbol,
   quote,
+  onGoMemory,
 }: {
   symbol: string;
   quote: RhythmResponse | null;
+  onGoMemory?: (symbol: string) => void;
 }) {
   const ops = useMemo(
     () => loadOperations().filter((o) => o.symbol === symbol).sort((a, b) => (a.date < b.date ? 1 : -1)),
@@ -88,9 +90,22 @@ export default function StockStory({
   if (ops.length === 0) {
     const blurb = findStock(symbol)?.blurb;
     return (
-      <div className="mt-3 pt-3 border-t border-slate-700/60 text-[11px] text-slate-500 space-y-1.5">
+      <div className="mt-3 pt-3 border-t border-slate-700/60 text-[11px] text-slate-500 space-y-1.5" onClick={(e) => e.stopPropagation()}>
         {blurb && <div className="leading-relaxed">🏢 {blurb}</div>}
-        <div>📖 这只还没有操作记录，去记忆页记一笔，故事就从这里开始。</div>
+        <div>
+          📖 这只还没有操作记录，
+          {onGoMemory ? (
+            <button
+              onClick={() => onGoMemory(symbol)}
+              className="text-blue-400 hover:text-blue-300 underline underline-offset-2"
+            >
+              去记忆页记一笔
+            </button>
+          ) : (
+            '去记忆页记一笔'
+          )}
+          ，故事就从这里开始。
+        </div>
       </div>
     );
   }

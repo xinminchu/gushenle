@@ -44,7 +44,13 @@ function positionAdvice(statusKey: string | undefined, pnlPct: number | null): s
       return '横盘波动，拿着等方向';
   }
 }
-export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: string) => void }) {
+export default function PortfolioTab({
+  onViewSymbol,
+  onGoMemory,
+}: {
+  onViewSymbol: (symbol: string) => void;
+  onGoMemory?: (symbol: string) => void;
+}) {
   // 涨跌配色跟随今日页的全局选择
   const { scheme } = useColorScheme();
   const { items: watchlist, nameOf, addItem } = useWatchlist();
@@ -635,7 +641,9 @@ export default function PortfolioTab({ onViewSymbol }: { onViewSymbol: (symbol: 
                   </div>
                 </div>
               )}
-              {storySymbol === p.symbol && <StockStory symbol={p.symbol} quote={q ?? null} />}
+              {storySymbol === p.symbol && (
+                <StockStory symbol={p.symbol} quote={q ?? null} onGoMemory={onGoMemory} />
+              )}
             </div>
           );
         })}

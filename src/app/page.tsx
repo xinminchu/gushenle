@@ -39,6 +39,17 @@ function HomeInner() {
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 80);
   };
 
+  // 持仓故事"补一笔" -> 跳到记忆页，输入框预填"买入XXX"
+  const [memoryPrefill, setMemoryPrefill] = useState<string | null>(null);
+  const goMemory = (symbol: string) => {
+    setMemoryPrefill(symbol);
+    setActiveTab('memory');
+    setTimeout(() => {
+      window.scrollTo({ top: 0 });
+      setMemoryPrefill(null);
+    }, 80);
+  };
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 selection:bg-emerald-500/30 relative pb-32">
       {/* 全页面共用顶栏：所有 tab 顶部都显示 */}
@@ -51,8 +62,8 @@ function HomeInner() {
             <RhythmDashboard onGoPortfolio={() => setActiveTab('portfolio')} />
           </section>
         )}
-        {activeTab === 'portfolio' && <PortfolioTab onViewSymbol={viewSymbol} />}
-        {activeTab === 'memory' && <MemoryTab />}
+        {activeTab === 'portfolio' && <PortfolioTab onViewSymbol={viewSymbol} onGoMemory={goMemory} />}
+        {activeTab === 'memory' && <MemoryTab prefillSymbol={memoryPrefill} />}
         {activeTab === 'community' && <CommunityTab />}
         {activeTab === 'fun' && <FunTab />}
       </div>
