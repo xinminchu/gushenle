@@ -132,9 +132,19 @@ export interface FibLevel {
   kind: FibLevelKind;
 }
 
-/** 在最近 lookback 根K线里找波段最高/最低。点数不足 20 时返回 null。 */
+/** 在最近 lookback 根K线里找波段。
+ * 2026-09-24 用户拍板：视野固定（默认60天，共识基础不动），但优先取
+ * "最近一段像样的波段"——近30天内走出幅度≥5%的波段就用它；30天里横盘
+ * 没动静，再放宽到整个视野。规则是死的，不用人选；老波段不再霸占画面。 */
 export function findSwing(points: FibPoint[], lookback: number): FibSwing | null {
-  const win = points.slice(-lookback).filter((p) => p.high > 0 && p.low > 0);
+  const recent = findSwingIn(points.slice(-30));
+  if (recent && recent.range / recent.low >= 0.05) return recent;
+  return findSwingIn(points.slice(-lookback));
+}
+
+/** 在给定窗口里找波段最高/最低。点数不足 20 时返回 null。 */
+function findSwingIn(win0: FibPoint[]): FibSwing | null {
+  const win = win0.filter((p) => p.high > 0 && p.low > 0);
   if (win.length < 20) return null;
   let hi = win[0];
   let lo = win[0];
@@ -150,55 +160,65 @@ export function findSwing(points: FibPoint[], lookback: number): FibSwing | null
     highDate: hi.date,
     lowDate: lo.date,
     uptrend,
-    lookback,
+    lookback: win.length,
     range: hi.high - lo.low,
   };
 }
 
-/** 按组合算参考线价位（保留 2 位小数） */
-export function fibLevels(swing: FibSwing, comboId: FibComboId): FibLevel[] {
+/**
+ * 按组合算参考线价位（保留 2 位小数）。
+ * 传 nowPrice 时，回调位的压力/支撑按"线在现价之上还是之下"来定——
+ * 线的位置是死的（由波段决定），股价是活的；股价穿过线后，压力变支撑、
+ * 支撑变压力，标签和颜色跟着翻转才诚实。
+ */
+export function fibLevels(swing: FibSwing, comboId: FibComboId, nowPrice?: number): FibLevel[] {
   // 推荐视图是混搭：扩展只取最靠谱的 1.272/1.618（拦追高），
   // 回调只取最靠谱的深线 0.618/0.786（拦割肉），按价格从上到下排。
   if (comboId === 'smart') {
-    const ext = fibLevels(swing, 'extension').filter(
+    const ext = fibLevels(swing, 'extension', nowPrice).filter(
       (l) => l.ratio === 1.272 || l.ratio === 1.618
     );
-    const deep = fibLevelsForRatios(swing, [0.618, 0.786], 'retrace');
+    const deep = fibLevelsForRatios(swing, [0.618, 0.786], 'retrace', nowPrice);
     return [...ext, ...deep].sort((a, b) => b.price - a.price);
   }
   const combo = FIB_COMBOS[comboId];
-  return fibLevelsForRatios(swing, combo.ratios, combo.kind);
+  return fibLevelsForRatios(swing, combo.ratios, combo.kind, nowPrice);
 }
 
 /** 按给定比率与类型算参考线价位（保留 2 位小数） */
 function fibLevelsForRatios(
   swing: FibSwing,
   ratios: number[],
-  kind: 'retrace' | 'extension' | 'mixed'
+  kind: 'retrace' | 'extension' | 'mixed',
+  nowPrice?: number
 ): FibLevel[] {
   const { high, low, range, uptrend } = swing;
   const r2 = (n: number) => Math.round(n * 100) / 100;
   return ratios.map((r) => {
-    let price: number;
+    let lvPrice: number;
     let levelKind: FibLevelKind;
     if (kind === 'retrace') {
       if (uptrend) {
-        price = high - range * r;
+        lvPrice = high - range * r;
         levelKind = 'support';
       } else {
-        price = low + range * r;
+        lvPrice = low + range * r;
         levelKind = 'resistance';
+      }
+      // 有现价时按位置重定：线在现价之上是压力，在下是支撑
+      if (nowPrice != null && nowPrice > 0) {
+        levelKind = lvPrice >= nowPrice ? 'resistance' : 'support';
       }
     } else {
       if (uptrend) {
-        price = low + range * r;
+        lvPrice = low + range * r;
         levelKind = 'target-up';
       } else {
-        price = high - range * r;
+        lvPrice = high - range * r;
         levelKind = 'target-down';
       }
     }
-    return { ratio: r, price: r2(price), kind: levelKind };
+    return { ratio: r, price: r2(lvPrice), kind: levelKind };
   });
 }
 
@@ -351,7 +371,7 @@ export function fibAdviceHint(
   comboId: FibComboId,
   price: number
 ): string | null {
-  const near = nearestFibLevel(fibLevels(swing, comboId), price);
+  const near = nearestFibLevel(fibLevels(swing, comboId, price), price);
   if (!near || near.distPct > 1.5) return null;
   const { level } = near;
   const at = `${fibRatioLabel(level)}${fibKindLabel(level.kind)}（$${level.price}）`;

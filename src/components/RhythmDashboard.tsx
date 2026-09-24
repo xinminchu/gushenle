@@ -311,8 +311,11 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     [showFib, fibPts]
   );
   const fibChartLevels = useMemo(
-    () => (fibSwing ? fibLevels(fibSwing, dirComboId(fibCombo, fibSwing.uptrend)) : null),
-    [fibSwing, fibCombo]
+    () =>
+      fibSwing
+        ? fibLevels(fibSwing, dirComboId(fibCombo, fibSwing.uptrend), data?.price ?? undefined)
+        : null,
+    [fibSwing, fibCombo, data?.price]
   );
   /**
    * 缩放基准：固定用"完整五线 + 扩展目标"的并集喂给图表缩放，
