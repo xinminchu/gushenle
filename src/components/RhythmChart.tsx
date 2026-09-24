@@ -207,6 +207,28 @@ export default function RhythmChart({
       }
       drawFibLines(area);
     }
+    // 黄金分割线画出可视范围时，把价格轴缩放到能看见它们。
+    // lightweight-charts 的 priceLine 不参与自动缩放，所以用一条全透明的线
+    // 把各参考价"喂"给缩放逻辑（颜色透明、不画价格线、不响应十字线）。
+    if (fibLevels && fibLevels.length > 0 && series.length > 1) {
+      const scaler = chart.addSeries(LineSeries, {
+        color: 'rgba(0, 0, 0, 0)',
+        lineWidth: 1,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+      });
+      const n = series.length;
+      const used = new Set<number>();
+      const scalerData: { time: string; value: number }[] = [];
+      fibLevels.forEach((lv, i) => {
+        const j = Math.min(n - 1, Math.floor(((i + 1) * n) / (fibLevels.length + 1)));
+        if (used.has(j)) return;
+        used.add(j);
+        scalerData.push({ time: series[j].date, value: lv.price });
+      });
+      if (scalerData.length > 0) scaler.setData(scalerData);
+    }
     chart.timeScale().fitContent();
 
     const ro = new ResizeObserver((entries) => {

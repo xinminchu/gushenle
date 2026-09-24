@@ -264,7 +264,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     () => (showFib ? findSwing(fibPts, fibLookback) : null),
     [showFib, fibPts, fibLookback]
   );
-  const fibChartLevels = fibSwing ? fibLevels(fibSwing, fibCombo) : null;
+  const fibChartLevels = useMemo(
+    () => (fibSwing ? fibLevels(fibSwing, fibCombo) : null),
+    [fibSwing, fibCombo]
+  );
   /** 诊断卡联动：现价贴近参考线时给一句行为纠偏（常开）。
    * 先看推荐组合（扩展目标→拦追高），没贴近再看深回调（→拦割肉）。 */
   const fibHint = useMemo(() => {
