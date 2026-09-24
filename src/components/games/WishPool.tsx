@@ -45,12 +45,24 @@ export default function WishPool() {
   const load = useCallback(async () => {
     if (!supabase) return;
     try {
-      const { data } = await supabase
+      let rows: Wish[] | null = null;
+      const full = await supabase
         .from('game_wishes')
         .select('id,user_id,nickname,kind,content,created_at,adopted')
         .order('created_at', { ascending: false })
         .limit(30);
-      if (data) setWishes(data as Wish[]);
+      if (full.error) {
+        // adopted 列还没建（006 没跑）时降级
+        const lite = await supabase
+          .from('game_wishes')
+          .select('id,user_id,nickname,kind,content,created_at')
+          .order('created_at', { ascending: false })
+          .limit(30);
+        rows = (lite.data || []).map((w) => ({ ...(w as Wish), adopted: false }));
+      } else {
+        rows = (full.data || []) as Wish[];
+      }
+      setWishes(rows);
       if (user) {
         const { count } = await supabase
           .from('game_wishes')
