@@ -192,7 +192,7 @@ export default function WheelGame() {
                 y={ty}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fontSize="10"
+                fontSize="15"
                 fontWeight="bold"
                 fill={s.pct >= 0 ? up : down}
               >
@@ -220,28 +220,28 @@ export default function WheelGame() {
   return (
     <div className="w-full max-w-[340px] p-3 space-y-3">
       <div className="text-center">
-        <div className="text-sm font-bold text-slate-200">🎡 转转盘买股</div>
-        <div className="text-[11px] text-slate-500 mt-0.5">
+        <div className="text-base font-bold text-slate-200">🎡 转转盘买股</div>
+        <div className="text-sm text-slate-500 mt-0.5">
           真实历史行情 · 随缘选股挑战 · 本局 {score} 分
         </div>
       </div>
 
       {phase === 'setup' && (
         <div className="space-y-3">
-          <p className="text-xs text-slate-300 leading-relaxed bg-slate-800/60 border border-slate-700 rounded-xl p-3">
+          <p className="text-sm text-slate-300 leading-relaxed bg-slate-800/60 border border-slate-700 rounded-xl p-3">
             《漫步华尔街》说：
             <span className="text-slate-100 font-semibold">蒙眼扔飞镖选的股票，不输华尔街专家</span>
             。今天换个玩法——自选股摆上转盘，转到哪只就"买入"哪只，再看它后 5
             天能不能跑赢大盘。
           </p>
-          <p className="text-[11px] text-slate-500 leading-relaxed px-1">
+          <p className="text-sm text-slate-500 leading-relaxed px-1">
             小说明：用历史上的某一天当"买入日"，这样才能揭晓后 5 天的真实走势。
             <span className="text-violet-300/80">💡 创意：@vipdongxia</span>
           </p>
-          {err && <p className="text-[11px] text-rose-300 px-1">{err}</p>}
+          {err && <p className="text-xs text-rose-300 px-1">{err}</p>}
           <button
             onClick={start}
-            className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
+            className="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-base font-bold"
           >
             开始转转盘
           </button>
@@ -249,19 +249,19 @@ export default function WheelGame() {
       )}
 
       {phase === 'loading' && (
-        <p className="text-center text-xs text-slate-400 py-10">正在准备转盘…🎡</p>
+        <p className="text-center text-sm text-slate-400 py-10">正在准备转盘…🎡</p>
       )}
 
       {(phase === 'ready' || phase === 'spinning') && (
         <div className="space-y-2">
           {wheel}
-          <p className="text-center text-[11px] text-slate-500">
+          <p className="text-center text-sm text-slate-500">
             买入日 {dayLabel} · 扇区颜色 = 前一交易日涨跌
           </p>
           <button
             onClick={spin}
             disabled={phase !== 'ready'}
-            className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm font-bold"
+            className="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-base font-bold"
           >
             {phase === 'ready' ? '🎡 转动！' : '转盘转动中…'}
           </button>
@@ -272,17 +272,17 @@ export default function WheelGame() {
         <div className="space-y-2">
           {wheel}
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center">
-            <p className="text-sm font-bold text-slate-100">
+            <p className="text-base font-bold text-slate-100">
               🎡 转到了！{hit.name}（{hit.symbol}）
             </p>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-sm text-slate-400 mt-1">
               前一日涨跌 <span style={{ color: hit.pct >= 0 ? up : down }}>{fmtPct(hit.pct)}</span>
               ，已"买入"
             </p>
           </div>
           <button
             onClick={reveal}
-            className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
+            className="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-base font-bold"
           >
             揭晓后 5 天走势
           </button>
@@ -292,13 +292,13 @@ export default function WheelGame() {
       {phase === 'reveal' && hit && (
         <div className="space-y-2">
           <div
-            className={`rounded-xl p-3 text-center text-xs leading-relaxed border ${
+            className={`rounded-xl p-3 text-center text-sm leading-relaxed border ${
               win
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
                 : 'bg-slate-500/10 border-slate-600/40 text-slate-300'
             }`}
           >
-            <p className="font-semibold text-sm">{win ? '🚀 缘分赢了！+100 分' : '📉 这次大盘更稳'}</p>
+            <p className="font-semibold text-base">{win ? '🚀 缘分赢了！+100 分' : '📉 这次大盘更稳'}</p>
             <p className="mt-1 tabular-nums">
               {hit.name} 后 5 天{' '}
               <span style={{ color: hit.next5 >= 0 ? up : down }}>{fmtPct(hit.next5)}</span>
@@ -306,10 +306,10 @@ export default function WheelGame() {
               <span style={{ color: qqq5 >= 0 ? up : down }}>{fmtPct(qqq5)}</span>
             </p>
           </div>
-          <p className="text-[11px] text-slate-400 leading-relaxed px-1">{tip}</p>
+          <p className="text-sm text-slate-400 leading-relaxed px-1">{tip}</p>
           <button
             onClick={again}
-            className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
+            className="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-base font-bold"
           >
             再转一次
           </button>
