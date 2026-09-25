@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 // 相对路径导入组件
 import BottomNav from '../components/BottomNav';
 import SiteFooter from '../components/SiteFooter';
@@ -30,6 +30,16 @@ export default function Home() {
 }
 
 function HomeInner() {
+  // 启动探针：React 成功挂载即标记存活，layout 里的探针脚本就不再弹横幅
+  useEffect(() => {
+    try {
+      (window as unknown as Record<string, unknown>).__gsl_alive = true;
+      document.getElementById('gsl-boot-fail')?.remove();
+    } catch {
+      /* 忽略 */
+    }
+  }, []);
+
   // 当前激活的页签状态：'today' | 'portfolio' | 'memory' | 'community' | 'fun'
   const [activeTab, setActiveTab] = useState<string>('today');
   const { setFocusSymbol } = useWatchlist();
