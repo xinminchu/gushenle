@@ -64,7 +64,11 @@ export default function FlowPanel({ symbol }: { symbol: string }) {
           {/* 手画稿：左右两根竖条，流入/流出，各按近5日·6-10日·11-20日分段 */}
           <FlowBars buckets={buckets} totalIn={totalIn} totalOut={totalOut} symbol={symbol} />
           <div className="mt-1.5 mb-1.5 text-[9px] text-slate-600 leading-relaxed">
-            <div className="flex gap-2">
+            <p>
+              <span className="text-emerald-400 font-medium">绿柱</span>：流入的时间分布；
+              <span className="text-rose-400 font-medium">红柱</span>：流出的时间分布
+            </p>
+            <div className="flex gap-2 mt-0.5">
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-sm bg-emerald-600 inline-block" /> 近5日
               </span>
@@ -75,7 +79,7 @@ export default function FlowPanel({ symbol }: { symbol: string }) {
                 <span className="w-2 h-2 rounded-sm bg-emerald-400 inline-block" /> 11-20日
               </span>
             </div>
-            <p>颜色越深，钱越新</p>
+            <p>颜色越深，钱越新（近5日最深）</p>
           </div>
 
           <p className="text-[10px] text-amber-200/90 leading-relaxed">💡 {result.verdict}</p>
@@ -108,19 +112,22 @@ function FlowBars({
   const bar = (isIn: boolean) => {
     const total = isIn ? totalIn : totalOut;
     const colors = isIn ? inColors : outColors;
+    const pcts = buckets.map((s) => {
+      const v = isIn ? s.inSum : s.outSum;
+      return total > 0 ? (v / total) * 100 : 0;
+    });
     return (
       <div className="flex flex-col items-center">
         <div className="w-12 h-40 flex flex-col rounded-md overflow-hidden bg-slate-800/50">
           {buckets.map((s, i) => {
-            const v = isIn ? s.inSum : s.outSum;
-            const pct = total > 0 ? (v / total) * 100 : 0;
+            const pct = pcts[i];
             if (pct <= 0) return null;
             return (
               <div
                 key={s.label}
                 className={`${colors[i]} flex items-center justify-center shrink-0`}
                 style={{ height: `${pct}%` }}
-                title={`${s.label} ${isIn ? '流入' : '流出'} ${fmtCompactMoney(symbol, v)}`}
+                title={`${s.label} ${isIn ? '流入' : '流出'} ${fmtCompactMoney(symbol, isIn ? s.inSum : s.outSum)}`}
               >
                 {pct >= 16 && (
                   <span className="text-[9px] font-semibold text-white/95 tabular-nums">
@@ -136,6 +143,10 @@ function FlowBars({
         </span>
         <span className="text-[9px] text-slate-500 tabular-nums">
           {fmtCompactMoney(symbol, total)}
+        </span>
+        {/* 完整百分比：每段都列出，小段标不进柱子也不省略 */}
+        <span className="text-[8px] text-slate-500 tabular-nums mt-0.5 text-center leading-tight max-w-[76px]">
+          {buckets.map((s, i) => `${s.label}${Math.round(pcts[i])}%`).join(' · ')}
         </span>
       </div>
     );
