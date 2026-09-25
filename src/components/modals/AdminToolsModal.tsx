@@ -137,6 +137,11 @@ function MigratePane() {
   }
 
   const pending = list.filter((m) => m.applied === false).length;
+  // 只展示待执行的迁移：已执行的收成一行小字。查不到执行状态（applied 全为 null）
+  // 时降级为全列出，别把列表搞没。
+  const statusKnown = list.some((m) => m.applied !== null);
+  const visibleMigrations = statusKnown ? list.filter((m) => !m.applied) : list;
+  const appliedCount = list.filter((m) => m.applied === true).length;
 
   return (
     <>
@@ -168,7 +173,7 @@ function MigratePane() {
       {!loading && configured && !loadFailed && (
         <>
           <div className="space-y-1.5 mb-3">
-            {list.map((m) => (
+            {visibleMigrations.map((m) => (
               <div
                 key={m.version}
                 className="flex items-center gap-2 text-xs bg-slate-800/60 rounded-lg px-2.5 py-2"
@@ -185,7 +190,15 @@ function MigratePane() {
                 </span>
               </div>
             ))}
+            {statusKnown && visibleMigrations.length === 0 && (
+              <p className="text-xs text-emerald-400 text-center py-2">✓ 全部迁移已是最新</p>
+            )}
           </div>
+          {statusKnown && appliedCount > 0 && (
+            <p className="text-[11px] text-slate-500 text-center mb-3">
+              ✓ 已执行 {appliedCount} 个迁移
+            </p>
+          )}
 
           {results && (
             <div className="mb-3 space-y-1.5">
@@ -240,6 +253,14 @@ function MigratePane() {
 /* ---------------- Mas 回复草稿轮盘 ---------------- */
 
 function ReplyDraftsPane() {
+  // 草稿被清空后（全部已用完），不渲染空轮盘
+  if (REPLY_DRAFTS.length === 0) {
+    return (
+      <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-4 text-center">
+        <p className="text-xs text-slate-500">暂无回复草稿，有新的再补进来。</p>
+      </div>
+    );
+  }
   const [idx, setIdx] = useState(0);
   const [text, setText] = useState(REPLY_DRAFTS[0].text);
   const [copied, setCopied] = useState(false);

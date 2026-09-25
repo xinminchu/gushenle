@@ -338,23 +338,25 @@ export default function WishPool() {
               <div className="mt-1.5">
                 {replying === w.id ? (
                   <div className="space-y-1.5">
-                    {/* 草稿轮盘：点选填入，可再修改，发布仍由站长亲手点 */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto">
-                      <span className="text-[10px] text-slate-500 shrink-0">📋 草稿</span>
-                      {REPLY_DRAFTS.map((d) => (
-                        <button
-                          key={d.label}
-                          onClick={() => {
-                            if (replyText.trim() && !window.confirm('用这条草稿替换已输入的内容？'))
-                              return;
-                            setReplyText(d.text);
-                          }}
-                          className="shrink-0 text-[10px] px-2 py-1 rounded-full border border-sky-500/40 text-sky-300 bg-sky-500/10 active:bg-sky-500/25"
-                        >
-                          {d.label}
-                        </button>
-                      ))}
-                    </div>
+                    {/* 草稿轮盘：点选填入，可再修改，发布仍由站长亲手点（无草稿时整行隐藏） */}
+                    {REPLY_DRAFTS.length > 0 && (
+                      <div className="flex items-center gap-1.5 overflow-x-auto">
+                        <span className="text-[10px] text-slate-500 shrink-0">📋 草稿</span>
+                        {REPLY_DRAFTS.map((d) => (
+                          <button
+                            key={d.label}
+                            onClick={() => {
+                              if (replyText.trim() && !window.confirm('用这条草稿替换已输入的内容？'))
+                                return;
+                              setReplyText(d.text);
+                            }}
+                            className="shrink-0 text-[10px] px-2 py-1 rounded-full border border-sky-500/40 text-sky-300 bg-sky-500/10 active:bg-sky-500/25"
+                          >
+                            {d.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <textarea
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
