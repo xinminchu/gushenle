@@ -685,12 +685,12 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   <span className="font-bold text-slate-100 text-lg">{symbol}</span>
                   <span className="text-xs text-slate-400">{nameOf(symbol)}</span>
                   {overHeat && (
-                    <span className="bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                    <span className="bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap shrink-0">
                       <Flame className="w-3 h-3" /> 涨太猛
                     </span>
                   )}
                   {strongHigh && (
-                    <span className="bg-sky-500/15 text-sky-400 border border-sky-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                    <span className="bg-sky-500/15 text-sky-400 border border-sky-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap shrink-0">
                       <TrendingUp className="w-3 h-3" /> 稳着涨
                     </span>
                   )}
@@ -710,13 +710,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                     {judgment.score}
                   </div>
                   <div className="text-[10px] text-slate-400">{judgment.status}</div>
-                  {judgment.statusDetail && (
-                    <div className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
-                      {judgment.statusDetail}
-                    </div>
-                  )}
                 </div>
               </div>
+              {judgment.statusDetail && (
+                <div className="mt-1.5 text-[10px] text-slate-500 leading-relaxed">
+                  {judgment.statusDetail}
+                </div>
+              )}
 
               <div className="mt-3 flex items-center gap-2">
                 <span className="text-sm font-semibold text-slate-200 shrink-0">
