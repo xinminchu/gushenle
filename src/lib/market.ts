@@ -11,6 +11,18 @@ const inflight = new Map<string, Promise<RhythmResponse>>();
 const TTL_LIVE_MS = 60 * 1000;
 const TTL_CLOSED_MS = 5 * 60 * 1000;
 
+/** 单次请求超时：弱网/老手机上连接 hang 住时不无限转圈 */
+const FETCH_TIMEOUT_MS = 20 * 1000;
+/** 超时或网络错时自动再试一次 */
+const MAX_ATTEMPTS = 2;
+
+function fetchWithTimeout(url: string): Promise<Response> {
+  if (typeof AbortController === 'undefined') return fetch(url);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(timer));
+}
+
 export function getRhythm(
   symbol: string,
   range: string,
@@ -25,11 +37,19 @@ export function getRhythm(
   const ongoing = inflight.get(key);
   if (ongoing) return ongoing;
 
-  const p = fetch(`/api/rhythm?symbol=${encodeURIComponent(symbol)}&range=${encodeURIComponent(range)}`)
-    .then((res) => {
-      if (!res.ok) throw new Error(`rhythm api ${res.status}`);
-      return res.json() as Promise<RhythmResponse>;
-    })
+  const url = `/api/rhythm?symbol=${encodeURIComponent(symbol)}&range=${encodeURIComponent(range)}`;
+  const attempt = (n: number): Promise<RhythmResponse> =>
+    fetchWithTimeout(url)
+      .then((res) => {
+        if (!res.ok) throw new Error(`rhythm api ${res.status}`);
+        return res.json() as Promise<RhythmResponse>;
+      })
+      .catch((err) => {
+        if (n < MAX_ATTEMPTS) return attempt(n + 1);
+        throw err;
+      });
+
+  const p = attempt(1)
     .then((json) => {
       cache.set(key, { data: json, fetchedAt: Date.now() });
       inflight.delete(key);

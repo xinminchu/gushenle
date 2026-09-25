@@ -144,6 +144,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const [fibCombo, setFibCombo] = useState<FibComboId>('full');
   const [data, setData] = useState<RhythmResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [showZenModal, setShowZenModal] = useState(false);
   // 沉思乐弹窗打开时：按当前标的查持仓，组织"看持仓说话"的内容
   const zenHoldings = useMemo(
@@ -219,12 +221,14 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
       prevTick.current = autoTick;
     }
     setLoading(true);
+    setLoadError(false);
     getRhythm(symbol, range)
       .then((json) => {
         if (!cancelled) setData(json);
       })
       .catch((err) => {
         console.error('获取律动数据失败:', err);
+        if (!cancelled) setLoadError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -232,7 +236,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     return () => {
       cancelled = true;
     };
-  }, [symbol, range, autoTick]);
+  }, [symbol, range, autoTick, retryKey]);
 
   // 盘中每 60 秒静默刷新一次实时价（页面切到后台时不拉；收盘后自动停）
   useEffect(() => {
@@ -1065,8 +1069,16 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
           <AccuracyPanel symbol={symbol} />
         </>
       ) : (
-        <div className="h-64 flex items-center justify-center bg-slate-900 border border-slate-800 rounded-xl text-slate-400">
-          数据加载失败，请稍后重试
+        <div className="h-64 flex flex-col items-center justify-center gap-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-400">
+          <p className="text-sm">{loadError ? '行情加载失败（网络超时或服务器没响应）' : '数据加载失败，请稍后重试'}</p>
+          {loadError && (
+            <button
+              onClick={() => setRetryKey((k) => k + 1)}
+              className="px-4 py-1.5 rounded-full bg-blue-600 text-white text-xs font-medium active:bg-blue-700"
+            >
+              重新加载
+            </button>
+          )}
         </div>
       )}
 
