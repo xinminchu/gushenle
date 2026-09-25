@@ -18,6 +18,7 @@ interface Wish {
   adopted: boolean;
   reply_text: string | null;
   replied_at: string | null;
+  bonus_points: number; // 017：被采纳的额外奖励分（默认 0）
 }
 
 const KIND_META = {
@@ -54,13 +55,20 @@ export default function WishPool() {
   const isAdmin = isAdminEmail(user?.email);
 
   const normalize = (rows: object[]): Wish[] =>
-    rows.map((w) => ({ adopted: false, reply_text: null, replied_at: null, ...(w as Wish) }));
+    rows.map((w) => ({
+      adopted: false,
+      reply_text: null,
+      replied_at: null,
+      bonus_points: 0,
+      ...(w as Wish),
+    }));
 
   const load = useCallback(async () => {
     if (!supabase) return;
     try {
-      // 三档降级：009 没跑就没有 reply 列，006 没跑就没有 adopted 列
+      // 四档降级：017 没跑就没有 bonus_points 列，009 没跑就没有 reply 列，006 没跑就没有 adopted 列
       const tries = [
+        'id,user_id,nickname,kind,content,created_at,adopted,reply_text,replied_at,bonus_points',
         'id,user_id,nickname,kind,content,created_at,adopted,reply_text,replied_at',
         'id,user_id,nickname,kind,content,created_at,adopted',
         'id,user_id,nickname,kind,content,created_at',
@@ -79,11 +87,26 @@ export default function WishPool() {
       }
       setWishes(rows);
       if (user) {
-        const { count } = await supabase
-          .from('game_wishes')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-        setPoints((count || 0) * 10);
+        // 贡献值 = Σ(10 + bonus_points)：被采纳的留言额外 +40；
+        // bonus_points 列不存在（017 没跑）时降级回按条数 ×10
+        try {
+          const r = await supabase
+            .from('game_wishes')
+            .select('bonus_points')
+            .eq('user_id', user.id);
+          if (r.error) throw r.error;
+          const pts = ((r.data || []) as { bonus_points: number | null }[]).reduce(
+            (a, w) => a + 10 + (w.bonus_points || 0),
+            0
+          );
+          setPoints(pts);
+        } catch {
+          const { count } = await supabase
+            .from('game_wishes')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+          setPoints((count || 0) * 10);
+        }
       } else {
         setPoints(0);
       }
@@ -277,7 +300,9 @@ export default function WishPool() {
                 </span>
               )}
               {w.user_id && (
-                <span className="text-[10px] text-amber-400/80">+10 贡献</span>
+                <span className="text-[10px] text-amber-400/80">
+                  +{10 + (w.bonus_points || 0)} 贡献
+                </span>
               )}
               <span className="text-[10px] text-slate-600 ml-auto">{fmtTime(w.created_at)}</span>
               {user && w.user_id === user.id && (

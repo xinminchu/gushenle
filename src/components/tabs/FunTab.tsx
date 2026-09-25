@@ -20,6 +20,7 @@ const DcaGame = dynamic(() => import('../games/DcaGame'), { ssr: false });
 const DartGame = dynamic(() => import('../games/DartGame'), { ssr: false });
 const MoleGame = dynamic(() => import('../games/MoleGame'), { ssr: false });
 const EncyclopediaGame = dynamic(() => import('../games/EncyclopediaGame'), { ssr: false });
+const WheelGame = dynamic(() => import('../games/WheelGame'), { ssr: false });
 
 export default function FunTab() {
   const [activeGame, setActiveGame] = useState<string | null>(null);
@@ -137,6 +138,14 @@ export default function FunTab() {
       level: '🟢 极低',
       hot: true,
       credit: '@ecfollower',
+    },
+    {
+      id: 'wheel',
+      name: '转转盘买股',
+      icon: '🎡',
+      level: '🟢 极低',
+      hot: true,
+      credit: '@vipdongxia',
     },
   ];
 
@@ -263,6 +272,7 @@ export default function FunTab() {
               {activeGame === 'dart' && <DartGame />}
               {activeGame === 'mole' && <MoleGame />}
               {activeGame === 'encyclopedia' && <EncyclopediaGame />}
+              {activeGame === 'wheel' && <WheelGame />}
             </div>
           </div>
         </div>
