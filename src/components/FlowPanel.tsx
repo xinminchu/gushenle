@@ -9,7 +9,8 @@ import { fmtCompactMoney } from '@/lib/currency';
 /**
  * 日线资金流向：每日资金 = 典型价 × 成交量，涨记流入、跌记流出。
  * 确定性估算，非逐笔大单数据。和筹码分布并排展示。
- * 解读口径（跟用户对齐）：看高低=谁更主动，看深浅=钱新不新，看配合=结合筹码分布。
+ * 解读口径（跟用户对齐）：环形图红绿总和=100%，一眼看买卖对比；
+ * 看占比=谁更主动，看深浅=钱新不新，看配合=结合筹码分布。
  */
 export default function FlowPanel({ symbol }: { symbol: string }) {
   const [data, setData] = useState<RhythmResponse | null>(null);
@@ -61,24 +62,15 @@ export default function FlowPanel({ symbol }: { symbol: string }) {
             </strong>
           </p>
 
-          {/* 手画稿：左右两根竖条，流入/流出，各按近5日·6-10日·11-20日分段 */}
-          <FlowBars buckets={buckets} totalIn={totalIn} totalOut={totalOut} symbol={symbol} />
+          {/* 环形图：红绿总和=100%，一眼看出买/卖谁更用力；段内深浅=钱新不新 */}
+          <FlowDonut
+            buckets={buckets}
+            totalIn={totalIn}
+            totalOut={totalOut}
+            net={result.net}
+            symbol={symbol}
+          />
           <div className="mt-1.5 mb-1.5 text-[9px] text-slate-600 leading-relaxed">
-            <p>
-              <span className="text-emerald-400 font-medium">绿柱</span>：流入的时间分布；
-              <span className="text-rose-400 font-medium">红柱</span>：流出的时间分布
-            </p>
-            <div className="flex gap-2 mt-0.5">
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-sm bg-emerald-600 inline-block" /> 近5日
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-sm bg-emerald-500 inline-block" /> 6-10日
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-sm bg-emerald-400 inline-block" /> 11-20日
-              </span>
-            </div>
             <p>颜色越深，钱越新（近5日最深）</p>
           </div>
 
@@ -93,69 +85,131 @@ export default function FlowPanel({ symbol }: { symbol: string }) {
   );
 }
 
-/** 手画稿：左右两根竖条（绿流入/红流出），各按时间段分段，段高=金额占比 */
-function FlowBars({
+/**
+ * 环形图：流入（绿）+ 流出（红）= 100%，一眼看出买卖对比。
+ * 每侧按 近5日 / 6-10日 / 11-20日 分段，颜色越深钱越新。
+ * 大软件习惯：绿=流入，红=流出。
+ */
+function FlowDonut({
   buckets,
   totalIn,
   totalOut,
+  net,
   symbol,
 }: {
   buckets: FlowBucket[];
   totalIn: number;
   totalOut: number;
+  net: number;
   symbol: string;
 }) {
-  // 大软件习惯：绿=流入，红=流出
-  const inColors = ['bg-emerald-600', 'bg-emerald-500', 'bg-emerald-400'];
-  const outColors = ['bg-rose-600', 'bg-rose-500', 'bg-rose-400'];
-
-  const bar = (isIn: boolean) => {
-    const total = isIn ? totalIn : totalOut;
-    const colors = isIn ? inColors : outColors;
-    const pcts = buckets.map((s) => {
-      const v = isIn ? s.inSum : s.outSum;
-      return total > 0 ? (v / total) * 100 : 0;
-    });
-    return (
-      <div className="flex flex-col items-center">
-        <div className="w-12 h-40 flex flex-col rounded-md overflow-hidden bg-slate-800/50">
-          {buckets.map((s, i) => {
-            const pct = pcts[i];
-            if (pct <= 0) return null;
-            return (
-              <div
-                key={s.label}
-                className={`${colors[i]} flex items-center justify-center shrink-0`}
-                style={{ height: `${pct}%` }}
-                title={`${s.label} ${isIn ? '流入' : '流出'} ${fmtCompactMoney(symbol, isIn ? s.inSum : s.outSum)}`}
-              >
-                {pct >= 16 && (
-                  <span className="text-[9px] font-semibold text-white/95 tabular-nums">
-                    {Math.round(pct)}%
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <span className={`text-[10px] mt-1 font-medium ${isIn ? 'text-emerald-300' : 'text-rose-300'}`}>
-          {isIn ? '流入' : '流出'}
-        </span>
-        <span className="text-[9px] text-slate-500 tabular-nums">
-          {fmtCompactMoney(symbol, total)}
-        </span>
-        {/* 完整百分比：每段都列出，小段标不进柱子也不省略 */}
-        <span className="text-[8px] text-slate-500 tabular-nums mt-0.5 text-center leading-tight max-w-[76px]">
-          {buckets.map((s, i) => `${s.label}${Math.round(pcts[i])}%`).join(' · ')}
-        </span>
-      </div>
-    );
-  };
+  const grand = totalIn + totalOut;
+  const R = 70;
+  const C = 2 * Math.PI * R;
+  const segs = [
+    { label: '近5日流入', short: '近5日', v: buckets[0]?.inSum ?? 0, color: '#059669' },
+    { label: '6-10日流入', short: '6-10日', v: buckets[1]?.inSum ?? 0, color: '#10b981' },
+    { label: '11-20日流入', short: '11-20日', v: buckets[2]?.inSum ?? 0, color: '#34d399' },
+    { label: '近5日流出', short: '近5日', v: buckets[0]?.outSum ?? 0, color: '#e11d48' },
+    { label: '6-10日流出', short: '6-10日', v: buckets[1]?.outSum ?? 0, color: '#f43f5e' },
+    { label: '11-20日流出', short: '11-20日', v: buckets[2]?.outSum ?? 0, color: '#fb7185' },
+  ];
+  let acc = 0;
+  const arcs = segs.map((s) => {
+    const frac = grand > 0 ? s.v / grand : 0;
+    const a = { ...s, frac, start: acc };
+    acc += frac;
+    return a;
+  });
+  const inPct = grand > 0 ? Math.round((totalIn / grand) * 100) : 0;
+  const outPct = grand > 0 ? Math.round((totalOut / grand) * 100) : 0;
 
   return (
-    <div className="flex justify-center gap-5" aria-hidden>
-      {bar(true)}
-      {bar(false)}
+    <div>
+      <div className="flex justify-center">
+        <svg viewBox="0 0 180 180" className="w-44 h-44" role="img" aria-label="资金流向环形图">
+          {arcs.map((a, i) =>
+            a.frac <= 0 ? null : (
+              <circle
+                key={i}
+                cx="90"
+                cy="90"
+                r={R}
+                fill="none"
+                stroke={a.color}
+                strokeWidth="26"
+                strokeDasharray={`${Math.max(0, a.frac * C - 2)} ${C}`}
+                strokeDashoffset={-a.start * C}
+                transform="rotate(-90 90 90)"
+              >
+                <title>{`${a.label} ${Math.round(a.frac * 100)}% · ${fmtCompactMoney(symbol, a.v)}`}</title>
+              </circle>
+            ),
+          )}
+          {/* 段内百分比：太小的段不标，图例里有全量 */}
+          {arcs.map((a, i) => {
+            if (a.frac < 0.07) return null;
+            const mid = (a.start + a.frac / 2) * 2 * Math.PI - Math.PI / 2;
+            return (
+              <text
+                key={`t${i}`}
+                x={90 + R * Math.cos(mid)}
+                y={90 + R * Math.sin(mid)}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize="10"
+                fontWeight="700"
+                fill="#ffffff"
+              >
+                {Math.round(a.frac * 100)}%
+              </text>
+            );
+          })}
+          <text x="90" y="82" textAnchor="middle" fontSize="11" fill="#94a3b8">
+            {net >= 0 ? '净流入' : '净流出'}
+          </text>
+          <text
+            x="90"
+            y="100"
+            textAnchor="middle"
+            fontSize="14"
+            fontWeight="800"
+            fill={net >= 0 ? '#6ee7b7' : '#fda4af'}
+          >
+            {fmtCompactMoney(symbol, Math.abs(net))}
+          </text>
+        </svg>
+      </div>
+
+      {/* 流入 vs 流出：金额 + 占总和比例 */}
+      <div className="flex justify-center gap-6 mt-1 text-[11px]">
+        <span className="tabular-nums">
+          <span className="text-emerald-400 font-medium">流入</span>{' '}
+          <span className="text-slate-200 font-semibold">{fmtCompactMoney(symbol, totalIn)}</span>{' '}
+          <span className="text-slate-500">{inPct}%</span>
+        </span>
+        <span className="tabular-nums">
+          <span className="text-rose-400 font-medium">流出</span>{' '}
+          <span className="text-slate-200 font-semibold">{fmtCompactMoney(symbol, totalOut)}</span>{' '}
+          <span className="text-slate-500">{outPct}%</span>
+        </span>
+      </div>
+
+      {/* 六段图例：每段金额占比（相对红绿总和），小段也不省略 */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1.5 text-[9px] text-slate-500 tabular-nums">
+        {arcs.slice(0, 3).map((a, i) => (
+          <span key={i} className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-sm inline-block" style={{ background: a.color }} />
+            {a.short}流入 {Math.round(a.frac * 100)}%
+          </span>
+        ))}
+        {arcs.slice(3).map((a, i) => (
+          <span key={i} className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-sm inline-block" style={{ background: a.color }} />
+            {a.short}流出 {Math.round(a.frac * 100)}%
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

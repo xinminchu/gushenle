@@ -710,6 +710,11 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                     {judgment.score}
                   </div>
                   <div className="text-[10px] text-slate-400">{judgment.status}</div>
+                  {judgment.statusDetail && (
+                    <div className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
+                      {judgment.statusDetail}
+                    </div>
+                  )}
                 </div>
               </div>
 

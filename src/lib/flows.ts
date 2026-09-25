@@ -48,9 +48,9 @@ export function bucketizeFlows(days: DayFlow[]): FlowBucket[] {
 /** 一句"怎么用"：行为纠偏口吻，不预测 */
 export function flowUsage(totalIn: number, totalOut: number): string {
   if (totalIn <= 0 && totalOut <= 0) return '数据不足，先不动';
-  if (totalOut > totalIn * 1.5) return '红柱高出一截：卖盘更用力，先别急着买';
-  if (totalIn > totalOut * 1.5) return '绿柱高出一截：买盘更主动，拿着的别慌着卖';
-  return '两边差不多：多空僵持，看不懂就先不动';
+  if (totalOut > totalIn * 1.5) return '红色占了一大块：卖盘更用力，先别急着买';
+  if (totalIn > totalOut * 1.5) return '绿色占了一大块：买盘更主动，拿着的别慌着卖';
+  return '红绿差不多：多空僵持，看不懂就先不动';
 }
 
 /**

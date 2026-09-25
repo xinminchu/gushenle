@@ -229,6 +229,12 @@ export interface Judgment {
   statusKey?: StatusKey;
   /** 中文展示 = STATUS_LABELS[statusKey]（数据不足时为'数据不足'） */
   status: string;
+  /**
+   * 一句话解码：把标签翻译成带数字和时间的白话，例如
+   * "近3月 +24.6% · 近1月 +3.2% · 近20天13涨7跌 · 处高位"。
+   * 标签本身太抽象（"稳着涨是啥意思？"），这行负责让它落地。
+   */
+  statusDetail: string;
   advice: string;
   pos: number;
   trend: number;
@@ -315,6 +321,36 @@ export function adviceWithPosition(
   return advice;
 }
 
+const fmtSignedPct = (v: number): string =>
+  `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}%`;
+
+/**
+ * 状态解码行：用数字和时间把大白话标签翻译成人能看懂的话。
+ * 回答三个问题：这段时间涨/跌了多少（近3月锚定窗口 + 近1月看 pace）、
+ * 是天天涨还是一半一半（近20天涨跌天数）、现在处在什么位置。
+ * 纯函数，确定性。
+ */
+export function describeStatus(closes: number[], pos: number): string {
+  const n = closes.length;
+  if (n < 2) return '';
+  const winPct = (w: number[]): number =>
+    w[0] > 0 ? ((w[w.length - 1] - w[0]) / w[0]) * 100 : 0;
+  const longWin = closes.slice(-66);
+  const longLabel = n >= 66 ? '近3月' : `近${longWin.length}天`;
+  const parts: string[] = [`${longLabel} ${fmtSignedPct(winPct(longWin))}`];
+  if (n >= 22) parts.push(`近1月 ${fmtSignedPct(winPct(closes.slice(-22)))}`);
+  const tail = closes.slice(-21); // 20 个涨跌
+  let up = 0;
+  let down = 0;
+  for (let i = 1; i < tail.length; i++) {
+    if (tail[i] > tail[i - 1]) up++;
+    else if (tail[i] < tail[i - 1]) down++;
+  }
+  parts.push(`近${tail.length - 1}天${up}涨${down}跌`);
+  parts.push(pos >= 90 ? '处高位' : pos <= 10 ? '处低位' : '处中部');
+  return parts.join(' · ');
+}
+
 /** 基于全量日线做主判断（锚定近 3 月；阈值按最新 trailing 波动率自适应） */
 export function buildJudgment(closes: number[]): Judgment {
   const s = closes.length > 0 ? scoreAt(closes, closes.length - 1) : null;
@@ -324,6 +360,7 @@ export function buildJudgment(closes: number[]): Judgment {
     return {
       score: 50,
       status: '数据不足',
+      statusDetail: '',
       advice: '上市时间较短，暂无足够数据做出判断。',
       pos: 50,
       trend: 50,
@@ -339,6 +376,7 @@ export function buildJudgment(closes: number[]): Judgment {
     ...s,
     statusKey,
     status: STATUS_LABELS[statusKey],
+    statusDetail: describeStatus(closes, s.pos),
     advice,
     overheated,
     anchorRange: ANCHOR_RANGE_ID,
