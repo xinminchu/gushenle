@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserRound, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -8,6 +8,7 @@ import { useNickname } from '@/hooks/useNickname';
 import { isAdminEmail, getAdminRole, ADMIN_ROLE_LABEL } from '@/lib/admin';
 import LoginModal from './modals/LoginModal';
 import AdminToolsModal from './modals/AdminToolsModal';
+import { OPEN_LOGIN_EVENT } from './games/LoginNudge';
 
 /** 全页面共用顶栏：不论底部切到哪个 tab（今日/持仓/记忆/资讯/娱乐）都显示
  *  Logo 中英常驻；下方一条 slogan 横幅，一行中文，不折行 */
@@ -16,6 +17,13 @@ export default function AppHeader() {
   const { lang, setLang, t } = useLanguage();
   const [loginOpen, setLoginOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+
+  // 各处（登录提示横幅等）可派发 OPEN_LOGIN_EVENT 打开登录弹窗
+  useEffect(() => {
+    const open = () => setLoginOpen(true);
+    window.addEventListener(OPEN_LOGIN_EVENT, open);
+    return () => window.removeEventListener(OPEN_LOGIN_EVENT, open);
+  }, []);
 
   const shortName = useNickname(user?.email);
   const isAdmin = isAdminEmail(user?.email);

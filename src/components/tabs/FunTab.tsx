@@ -4,9 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Flame, X, Trophy } from 'lucide-react';
 import { loadStats, recordPlay, recordSession, GAME_ICONS, type GameId, type GameStat } from '@/lib/gameStats';
-import { useAuth } from '@/context/AuthContext';
 import WishPool from '../games/WishPool';
 import Leaderboard from '../games/Leaderboard';
+import LoginNudge from '../games/LoginNudge';
 
 // 游戏按需加载：点开哪个才下载哪个，不拖慢首页
 const ClipperGame = dynamic(() => import('../games/ClipperGame'), { ssr: false });
@@ -29,7 +29,6 @@ const DrunkardGame = dynamic(() => import('../games/DrunkardGame'), { ssr: false
 export default function FunTab() {
   const [activeGame, setActiveGame] = useState<string | null>(null);
   const [stats, setStats] = useState<Record<GameId, GameStat> | null>(null);
-  const { user } = useAuth();
   const wishPoolRef = useRef<HTMLDivElement>(null);
 
   // 打开游戏即记一次游玩（统一口径）
@@ -215,13 +214,10 @@ export default function FunTab() {
         <p className="text-xs text-slate-400 mt-0.5">
           随时想解压、想玩盲盒时点进来，建立理性投资心态
         </p>
-        {!user && (
-          <p className="text-[11px] text-amber-400/90 mt-1.5 flex items-center gap-1">
-            <Trophy className="w-3 h-3 shrink-0" />
-            游客模式：分数只保存在这台设备，登录后跟你走
-          </p>
-        )}
       </header>
+
+      {/* 🌱 登录提示：未登录才出现，卖的是"所有权"不是"登录功能" */}
+      <LoginNudge />
 
       {/* 🏆 英雄榜：全站次数/总分/排行 */}
       <Leaderboard />
