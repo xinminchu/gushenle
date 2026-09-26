@@ -13,6 +13,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Radar,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { REPLY_DRAFTS } from '@/lib/replyDrafts';
@@ -30,9 +31,9 @@ interface RunResult {
   error?: string;
 }
 
-type Tab = 'migrate' | 'reply';
+type Tab = 'migrate' | 'reply' | 'scan';
 
-/** 站长专属工具箱：数据库迁移 + Mas 回复草稿轮盘 */
+/** 站长专属工具箱：数据库迁移 + Mas 回复草稿轮盘 + 市场扫描 */
 export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>('migrate');
   return (
@@ -59,6 +60,15 @@ export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
               <Sparkles className="w-4 h-4 text-sky-400" />
               回复草稿
             </button>
+            <button
+              onClick={() => setTab('scan')}
+              className={`flex items-center gap-1.5 text-sm font-semibold px-2.5 py-1.5 rounded-lg ${
+                tab === 'scan' ? 'text-slate-100 bg-slate-800' : 'text-slate-500'
+              }`}
+            >
+              <Radar className="w-4 h-4 text-amber-400" />
+              市场扫描
+            </button>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-300 p-1">
             <X className="w-4 h-4" />
@@ -66,7 +76,13 @@ export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="px-4 py-3 overflow-y-auto">
-          {tab === 'migrate' ? <MigratePane /> : <ReplyDraftsPane />}
+          {tab === 'migrate' ? (
+            <MigratePane />
+          ) : tab === 'reply' ? (
+            <ReplyDraftsPane />
+          ) : (
+            <ScanPane />
+          )}
         </div>
       </div>
     </div>
@@ -353,6 +369,89 @@ function ReplyDraftsPane() {
       </button>
       <p className="text-[11px] text-slate-500 leading-relaxed">
         复制后去娱乐页许愿池，点对应留言下的「回复」粘贴发布。草稿不会自动发出，发哪条、发不发都由你亲手决定。
+      </p>
+    </div>
+  );
+}
+
+/* ---------------- 市场扫描 ---------------- */
+
+/**
+ * 手动触发全市场扫描：每天收盘后有定时任务自动跑，
+ * 这里是手动补跑/立即刷新用。分片循环调用直到 done。
+ */
+function ScanPane() {
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState('');
+  const [result, setResult] = useState('');
+  const [error, setError] = useState('');
+
+  async function run() {
+    setRunning(true);
+    setResult('');
+    setError('');
+    setProgress('开始…');
+    try {
+      const { data } = await supabase!.auth.getSession();
+      const tk = data.session?.access_token ?? '';
+      let offset = 0;
+      let total = 0;
+      let scanned = 0;
+      for (;;) {
+        const res = await fetch('/api/admin/market-scan', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            Authorization: `Bearer ${tk}`,
+          },
+          body: JSON.stringify({ offset, limit: 8 }),
+        });
+        const j = await res.json().catch(() => null);
+        if (!res.ok || !j?.ok) throw new Error((j && j.error) || `扫描失败（${res.status}）`);
+        total = j.total;
+        scanned += j.scanned;
+        offset += j.limit;
+        setProgress(`已扫 ${scanned}/${total} 只…`);
+        if (j.done) break;
+        await new Promise((r) => setTimeout(r, 1200));
+      }
+      setProgress('');
+      setResult(`✓ 扫描完成，共 ${scanned}/${total} 只，首页「今日信号」已更新`);
+    } catch (e) {
+      setProgress('');
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-slate-400 leading-relaxed">
+        每天美股收盘后自动扫描精选池（律动分/信号/涨跌/昨日估算资金流），
+        结果供首页「今日信号」和盘前盘后两报使用。这里可手动立即跑一次。
+      </p>
+      {progress && <p className="text-xs text-sky-300 text-center py-2">{progress}</p>}
+      {result && (
+        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-300 leading-relaxed">
+          {result}
+        </div>
+      )}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-xs text-red-300 leading-relaxed break-words">
+          {error}
+        </div>
+      )}
+      <button
+        onClick={run}
+        disabled={running}
+        className="w-full bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-semibold rounded-xl py-2.5 flex items-center justify-center gap-2 active:scale-[0.98] transition"
+      >
+        <Play className="w-4 h-4" />
+        {running ? '扫描中…' : '运行一次全市场扫描'}
+      </button>
+      <p className="text-[11px] text-slate-500 leading-relaxed">
+        约 200 只股票，分片依次扫描，需要几分钟，请勿关闭弹窗。
       </p>
     </div>
   );

@@ -28,6 +28,7 @@ import { saveOperation, todayStr, type OpAction } from '@/lib/operations';
 import { loadPositions } from '@/lib/positions';
 import { useColorScheme, schemeLabel, upText, downText } from '@/lib/colorScheme';
 import { useLanguage } from '@/context/LanguageContext';
+import MarketSignalBoard from './MarketSignalBoard';
 import {
   findSwing,
   fibLevels,
@@ -433,6 +434,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
 
   return (
     <div className="w-full space-y-4">
+      {/* 今日信号：全市场扫描的两行（涨太猛了/跌过头了），点一只直接看它的诊断 */}
+      <MarketSignalBoard
+        onPick={(s) => {
+          setSymbol(s);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
       {/* 标题 + 自选管理 + 标的选择 */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">

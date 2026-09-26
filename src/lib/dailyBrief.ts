@@ -61,6 +61,7 @@ export interface PreBrief {
   ups: BriefStock[];
   downs: BriefStock[];
   line: string;
+  market?: MarketScanSummary | null;
 }
 
 export interface PostBrief {
@@ -68,11 +69,37 @@ export interface PostBrief {
   downs: BriefStock[];
   changes: SignalChange[];
   line: string;
+  market?: MarketScanSummary | null;
+}
+
+/** 全市场扫描摘要（/api/market-scan 返回，供两报的大盘/全市场行用） */
+export interface ScanMini {
+  symbol: string;
+  name: string;
+  score: number;
+  statusKey: StatusKey | '';
+  changePct: number | null;
+  inflowEst: number | null;
+}
+
+export interface MarketScanSummary {
+  scanDate: string;
+  total: number;
+  hotCount: number;
+  coldCount: number;
+  qqq: ScanMini | null;
+  spy: ScanMini | null;
+  inflowTop: ScanMini[];
+  outflowTop: ScanMini[];
 }
 
 const byChange = (a: BriefStock, b: BriefStock) => (b.changePct ?? -Infinity) - (a.changePct ?? -Infinity);
 
-export function buildPreBrief(stocks: BriefStock[], eventsToday: CalEvent[]): PreBrief {
+export function buildPreBrief(
+  stocks: BriefStock[],
+  eventsToday: CalEvent[],
+  market?: MarketScanSummary | null,
+): PreBrief {
   const sorted = [...stocks].sort(byChange);
   const ups = sorted.filter((s) => (s.changePct ?? 0) > 0).slice(0, 2);
   const downs = sorted.filter((s) => (s.changePct ?? 0) < 0).slice(-1);
@@ -86,10 +113,14 @@ export function buildPreBrief(stocks: BriefStock[], eventsToday: CalEvent[]): Pr
   } else {
     line = '今日无重磅日程，安心看盘';
   }
-  return { eventsToday, ups, downs, line };
+  return { eventsToday, ups, downs, line, market: market ?? null };
 }
 
-export function buildPostBrief(stocks: BriefStock[], changes: SignalChange[]): PostBrief {
+export function buildPostBrief(
+  stocks: BriefStock[],
+  changes: SignalChange[],
+  market?: MarketScanSummary | null,
+): PostBrief {
   const sorted = [...stocks].sort(byChange);
   const ups = sorted.filter((s) => (s.changePct ?? 0) > 0).slice(0, 3);
   const downs = sorted.filter((s) => (s.changePct ?? 0) < 0).slice(-3);
@@ -104,7 +135,7 @@ export function buildPostBrief(stocks: BriefStock[], changes: SignalChange[]): P
   } else if (weak.length > 0) {
     line = `${weak.map((c) => c.symbol).join('、')}还在往下跌，不接飞刀`;
   }
-  return { ups, downs, changes, line };
+  return { ups, downs, changes, line, market: market ?? null };
 }
 
 export const zhStatus = (k: StatusKey | ''): string => (k ? STATUS_LABELS[k] : '—');

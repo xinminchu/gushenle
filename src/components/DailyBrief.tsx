@@ -15,7 +15,10 @@ import {
   type PreBrief,
   type PostBrief,
   type SignalChange,
+  type MarketScanSummary,
+  type ScanMini,
 } from '@/lib/dailyBrief';
+import { fmtCompactMoney } from '@/lib/currency';
 
 const SNAP_KEY = 'gushenle:brief-snapshot:v1';
 
@@ -43,6 +46,7 @@ export default function DailyBrief() {
   const [stocks, setStocks] = useState<BriefStock[] | null>(null);
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [changes, setChanges] = useState<SignalChange[]>([]);
+  const [market, setMarket] = useState<MarketScanSummary | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -71,6 +75,37 @@ export default function DailyBrief() {
         /* 财报拿不到不影响 */
       }
       if (alive) setEvents([...staticEvts, ...earningEvts]);
+
+      // 全市场扫描：大盘 + 全市场信号统计 + 昨日资金异动（读批处理表，不实时算）
+      try {
+        const mr = await fetch('/api/market-scan');
+        const mj = await mr.json();
+        if (mj.ok && !mj.empty && alive) {
+          const mini = (x: unknown): ScanMini | null =>
+            x
+              ? {
+                  symbol: (x as ScanMini).symbol,
+                  name: (x as ScanMini).name,
+                  score: (x as ScanMini).score,
+                  statusKey: (x as ScanMini).statusKey || '',
+                  changePct: (x as ScanMini).changePct,
+                  inflowEst: (x as ScanMini).inflowEst,
+                }
+              : null;
+          setMarket({
+            scanDate: mj.scanDate,
+            total: mj.total,
+            hotCount: mj.counts?.overheated ?? 0,
+            coldCount: mj.counts?.oversoldBottom ?? 0,
+            qqq: mini(mj.qqq),
+            spy: mini(mj.spy),
+            inflowTop: (mj.inflowTop || []).map(mini).filter(Boolean) as ScanMini[],
+            outflowTop: (mj.outflowTop || []).map(mini).filter(Boolean) as ScanMini[],
+          });
+        }
+      } catch {
+        /* 扫描表没数据就不显示全市场行 */
+      }
 
       // 每只自选：最近交易日涨跌 + 律动信号（走共享缓存）
       const list: BriefStock[] = [];
@@ -139,12 +174,12 @@ export default function DailyBrief() {
   }, []);
 
   const pre: PreBrief | null = useMemo(
-    () => (stocks ? buildPreBrief(stocks, events) : null),
-    [stocks, events],
+    () => (stocks ? buildPreBrief(stocks, events, market) : null),
+    [stocks, events, market],
   );
   const post: PostBrief | null = useMemo(
-    () => (stocks ? buildPostBrief(stocks, changes) : null),
-    [stocks, changes],
+    () => (stocks ? buildPostBrief(stocks, changes, market) : null),
+    [stocks, changes, market],
   );
   const barDate = useMemo(() => {
     if (!stocks || stocks.length === 0) return '';
@@ -202,6 +237,24 @@ export default function DailyBrief() {
                 {[...pre.ups, ...pre.downs].map((s) => <Mover key={s.symbol} s={s} />)}
               </div>
             )}
+            {pre.market && (
+              <div className="space-y-1.5 pt-0.5">
+                {(pre.market.qqq || pre.market.spy) && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-slate-500 shrink-0">大盘</span>
+                    {[pre.market.qqq, pre.market.spy].filter(Boolean).map((m) => (
+                      <IndexChip key={m!.symbol} m={m!} />
+                    ))}
+                  </div>
+                )}
+                <p className="text-slate-400">
+                  📡 全市场扫描（{pre.market.total}只）：{pre.market.hotCount}只
+                  <span className="text-amber-300">「涨太猛了」</span>，
+                  {pre.market.coldCount}只
+                  <span className="text-sky-300">「跌过头了」</span>
+                </p>
+              </div>
+            )}
             <p className="text-amber-200/90">💡 {pre.line}</p>
           </div>
         )}
@@ -252,6 +305,29 @@ export default function DailyBrief() {
                 </ul>
               )}
             </div>
+            {post.market && (post.market.inflowTop.length > 0 || post.market.outflowTop.length > 0) && (
+              <div className="space-y-1.5">
+                <p className="text-slate-500">
+                  💸 昨日资金异动<span className="text-slate-600">（日线估算，非逐笔）</span>
+                </p>
+                {post.market.inflowTop.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-slate-500 shrink-0">流入</span>
+                    {post.market.inflowTop.map((m) => (
+                      <FlowChip key={m.symbol} m={m} dir={1} />
+                    ))}
+                  </div>
+                )}
+                {post.market.outflowTop.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-slate-500 shrink-0">流出</span>
+                    {post.market.outflowTop.map((m) => (
+                      <FlowChip key={m.symbol} m={m} dir={-1} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <p className="text-amber-200/90">💡 {post.line}</p>
           </div>
         )}
@@ -271,6 +347,37 @@ function Mover({ s }: { s: BriefStock }) {
       }`}
     >
       {s.symbol} {up ? '+' : ''}{s.changePct}%
+    </span>
+  );
+}
+
+/** 大盘 chip：指数 + 大白话信号 */
+function IndexChip({ m }: { m: ScanMini }) {
+  const up = (m.changePct ?? 0) > 0;
+  return (
+    <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-slate-700 bg-slate-800/60 text-slate-300 tabular-nums">
+      {m.symbol} · {zhStatus(m.statusKey)}
+      {m.changePct != null && (
+        <span className={up ? 'text-emerald-300' : 'text-rose-300'}>
+          {' '}{up ? '+' : ''}{m.changePct}%
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** 资金异动 chip：估算净流入/流出 */
+function FlowChip({ m, dir }: { m: ScanMini; dir: 1 | -1 }) {
+  const amt = m.inflowEst != null ? fmtCompactMoney(m.symbol, Math.abs(m.inflowEst)) : '—';
+  return (
+    <span
+      className={`text-[10px] px-1.5 py-0.5 rounded-full border tabular-nums ${
+        dir === 1
+          ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+          : 'text-rose-300 border-rose-500/30 bg-rose-500/10'
+      }`}
+    >
+      {m.symbol} {dir === 1 ? '净流入' : '净流出'} {amt}
     </span>
   );
 }
