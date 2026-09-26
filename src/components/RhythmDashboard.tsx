@@ -164,6 +164,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   // 区间横滑条的滚动位置：切区间/切股票重渲染时保持，不回到最左
   const rangeBarRef = useRef<HTMLDivElement | null>(null);
   const rangeScrollPos = useRef(0);
+  /** 价格走势卡锚点：信号牌点一只股票后滚到这里 */
+  const priceChartRef = useRef<HTMLDivElement | null>(null);
   useLayoutEffect(() => {
     const el = rangeBarRef.current;
     if (el && el.scrollLeft !== rangeScrollPos.current) {
@@ -441,11 +443,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
 
   return (
     <div className="w-full space-y-4">
-      {/* 今日信号：全市场扫描的两行（涨太猛了/跌过头了），点一只直接看它的诊断 */}
+      {/* 今日信号：全市场扫描的三行（涨太猛了/看一眼/跌过头了），点一只直接看它的价格走势 */}
       <MarketSignalBoard
         onPick={(s) => {
           setSymbol(s);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          requestAnimationFrame(() => {
+            priceChartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
         }}
       />
       {/* 标题 + 自选管理 + 标的选择 */}
@@ -659,6 +663,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
         </div>
       </div>
 
+      {/* 价格走势区（loading 骨架与图表共用锚点，保证点选股票时总能滚到） */}
+      <div ref={priceChartRef} className="scroll-mt-20">
       {loading ? (
         <div className="space-y-4">
           <div className="h-44 bg-slate-900 border border-slate-800 rounded-xl flex flex-col items-center justify-center gap-3">
@@ -1116,6 +1122,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
           )}
         </div>
       )}
+      </div>{/* 价格走势区锚点结束 */}
 
       {/* 沉思乐：涨太猛了时点击诊断卡弹出的冷静拦截（看持仓说话） */}
       {showZenModal && data && judgment && (

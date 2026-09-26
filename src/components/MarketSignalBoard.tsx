@@ -6,7 +6,7 @@ import { useLanguage } from '@/context/LanguageContext';
 /** 首页三行的大白话标题（用户定版；中间行名字暂定） */
 const HOT_LABEL = '涨得欢';
 const MIDDLE_LABEL = '看一眼';
-const FIND_LABEL = '姿态低';
+const COLD_LABEL = '跌得凶';
 
 interface ScanItem {
   symbol: string;
@@ -22,15 +22,15 @@ interface ScanPayload {
   scanDate?: string;
   hot?: ScanItem[];
   middle?: ScanItem[];
-  find?: ScanItem[];
+  cold?: ScanItem[];
 }
 
 /**
  * 首页「今日信号」：每天收盘后批处理扫精选池，摆三行
- * 🔥 涨得欢：冲高过热，按分从高到低前 5 —— 别追，当心有套
- * 👀 看一眼：|综合分-50| 最小的前 5（离两头都远）—— 中间行名字暂定
- * 🙇 姿态低：律动分≤30 且 昨天跌 —— 当天涨标「反弹」，还跌标「连跌」—— 忍住，小心脚滑（待看真实数据再定位）
- * 只展示数据 + 大白话，三行都是状态描述，不做买入推荐。
+ * 🔥 涨得欢：冲高过热，按分从高到低前 5 —— 别追，当心有套（栏杆，淡红底）
+ * 👀 看一眼：|综合分-50| 最小的前 5（离两头都远）—— 中间行名字暂定（淡绿底，观察中）
+ * 🥶 跌得凶：模型判定跌过头了，按分从低到高前 5 —— 慎出，不卖飞（栏杆，淡红底）
+ * 不展示律动分；点一只直接跳到它的价格走势。只展示数据 + 大白话，不做买入推荐。
  */
 export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string) => void }) {
   const { lang } = useLanguage();
@@ -53,14 +53,19 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
   if (
     !data ||
     !data.hot ||
-    (data.hot.length === 0 && (data.middle || []).length === 0 && (data.find || []).length === 0)
+    (data.hot.length === 0 && (data.middle || []).length === 0 && (data.cold || []).length === 0)
   ) {
     return null;
   }
   const md = data.scanDate || '';
 
-  const row = (items: ScanItem[], label: string, sub?: string) => (
-    <div className="mb-2 last:mb-0">
+  // tone: 上下两行是栏杆（淡红底），中间行观察区（淡绿底）
+  const row = (items: ScanItem[], label: string, sub: string | undefined, tone: 'red' | 'green') => (
+    <div
+      className={`mb-2 last:mb-0 rounded-lg border px-2 py-2 ${
+        tone === 'red' ? 'bg-red-950/50 border-red-900/50' : 'bg-green-950/40 border-green-900/50'
+      }`}
+    >
       <div className="mb-1.5">
         <span className="text-xs font-semibold text-slate-200">{label}</span>
         {sub && <span className="text-[10px] text-slate-500 ml-1.5">{sub}</span>}
@@ -76,9 +81,6 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
             >
               <div className="text-[11px] font-bold text-slate-100 leading-tight">{s.symbol}</div>
               <div className="text-[9px] text-slate-500 leading-tight truncate">{s.name}</div>
-              <div className="text-[10px] text-amber-300 font-semibold tabular-nums mt-0.5">
-                {s.score}分
-              </div>
               {s.pattern && (
                 <div
                   className={`text-[9px] leading-tight mt-0.5 ${
@@ -116,19 +118,25 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
         <span className="text-[10px] text-slate-500">{en ? 'data only' : '只摆数据·仅供参考'}</span>
       </div>
       {data.hot.length > 0 &&
-        row(data.hot, `🔥 ${HOT_LABEL}`, en ? 'don\u2019t chase, avoid getting trapped' : '别追，当心有套')}
-      {(data.middle || []).length > 0 &&
-        row(data.middle || [], `👀 ${MIDDLE_LABEL}`, en ? 'closest to score 50' : '离50分最近')}
-      {(data.find || []).length > 0 &&
         row(
-          data.find || [],
-          `🙇 ${FIND_LABEL}`,
-          en ? 'score ≤ 30, down yesterday · hold back, watch your step' : '分≤30 · 昨天跌 · 忍住，小心脚滑',
+          data.hot,
+          `🔥 ${HOT_LABEL}`,
+          en ? 'don\u2019t chase, avoid getting trapped' : '别追，当心有套',
+          'red',
+        )}
+      {(data.middle || []).length > 0 &&
+        row(data.middle || [], `👀 ${MIDDLE_LABEL}`, en ? 'closest to score 50' : '离50分最近', 'green')}
+      {(data.cold || []).length > 0 &&
+        row(
+          data.cold || [],
+          `🥶 ${COLD_LABEL}`,
+          en ? 'oversold, don\u2019t sell the bottom' : '跌过头了 · 慎出，不卖飞',
+          'red',
         )}
       <div className="mt-2 text-[10px] leading-relaxed text-slate-500">
         {en
-          ? '📌 Hot: be cautious entering, don\u2019t get trapped at the top; Low: be cautious exiting, don\u2019t sell the bottom; Take a look: far from both extremes — all three describe conditions, you make your own calls.'
-          : '📌 涨得欢：慎入，防套牢；姿态低：慎出，不卖飞；看一眼：离两头都远——三行都是状态，买卖自己定。'}
+          ? '📌 Hot: be cautious entering, don\u2019t get trapped at the top; Oversold: be cautious exiting, don\u2019t sell the bottom; Take a look: far from both extremes — all three describe conditions, you make your own calls.'
+          : '📌 涨得欢：慎入，防套牢；跌得凶：慎出，不卖飞；看一眼：离两头都远——三行都是状态，买卖自己定。'}
       </div>
     </div>
   );

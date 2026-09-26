@@ -1,5 +1,5 @@
 // src/app/api/market-scan/route.ts
-// 公开读：最新一次扫描的结果 + 汇总。首页「今日信号」两行、盘前盘后两报都走这里。
+// 公开读：最新一次扫描的结果 + 汇总。首页「今日信号」三行、盘前盘后两报都走这里。
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -94,31 +94,18 @@ export async function GET(req: Request) {
       .filter((i) => i.statusKey === 'overheated')
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
-    // 第三行：姿态低 —— 律动分≤30 且 昨天跌；
-    // 当天涨=反弹（已有买盘，排前面），当天还跌=连跌；同类按分从低到高
-    const LOW_SCORE = 30;
-    const find = items
-      .filter(
-        (i) =>
-          i.score <= LOW_SCORE &&
-          i.prevChangePct != null &&
-          i.prevChangePct < 0 &&
-          i.changePct != null &&
-          i.changePct !== 0,
-      )
-      .map((i) => ({ ...i, pattern: (i.changePct as number) > 0 ? ('rebound' as const) : ('streak' as const) }))
-      .sort((a, b) => {
-        if (a.pattern !== b.pattern) return a.pattern === 'rebound' ? -1 : 1;
-        return a.score - b.score;
-      })
+    // 第三行：跌得凶 —— 模型判定跌过头了（oversoldBottom），按分从低到高取 5
+    const cold = items
+      .filter((i) => i.statusKey === 'oversoldBottom')
+      .sort((a, b) => a.score - b.score)
       .slice(0, 5);
 
     // 第二行：看一眼 —— 离两头都远：|综合分-50| 最小的 5 只；
-    // 涨得欢/姿态低里已占的不重复出现
+    // 涨得欢/跌得凶里已占的不重复出现
     const hotSymbols = new Set(hot.map((h) => h.symbol));
-    const findSymbols = new Set(find.map((f) => f.symbol));
+    const coldSymbols = new Set(cold.map((c) => c.symbol));
     const middle = items
-      .filter((i) => !hotSymbols.has(i.symbol) && !findSymbols.has(i.symbol))
+      .filter((i) => !hotSymbols.has(i.symbol) && !coldSymbols.has(i.symbol))
       .sort((a, b) => Math.abs(a.score - 50) - Math.abs(b.score - 50) || b.score - a.score)
       .slice(0, 5);
 
@@ -139,7 +126,7 @@ export async function GET(req: Request) {
       total: items.length,
       hot,
       middle,
-      find,
+      cold,
       qqq: idx('QQQ'),
       spy: idx('SPY'),
       inflowTop,
