@@ -11,4 +11,9 @@ export interface ReplyDraft {
   text: string;
 }
 
-export const REPLY_DRAFTS: ReplyDraft[] = [];
+export const REPLY_DRAFTS: ReplyDraft[] = [
+  {
+    label: '猜碗选股（@路过）',
+    text: '路过兄这想法绝了——把街头猜碗的戏法搬进股市，碗一开不只是涨跌，还附赠这家公司的"相亲简历"😎「猜碗选股」已上线，tile 上有你的署名！贡献值+50已到账，请查收～',
+  },
+];

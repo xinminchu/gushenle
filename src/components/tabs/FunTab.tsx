@@ -19,6 +19,7 @@ const NewsTrapGame = dynamic(() => import('../games/NewsTrapGame'), { ssr: false
 const DcaGame = dynamic(() => import('../games/DcaGame'), { ssr: false });
 const DartGame = dynamic(() => import('../games/DartGame'), { ssr: false });
 const MoleGame = dynamic(() => import('../games/MoleGame'), { ssr: false });
+const BowlGame = dynamic(() => import('../games/BowlGame'), { ssr: false });
 const EncyclopediaGame = dynamic(() => import('../games/EncyclopediaGame'), { ssr: false });
 const WheelGame = dynamic(() => import('../games/WheelGame'), { ssr: false });
 
@@ -147,6 +148,14 @@ export default function FunTab() {
       hot: true,
       credit: '@vipdongxia',
     },
+    {
+      id: 'bowl',
+      name: '猜碗选股',
+      icon: '🥣',
+      level: '🟢 极低',
+      hot: true,
+      credit: '@路过',
+    },
   ];
 
   const getGameTitle = (id: string | null) => {
@@ -273,6 +282,7 @@ export default function FunTab() {
               {activeGame === 'mole' && <MoleGame />}
               {activeGame === 'encyclopedia' && <EncyclopediaGame />}
               {activeGame === 'wheel' && <WheelGame />}
+              {activeGame === 'bowl' && <BowlGame />}
             </div>
           </div>
         </div>

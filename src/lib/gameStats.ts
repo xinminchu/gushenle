@@ -23,7 +23,8 @@ export type GameId =
   | 'dart'
   | 'mole'
   | 'encyclopedia'
-  | 'wheel';
+  | 'wheel'
+  | 'bowl';
 
 export interface GameStat {
   plays: number;
@@ -47,6 +48,7 @@ export const GAME_NAMES: Record<GameId, string> = {
   mole: '高管打地鼠',
   encyclopedia: '股票大百科',
   wheel: '转转盘买股',
+  bowl: '猜碗选股',
 };
 
 const emptyStat = (): GameStat => ({ plays: 0, totalScore: 0, best: 0, banked: 0 });
@@ -65,6 +67,7 @@ function blank(): Record<GameId, GameStat> {
     mole: emptyStat(),
     encyclopedia: emptyStat(),
     wheel: emptyStat(),
+    bowl: emptyStat(),
   };
 }
 

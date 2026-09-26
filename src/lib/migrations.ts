@@ -438,6 +438,38 @@ create policy "market_scan 公开读"
 `,
   },
   {
+    version: "021_game_stats_bowl",
+    name: "游戏战绩表：放宽 game_id 约束到 13 个游戏（含猜碗选股）",
+    sql: `-- 021_game_stats_bowl.sql
+-- 放宽 game_stats.game_id 的检查约束：加入「猜碗选股」（bowl），共 13 个游戏。
+-- 在 Supabase Dashboard -> SQL Editor 中执行一次即可，
+-- 或用站内「管理」→ 数据库迁移一键执行。
+
+alter table public.game_stats drop constraint if exists game_stats_game_id_check;
+alter table public.game_stats add constraint game_stats_game_id_check
+  check (game_id in (
+    'clipper', 'cool30', 'bigtech', 'kline',
+    'cutloss', 'holdback', 'newstrap', 'dca', 'dart', 'mole',
+    'encyclopedia', 'wheel', 'bowl'
+  ));
+`,
+  },
+  {
+    version: "022_bowl_wish_adopted",
+    name: "许愿池：采纳 @路过 的猜碗设想（+40 奖励分）",
+    sql: `-- 022_bowl_wish_adopted.sql
+-- 许愿池：采纳 @路过 的"三个碗猜股票"设想，「猜碗选股」已开发上线。
+-- 置 adopted=true，采纳奖励 +40（bonus_points），许愿本身 +10，合计 50。
+-- 公开回复不随迁移自动写：草稿在站长工具箱「回复草稿」里，站长过目后亲手发布。
+-- 在 Supabase Dashboard -> SQL Editor 中执行一次即可，
+-- 或用站内「管理」→ 数据库迁移一键执行。
+
+update public.game_wishes
+  set adopted = true, bonus_points = 40
+  where nickname = '路过' and content like '%三个碗%' and adopted is not true;
+`,
+  },
+  {
     version: "020_market_scan_prev_change",
     name: "市场扫描表加前日涨跌幅（低分捡漏用）",
     sql: `-- 020_market_scan_prev_change.sql
