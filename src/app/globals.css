@@ -39,3 +39,28 @@ nav {
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
 }
+/* 页头 slogan：四句轮流点亮。纯 CSS 动画，零网络请求，不占流量；
+   尊重系统的"减少动态效果"设置 */
+@keyframes slogan-glow {
+  0%, 100% {
+    color: #475569;
+    text-shadow: 0 0 0 transparent;
+  }
+  6%, 24% {
+    color: #fcd34d;
+    text-shadow: 0 0 14px rgba(252, 211, 77, 0.5);
+  }
+  34% {
+    color: #475569;
+    text-shadow: 0 0 0 transparent;
+  }
+}
+.slogan-phrase {
+  animation: slogan-glow 8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .slogan-phrase {
+    animation: none;
+    color: #cbd5e1;
+  }
+}

@@ -9,6 +9,7 @@ import { isAdminEmail, getAdminRole, ADMIN_ROLE_LABEL } from '@/lib/admin';
 import { setNickname, updateMyPostsNickname } from '@/lib/family';
 import LoginModal from './modals/LoginModal';
 import AdminToolsModal from './modals/AdminToolsModal';
+import WorldClock from './WorldClock';
 import { OPEN_LOGIN_EVENT } from './games/LoginNudge';
 
 /** 全页面共用顶栏：不论底部切到哪个 tab（今日/持仓/记忆/资讯/娱乐）都显示
@@ -185,10 +186,25 @@ export default function AppHeader() {
           </div>
         </header>
       </div>
-      {/* slogan 横幅：一行中文，不折行 */}
+      {/* slogan 横幅：双时钟 + 四句轮流点亮（纯 CSS/本地计时，零网络请求） */}
       <div className="border-y border-slate-800/80 bg-slate-900/40">
-        <p className="px-4 py-2 text-center text-[12px] text-slate-300 tracking-wide whitespace-nowrap overflow-hidden">
-          快乐炒股 <span className="text-slate-600 mx-0.5">·</span> 轻松投资 <span className="text-slate-600 mx-0.5">·</span> 不赌不堵 <span className="text-slate-600 mx-0.5">·</span> 不气不弃
+        <WorldClock />
+        <p className="px-4 pb-2 pt-1 text-center text-[12px] tracking-wide whitespace-nowrap overflow-hidden">
+          <span className="slogan-phrase" style={{ animationDelay: '0s' }}>
+            快乐炒股
+          </span>
+          <span className="text-slate-700 mx-0.5">·</span>
+          <span className="slogan-phrase" style={{ animationDelay: '2s' }}>
+            轻松投资
+          </span>
+          <span className="text-slate-700 mx-0.5">·</span>
+          <span className="slogan-phrase" style={{ animationDelay: '4s' }}>
+            不赌不堵
+          </span>
+          <span className="text-slate-700 mx-0.5">·</span>
+          <span className="slogan-phrase" style={{ animationDelay: '6s' }}>
+            不气不弃
+          </span>
         </p>
       </div>
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} />}
