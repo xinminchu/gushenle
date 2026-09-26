@@ -46,7 +46,7 @@ export default function FlowPanel({ symbol }: { symbol: string }) {
           日线估算
         </span>
       </div>
-      <p className="text-[10px] text-slate-500 mt-1 mb-2">20天里，买的人和卖的人谁更用力</p>
+      <p className="text-[10px] text-slate-500 mt-1 mb-2">20天里买的人和卖的人谁更用力</p>
 
       {data == null ? (
         <p className="text-[10px] text-slate-500">资金计算中…</p>
@@ -117,7 +117,8 @@ function FlowDonut({
   let acc = 0;
   const arcs = segs.map((s) => {
     const frac = grand > 0 ? s.v / grand : 0;
-    const a = { ...s, frac, start: acc };
+    // 水平镜像：流入（绿）在左、流出（红）在右，和下方"流入/流出"文字同向
+    const a = { ...s, frac, start: 1 - acc - frac };
     acc += frac;
     return a;
   });

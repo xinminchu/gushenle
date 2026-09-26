@@ -768,7 +768,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
             {/* 黄金分割组合：一排按钮紧跟在开关下方 */}
             {showFib && fibRangeOk && chartType !== 'ohlc' && (
               <div className="flex gap-1 mb-2">
-                {FIB_COMBO_IDS.map((id) => (
+                {FIB_COMBO_IDS.filter((id) => id !== 'smart').map((id) => (
                   <Tip key={id} text={FIB_COMBOS[id].desc}>
                     <button
                       onClick={() => setFibCombo(id)}
