@@ -52,7 +52,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
   if (!data || !data.hot || !data.cold || (data.hot.length === 0 && data.cold.length === 0 && (data.find || []).length === 0)) {
     return null;
   }
-  const md = data.scanDate ? data.scanDate.slice(5).replace('-', '/') : '';
+  const md = data.scanDate || '';
 
   const row = (items: ScanItem[], label: string, sub?: string) => (
     <div className="mb-2 last:mb-0">
