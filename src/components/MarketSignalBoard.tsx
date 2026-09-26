@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 
-/** 首页三行的大白话标题（用户定版） */
+/** 首页三行的大白话标题（用户定版；中间行名字暂定） */
 const HOT_LABEL = '涨得欢';
-const STEADY_LABEL = '稳着涨';
+const MIDDLE_LABEL = '看一眼';
 const FIND_LABEL = '姿态低';
 
 interface ScanItem {
@@ -21,15 +21,15 @@ interface ScanPayload {
   empty?: boolean;
   scanDate?: string;
   hot?: ScanItem[];
-  steady?: ScanItem[];
+  middle?: ScanItem[];
   find?: ScanItem[];
 }
 
 /**
  * 首页「今日信号」：每天收盘后批处理扫精选池，摆三行
- * 🔥 涨得欢：冲高过热，按分从高到低前 5 —— 提醒别追高
- * 🌱 稳着涨：高位强势/涨势加速（分≥60 且 未过热），按分从高到低前 5 —— 趋势还行
- * 🙇 姿态低：律动分≤30 且 昨天跌 —— 当天涨标「反弹」，还跌标「连跌」—— 提醒别抄底
+ * 🔥 涨得欢：冲高过热，按分从高到低前 5 —— 别追，当心有套
+ * 👀 看一眼：|综合分-50| 最小的前 5（离两头都远）—— 中间行名字暂定
+ * 🙇 姿态低：律动分≤30 且 昨天跌 —— 当天涨标「反弹」，还跌标「连跌」—— 忍住，小心脚滑（待看真实数据再定位）
  * 只展示数据 + 大白话，三行都是状态描述，不做买入推荐。
  */
 export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string) => void }) {
@@ -53,7 +53,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
   if (
     !data ||
     !data.hot ||
-    (data.hot.length === 0 && (data.steady || []).length === 0 && (data.find || []).length === 0)
+    (data.hot.length === 0 && (data.middle || []).length === 0 && (data.find || []).length === 0)
   ) {
     return null;
   }
@@ -115,15 +115,20 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
         </span>
         <span className="text-[10px] text-slate-500">{en ? 'data only' : '只摆数据·仅供参考'}</span>
       </div>
-      {data.hot.length > 0 && row(data.hot, `🔥 ${HOT_LABEL}`)}
-      {(data.steady || []).length > 0 &&
-        row(data.steady || [], `🌱 ${STEADY_LABEL}`, en ? 'score ≥ 60, not overheated' : '分≥60 · 未过热')}
+      {data.hot.length > 0 &&
+        row(data.hot, `🔥 ${HOT_LABEL}`, en ? 'don\u2019t chase, avoid getting trapped' : '别追，当心有套')}
+      {(data.middle || []).length > 0 &&
+        row(data.middle || [], `👀 ${MIDDLE_LABEL}`, en ? 'closest to score 50' : '离50分最近')}
       {(data.find || []).length > 0 &&
-        row(data.find || [], `🙇 ${FIND_LABEL}`, en ? 'score ≤ 30, down yesterday' : '分≤30 · 昨天跌')}
+        row(
+          data.find || [],
+          `🙇 ${FIND_LABEL}`,
+          en ? 'score ≤ 30, down yesterday · hold back, watch your step' : '分≤30 · 昨天跌 · 忍住，小心脚滑',
+        )}
       <div className="mt-2 text-[10px] leading-relaxed text-slate-500">
         {en
-          ? '📌 Hot: be cautious entering, don\u2019t get trapped at the top; Low: be cautious exiting, don\u2019t sell the bottom; Middle: not too hot, not falling — all three describe conditions, you make your own calls.'
-          : '📌 涨得欢：慎入，防套牢；姿态低：慎出，不卖飞；中间这行：涨得不猛、跌得不惨——三行都是状态，买卖自己定。'}
+          ? '📌 Hot: be cautious entering, don\u2019t get trapped at the top; Low: be cautious exiting, don\u2019t sell the bottom; Take a look: far from both extremes — all three describe conditions, you make your own calls.'
+          : '📌 涨得欢：慎入，防套牢；姿态低：慎出，不卖飞；看一眼：离两头都远——三行都是状态，买卖自己定。'}
       </div>
     </div>
   );
