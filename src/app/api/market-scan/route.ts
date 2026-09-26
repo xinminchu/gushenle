@@ -125,10 +125,11 @@ export async function GET(req: Request) {
     // 每对（50下方离50最近一只，50上方离50最近一只）：净流入为正者入选，
     // 净流出/数据缺失跳过；两个都为正时取前一日涨幅（changePct）大者，涨幅打平取离50近者；
     // 每对比较完左右指针各往前推一格，直到取满 5 只。涨得欢/跌得凶已占的不重复出现。
-    // 031 未执行时（flow20d 全 null）退回"离50最近"不过滤。
+    // 031 未执行、或列已建但快照里还没有 flow_20d 数据：退回"离50最近"不过滤。
     const coldSymbols = new Set(cold.map((c) => c.symbol));
+    const hasFlowData = withFlow20 && items.some((i) => i.flow20d != null);
     let middle: ScanItem[];
-    if (!withFlow20) {
+    if (!hasFlowData) {
       middle = items
         .filter((i) => !hotSymbols.has(i.symbol) && !coldSymbols.has(i.symbol))
         .sort((a, b) => Math.abs(a.score - 50) - Math.abs(b.score - 50) || b.score - a.score)
@@ -183,8 +184,8 @@ export async function GET(req: Request) {
       hot,
       middle,
       cold,
-      /** 中间行是否经过"近20天净流入为正"过滤（031 未执行时为 false） */
-      flowFilter: withFlow20,
+      /** 中间行是否经过"近20天净流入为正"过滤（有真实 flow_20d 数据时才为 true） */
+      flowFilter: hasFlowData,
       qqq: idx('QQQ'),
       spy: idx('SPY'),
       inflowTop,
