@@ -29,7 +29,7 @@ interface ScanPayload {
  * 首页「今日信号」：每天收盘后批处理扫精选池，摆三行
  * 🔥 涨得欢：冲高过热，按分从高到低前 5 —— 别追，当心有套（栏杆，淡红底）
  * 👀 看一眼：|综合分-50| 最小的前 5（离两头都远）—— 中间行名字暂定（淡绿底，观察中）
- * 🥶 跌得凶：模型判定跌过头了，按分从低到高前 5 —— 慎出，不卖飞（栏杆，淡红底）
+ * 🥶 跌得凶：分最低的 5 只（跌过头判定天然排最前）—— 慎出，不卖飞（栏杆，淡红底）
  * 不展示律动分；点一只直接跳到它的价格走势。只展示数据 + 大白话，不做买入推荐。
  */
 export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string) => void }) {
@@ -133,7 +133,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
       {row(
         data.cold || [],
         `🥶 ${COLD_LABEL}`,
-        en ? 'oversold, don\u2019t sell the bottom' : '跌过头了 · 慎出，不卖飞',
+        en ? 'lowest scores · don\u2019t sell the bottom' : '分最低的5只 · 慎出，不卖飞',
         'red',
       )}
       <div className="mt-2 text-[10px] leading-relaxed text-slate-500">

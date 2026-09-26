@@ -94,15 +94,18 @@ export async function GET(req: Request) {
       .filter((i) => i.statusKey === 'overheated')
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
-    // 第三行：跌得凶 —— 模型判定跌过头了（oversoldBottom），按分从低到高取 5
+    const hotSymbols = new Set(hot.map((h) => h.symbol));
+
+    // 第三行：跌得凶 —— 底部栏杆：按分从低到高取 5 只，保证每天都有；
+    // 模型判定的跌过头（oversoldBottom）分最低，天然排最前面；
+    // 放宽条件：不要求 trend>45，也不要求分≤th.cold
     const cold = items
-      .filter((i) => i.statusKey === 'oversoldBottom')
+      .filter((i) => !hotSymbols.has(i.symbol))
       .sort((a, b) => a.score - b.score)
       .slice(0, 5);
 
     // 第二行：看一眼 —— 离两头都远：|综合分-50| 最小的 5 只；
     // 涨得欢/跌得凶里已占的不重复出现
-    const hotSymbols = new Set(hot.map((h) => h.symbol));
     const coldSymbols = new Set(cold.map((c) => c.symbol));
     const middle = items
       .filter((i) => !hotSymbols.has(i.symbol) && !coldSymbols.has(i.symbol))
