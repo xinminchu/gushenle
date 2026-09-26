@@ -25,7 +25,9 @@ export type GameId =
   | 'encyclopedia'
   | 'wheel'
   | 'bowl'
-  | 'stockbox';
+  | 'stockbox'
+  | 'dice'
+  | 'drunk';
 
 export interface GameStat {
   plays: number;
@@ -51,6 +53,8 @@ export const GAME_NAMES: Record<GameId, string> = {
   wheel: '转转盘买股',
   bowl: '猜碗选股',
   stockbox: '股票盲盒',
+  dice: '掷骰子买股',
+  drunk: '酒鬼走位买股',
 };
 
 /**
@@ -72,6 +76,8 @@ export const GAME_ICONS: Record<GameId, string> = {
   wheel: '🎡',
   bowl: '🥣',
   stockbox: '🎁',
+  dice: '🎲',
+  drunk: '🥴',
 };
 
 const emptyStat = (): GameStat => ({ plays: 0, totalScore: 0, best: 0, banked: 0 });
@@ -92,6 +98,8 @@ function blank(): Record<GameId, GameStat> {
     wheel: emptyStat(),
     bowl: emptyStat(),
     stockbox: emptyStat(),
+    dice: emptyStat(),
+    drunk: emptyStat(),
   };
 }
 

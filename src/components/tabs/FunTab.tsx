@@ -23,6 +23,8 @@ const BowlGame = dynamic(() => import('../games/BowlGame'), { ssr: false });
 const StockBoxGame = dynamic(() => import('../games/StockBoxGame'), { ssr: false });
 const EncyclopediaGame = dynamic(() => import('../games/EncyclopediaGame'), { ssr: false });
 const WheelGame = dynamic(() => import('../games/WheelGame'), { ssr: false });
+const DiceGame = dynamic(() => import('../games/DiceGame'), { ssr: false });
+const DrunkardGame = dynamic(() => import('../games/DrunkardGame'), { ssr: false });
 
 export default function FunTab() {
   const [activeGame, setActiveGame] = useState<string | null>(null);
@@ -174,6 +176,22 @@ export default function FunTab() {
       hot: true,
       credit: '@icey.bulbasa',
     },
+    {
+      id: 'dice',
+      name: '掷骰子买股',
+      icon: GAME_ICONS.dice,
+      level: '🟢 极低',
+      hot: true,
+      credit: '@vipdongxia',
+    },
+    {
+      id: 'drunk',
+      name: '酒鬼走位买股',
+      icon: GAME_ICONS.drunk,
+      level: '🟢 极低',
+      hot: true,
+      credit: '@vipdongxia',
+    },
   ];
 
   const getGameTitle = (id: string | null) => {
@@ -304,6 +322,8 @@ export default function FunTab() {
               {activeGame === 'wheel' && <WheelGame />}
               {activeGame === 'bowl' && <BowlGame />}
               {activeGame === 'stockbox' && <StockBoxGame onGoEndorse={goEndorse} />}
+              {activeGame === 'dice' && <DiceGame />}
+              {activeGame === 'drunk' && <DrunkardGame />}
             </div>
           </div>
         </div>

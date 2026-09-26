@@ -1,6 +1,7 @@
 'use client';
 
 import { loadColorScheme } from '../../lib/colorScheme';
+import { STOCK_LIST } from '../../lib/stockList';
 
 /**
  * 小游戏共享工具：自选列表读取、K 线数据拉取归一化、canvas K 线绘制。
@@ -251,4 +252,90 @@ export function drawLines(
     });
     ctx.stroke();
   }
+}
+
+export interface BuyRevealItem {
+  symbol: string;
+  name: string;
+  pct: number; // "昨日"涨跌幅
+  next5: number; // 后 5 天涨跌幅
+}
+
+export interface BuyReveal {
+  items: BuyRevealItem[];
+  dayLabel: string;
+  qqq5: number;
+}
+
+/**
+ * 自选不足时用默认名单 + 精选股票库补齐到 n 只（按代码去重）。
+ * 掷骰子（6 只）、酒鬼走位（25 只）等"随机买入"类游戏用。
+ */
+export function fillPicks(n: number): { symbol: string; name: string }[] {
+  const out: { symbol: string; name: string }[] = [];
+  const seen = new Set<string>();
+  const push = (symbol: string, name: string) => {
+    const sym = symbol.toUpperCase();
+    if (out.length >= n || seen.has(sym)) return;
+    seen.add(sym);
+    out.push({ symbol: sym, name });
+  };
+  for (const w of readWatchlist()) push(w.symbol, w.name);
+  for (const w of DEFAULT_WATCH) push(w.symbol, w.name);
+  for (const s of STOCK_LIST) {
+    push(s.code, s.zh);
+    if (out.length >= n) break;
+  }
+  return out;
+}
+
+/**
+ * 通用"买入揭晓"数据准备：随机挑历史某一天当"昨日"，
+ * 算每只候选的昨日涨跌 + 后 5 天涨跌 + QQQ 后 5 天。
+ * 供"随机买入"类游戏共用（飞镖/骰子/酒鬼走位逻辑同源）。
+ * 数据没拉全时返回 null。
+ */
+export async function prepareBuyReveal(
+  picks: { symbol: string; name: string }[],
+): Promise<BuyReveal | null> {
+  if (picks.length < 3) return null;
+  const all = await Promise.all([...picks.map((w) => fetchSeries(w.symbol)), fetchSeries('QQQ')]);
+  const qqqSeries = all[all.length - 1];
+  const items: { w: { symbol: string; name: string }; s: Candle[] }[] = [];
+  picks.forEach((w, i) => {
+    if (all[i] && all[i]!.length >= 60) items.push({ w, s: all[i]! });
+  });
+  if (items.length < 3 || !qqqSeries || qqqSeries.length < 60) return null;
+  const maps = items.map(({ s }) => {
+    const m = new Map<string, number>();
+    s.forEach((c, i) => m.set(c.date, i));
+    return m;
+  });
+  const qMap = new Map<string, number>();
+  qqqSeries.forEach((c, i) => qMap.set(c.date, i));
+  const base = items[0].s;
+  for (let t = 0; t < 30; t++) {
+    const i = 10 + Math.floor(Math.random() * (base.length - 20));
+    const D = base[i].date;
+    const idxs = items.map(({ s }, k) => {
+      const j = maps[k].get(D);
+      return j === undefined || j < 1 || j + 5 >= s.length ? -1 : j;
+    });
+    const qj = qMap.get(D);
+    if (idxs.some((j) => j < 0) || qj === undefined || qj < 1 || qj + 5 >= qqqSeries.length) continue;
+    return {
+      items: items.map(({ w, s }, k) => {
+        const j = idxs[k];
+        return {
+          symbol: w.symbol,
+          name: w.name,
+          pct: s[j].close / s[j - 1].close - 1,
+          next5: s[j + 5].close / s[j].close - 1,
+        };
+      }),
+      dayLabel: D,
+      qqq5: qqqSeries[qj + 5].close / qqqSeries[qj].close - 1,
+    };
+  }
+  return null;
 }
