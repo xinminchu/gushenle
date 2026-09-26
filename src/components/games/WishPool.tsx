@@ -169,6 +169,20 @@ export default function WishPool() {
     }
   }, [user, loadEndorsements]);
 
+  /** EaaS v0 · 拉取待审认领（028 没跑时静默隐藏认领入口；必须在下面的 useEffect 之前声明，避免 TDZ） */
+  const loadClaims = useCallback(async () => {
+    try {
+      const res = await fetch('/api/wish-claim?status=pending');
+      const j = await res.json();
+      if (!res.ok || !j.ok) throw new Error(j.error || 'fail');
+      setPendingClaims(new Set((j.claims || []).map((c: { nickname: string }) => c.nickname)));
+      setClaimReady(true);
+    } catch {
+      setPendingClaims(new Set());
+      setClaimReady(false);
+    }
+  }, []);
+
   useEffect(() => {
     load();
     loadClaims();
@@ -216,20 +230,6 @@ export default function WishPool() {
       setEndorseBusy(null);
     }
   };
-
-  /** EaaS v0 · 拉取待审认领（028 没跑时静默隐藏认领入口） */
-  const loadClaims = useCallback(async () => {
-    try {
-      const res = await fetch('/api/wish-claim?status=pending');
-      const j = await res.json();
-      if (!res.ok || !j.ok) throw new Error(j.error || 'fail');
-      setPendingClaims(new Set((j.claims || []).map((c: { nickname: string }) => c.nickname)));
-      setClaimReady(true);
-    } catch {
-      setPendingClaims(new Set());
-      setClaimReady(false);
-    }
-  }, []);
 
   /** 认领该昵称：站长审批后，该昵称下所有未认领留言归到我名下 */
   const claimNickname = async (w: Wish) => {
