@@ -36,19 +36,33 @@ export async function GET() {
       return NextResponse.json({ ok: true, empty: true });
     }
     const scanDate = latest[0].scan_date as string;
-    const { data: rows, error: e2 } = await sb
-      .from('market_scan')
-      .select('symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est')
-      .eq('scan_date', scanDate);
-    if (e2) throw e2;
+    // 020 没执行时（prev_change_pct 列不存在）降级：前两行照常，捡漏行留空
+    let rows: Record<string, unknown>[] | null = null;
+    let withPrev = true;
+    try {
+      const r = await sb
+        .from('market_scan')
+        .select('symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est')
+        .eq('scan_date', scanDate);
+      if (r.error) throw r.error;
+      rows = r.data;
+    } catch {
+      withPrev = false;
+      const r2 = await sb
+        .from('market_scan')
+        .select('symbol,name,score,status_key,change_pct,inflow_est')
+        .eq('scan_date', scanDate);
+      if (r2.error) throw r2.error;
+      rows = r2.data;
+    }
     const items: ScanItem[] = (rows || []).map((r) => ({
-      symbol: r.symbol,
-      name: r.name,
-      score: r.score,
-      statusKey: r.status_key || '',
-      changePct: r.change_pct,
-      prevChangePct: r.prev_change_pct,
-      inflowEst: r.inflow_est,
+      symbol: r.symbol as string,
+      name: r.name as string,
+      score: r.score as number,
+      statusKey: (r.status_key as string) || '',
+      changePct: r.change_pct as number | null,
+      prevChangePct: withPrev ? (r.prev_change_pct as number | null) : null,
+      inflowEst: r.inflow_est as number | null,
     }));
 
     // 两行：涨得欢 / 跌得凶，各取 5
