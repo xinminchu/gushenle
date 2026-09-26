@@ -47,6 +47,7 @@ interface Race {
   name: string;
   months: number;
   regime: Exclude<Regime, 'random'>;
+  fellBack: boolean;
   lumpVals: number[];
   dcaVals: number[];
   lumpFinal: number;
@@ -112,13 +113,13 @@ export default function DcaGame() {
     // 玩家还可选市况：想体验梭哈被埋，就去熊市窗口试试。
     const maxStart = monthFirst.length - months;
     const pickStart = () => (maxStart > 0 ? Math.floor(Math.random() * (maxStart + 1)) : 0);
-    const buildFrom = (startIdx: number) => {
+    const buildFrom = (startIdx: number, ignoreRegime = false) => {
       const frames = monthFirst.slice(startIdx, startIdx + months);
       if (frames.length < 6) return null;
       const m = frames.length;
       const ret = frames[m - 1].close / frames[0].close - 1;
       const reg = classify(ret, m);
-      if (regime !== 'random' && reg !== regime) return null;
+      if (!ignoreRegime && regime !== 'random' && reg !== regime) return null;
       const lumpShares = (MONTHLY * m) / frames[0].close;
       const lumpVals: number[] = [];
       const dcaVals: number[] = [];
@@ -134,6 +135,7 @@ export default function DcaGame() {
         name,
         months: m,
         regime: reg,
+        fellBack: ignoreRegime,
         lumpVals,
         dcaVals,
         lumpFinal: lumpVals[m - 1],
@@ -144,7 +146,9 @@ export default function DcaGame() {
     };
     let race: ReturnType<typeof buildFrom> = null;
     for (let t = 0; t < 80 && !race; t++) race = buildFrom(pickStart());
-    if (!race) race = buildFrom(pickStart()); // 实在抽不到指定市况就随缘
+    // 实在抽不到指定市况就随缘：放开市况限制再抽，结果页会如实标注实际抽到的市况
+    if (!race && regime !== 'random')
+      for (let t = 0; t < 80 && !race; t++) race = buildFrom(pickStart(), true);
     return race;
   }, [symbol, months, regime, list]);
 
@@ -355,6 +359,9 @@ export default function DcaGame() {
                 <p className="font-semibold">{resultText}</p>
                 <p className="text-slate-500 mt-1">
                   本局区间：{race.startDate.slice(0, 7)} ~ {race.endDate.slice(0, 7)} · {REGIME_LABEL[race.regime]}
+                  {race.fellBack && (
+                    <span>（没找到{REGIMES.find((r) => r.id === regime)?.label}窗口，随缘抽了一个）</span>
+                  )}
                 </p>
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed px-1">{tip}</p>
