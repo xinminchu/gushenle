@@ -595,9 +595,7 @@ alter table public.game_stats add constraint game_stats_game_id_check
 
 update public.game_wishes
 set adopted = true, bonus_points = 20
-where nickname = '@Rosemary'
-  and kind = 'review'
-  and content like '%候选太少%'
+where id = 'b7515852-f1c5-470d-ab69-829a84c58573'
   and adopted is distinct from true;
 `,
   },
