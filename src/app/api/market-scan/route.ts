@@ -89,25 +89,23 @@ export async function GET(req: Request) {
       inflowEst: r.inflow_est as number | null,
     }));
 
-    // 两行：涨得欢 / 跌得凶，各取 5
+    // 第一行：涨得欢 —— 冲高过热，按分从高到低取 5
     const hot = items
       .filter((i) => i.statusKey === 'overheated')
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
+    // （跌得凶仍在接口里算，前端不再展示）
     const cold = items
       .filter((i) => i.statusKey === 'oversoldBottom')
       .sort((a, b) => a.score - b.score)
       .slice(0, 5);
 
-    // 第三行：姿态低 —— 律动分≤30 且 昨天跌；
-    // 当天涨=反弹（已有买盘，排前面），当天还跌=连跌；同类按分从低到高；
-    // 与跌得凶去重：已在跌得凶里的不再重复出现，两行互补
+    // 第二行：姿态低 —— 律动分≤30 且 昨天跌；
+    // 当天涨=反弹（已有买盘，排前面），当天还跌=连跌；同类按分从低到高
     const LOW_SCORE = 30;
-    const coldSymbols = new Set(cold.map((c) => c.symbol));
     const find = items
       .filter(
         (i) =>
-          !coldSymbols.has(i.symbol) &&
           i.score <= LOW_SCORE &&
           i.prevChangePct != null &&
           i.prevChangePct < 0 &&
