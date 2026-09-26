@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { Flame, ShieldAlert, Settings2, X, Plus, RotateCcw, TrendingUp } from 'lucide-react';
+import { Flame, ShieldAlert, Settings2, X, Plus, RotateCcw, TrendingUp, RefreshCw } from 'lucide-react';
 import RhythmChart, { type ChartType } from './RhythmChart';
 import AccuracyPanel from './AccuracyPanel';
 import ChipPanel from './ChipPanel';
@@ -451,21 +451,35 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-xl sm:text-2xl font-bold text-slate-100 whitespace-nowrap">
-            今日看板 · 谷峰律动
+            自选列表
           </h1>
-          <button
-            onClick={() => setManaging((v) => !v)}
-            className="text-xs text-slate-400 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-800"
-          >
-            <Settings2 className="w-3.5 h-3.5" />
-            {managing ? '收起' : '管理自选'}
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                invalidateRhythm(symbol);
+                setRetryKey((k) => k + 1);
+              }}
+              className="text-xs text-slate-400 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-800"
+              aria-label="刷新当前股票行情"
+              title="刷新当前股票行情"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              刷新
+            </button>
+            <button
+              onClick={() => setManaging((v) => !v)}
+              className="text-xs text-slate-400 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-800"
+            >
+              <Settings2 className="w-3.5 h-3.5" />
+              {managing ? '收起' : '管理自选'}
+            </button>
+          </div>
         </div>
 
         {managing && (
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-slate-200">自选列表</span>
+              <span className="text-sm font-medium text-slate-200">编辑自选</span>
               {isDefault && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30">
                   默认推荐
@@ -654,159 +668,6 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
         </div>
       ) : data && judgment ? (
         <>
-          {/* ① 律动诊断：主判断永远锚定近 3 月，不随展示区间变化 */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <h2 className="text-base font-semibold mb-3 text-slate-200 flex items-center">
-              律动诊断
-              <span className="ml-2 text-[10px] font-normal px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                主判断 · 近{ANCHOR_LABEL}
-              </span>
-              {judgment && (
-                <span
-                  className={`ml-1.5 text-[10px] font-normal px-2 py-0.5 rounded-full border ${
-                    judgment.thresholds.tier === 'high'
-                      ? 'bg-orange-500/10 text-orange-400 border-orange-500/30'
-                      : 'bg-slate-800 text-slate-400 border-slate-700'
-                  }`}
-                >
-                  {judgment.thresholds.tierLabel} · {judgment.thresholds.hot}/
-                  {judgment.thresholds.cold}
-                </span>
-              )}
-              {judgment && (
-                <button
-                  onClick={() => setShowTierInfo((v) => !v)}
-                  className="ml-1 w-4 h-4 shrink-0 rounded-full border border-slate-600 text-slate-500 text-[9px] leading-none flex items-center justify-center hover:text-slate-300 hover:border-slate-400"
-                  aria-label="波动档位说明"
-                >
-                  i
-                </button>
-              )}
-            </h2>
-            {showTierInfo && judgment && (
-              <div className="mb-3 text-[11px] text-slate-400 leading-relaxed bg-slate-800/60 border border-slate-700/60 rounded-lg px-3 py-2">
-                {judgment.thresholds.tier === 'high'
-                  ? '高波模式：这只股票最近波动大（日均涨跌超 3%），"涨太猛了 / 跌过头了"的门槛收得更紧（85/15 分），免得信号泛滥。'
-                  : '稳健模式：这只股票最近波动温和，"涨太猛了 / 跌过头了"用常规门槛（80/20 分）。'}
-              </div>
-            )}
-            <div
-              className={`p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 ${
-                overHeat ? 'cursor-pointer hover:border-amber-500/40' : ''
-              }`}
-              onClick={() => {
-                if (overHeat) setShowZenModal(true);
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-100 text-lg">{symbol}</span>
-                  <span className="text-xs text-slate-400">{nameOf(symbol)}</span>
-                  {overHeat && (
-                    <span className="bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap shrink-0">
-                      <Flame className="w-3 h-3" /> 涨太猛
-                    </span>
-                  )}
-                  {strongHigh && (
-                    <span className="bg-sky-500/15 text-sky-400 border border-sky-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap shrink-0">
-                      <TrendingUp className="w-3 h-3" /> 稳着涨
-                    </span>
-                  )}
-                  {data.source === 'simulated' && (
-                    <span className="text-[10px] text-slate-500">演示数据</span>
-                  )}
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="text-[10px] text-slate-500 mb-0.5">
-                    {lang === 'en' ? 'Rhythm Score' : '律动值'}
-                  </div>
-                  <div
-                    className={`text-4xl font-extrabold ${
-                      overHeat ? 'text-amber-400' : 'text-emerald-400'
-                    }`}
-                  >
-                    {judgment.score}
-                  </div>
-                  <div className="text-[10px] text-slate-400">{judgment.status}</div>
-                </div>
-              </div>
-              {judgment.statusDetail && (
-                <div className="mt-1.5 text-[10px] text-slate-500 leading-relaxed">
-                  {judgment.statusDetail}
-                </div>
-              )}
-
-              <div className="mt-3 flex items-center gap-2">
-                <span className="text-sm font-semibold text-slate-200 shrink-0">
-                  {fmtPrice(data.price)}
-                </span>
-                {data.priceLive ? (
-                  <span className="flex items-center gap-1 shrink-0 text-[9px]" title={data.priceTime ?? undefined}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-emerald-400">
-                      实时{quoteTimeShort ? ` ${quoteTimeShort}` : ''}
-                    </span>
-                    {data.dayChangePct != null && (
-                      <span className={data.dayChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                        {data.dayChangePct >= 0 ? '+' : ''}
-                        {data.dayChangePct}%
-                      </span>
-                    )}
-                    {data.prevClose != null && (
-                      <span className="text-slate-500">昨收 {fmtPrice(data.prevClose)}</span>
-                    )}
-                  </span>
-                ) : (
-                  <span className="text-[9px] text-slate-500 shrink-0">收盘价</span>
-                )}
-                <div className="flex-1 h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full bg-gradient-to-r ${scoreGradient(
-                      judgment.score,
-                      judgment.thresholds.hot,
-                      judgment.thresholds.cold,
-                    )} transition-all duration-700`}
-                    style={{ width: `${judgment.score}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-2 text-[10px] text-slate-500">
-                位置 {judgment.pos} · 趋势 {judgment.trend} · 速度 {judgment.vel}
-              </div>
-
-              <div className="mt-2 text-xs text-slate-400 leading-relaxed">{displayAdvice}</div>
-              {!myPosition && onGoPortfolio && (
-                <button
-                  onClick={onGoPortfolio}
-                  className="mt-1.5 text-left text-[10px] text-slate-500 hover:text-slate-300 leading-relaxed"
-                >
-                  💡 持有这只？去持仓记一笔成本，下次建议按你的盈亏来说 →
-                </button>
-              )}
-              {fibHint && (
-                <div className="mt-2 text-[11px] text-amber-300/80 leading-relaxed">
-                  {fibHint}
-                </div>
-              )}
-              {overHeat && (
-                <div className="mt-2 text-[10px] text-amber-400/70">点击卡片查看冷静清单</div>
-              )}
-              <button
-                onClick={() => {
-                  setOpAction(judgment.statusKey === 'oversoldBottom' ? 'buy' : 'sell');
-                  setOpPrice(data.price ? fmtPrice(data.price) : '');
-                  setOpQty('');
-                  setOpSaved(false);
-                  setShowOpModal(true);
-                }}
-                className="mt-3 w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 font-medium transition-colors"
-              >
-                ✍️ 记一笔操作
-              </button>
-            </div>
-          </div>
-
           {/* ② 价格走势图：区间只控制展示，是多空对照，不下结论 */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
@@ -1070,6 +931,159 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   })}
                 </span>
               </div>
+            </div>
+          </div>
+
+          {/* ① 谷峰律动：主判断永远锚定近 3 月，不随展示区间变化 */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <h2 className="text-base font-semibold mb-3 text-slate-200 flex items-center">
+              谷峰律动
+              <span className="ml-2 text-[10px] font-normal px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
+                主判断 · 近{ANCHOR_LABEL}
+              </span>
+              {judgment && (
+                <span
+                  className={`ml-1.5 text-[10px] font-normal px-2 py-0.5 rounded-full border ${
+                    judgment.thresholds.tier === 'high'
+                      ? 'bg-orange-500/10 text-orange-400 border-orange-500/30'
+                      : 'bg-slate-800 text-slate-400 border-slate-700'
+                  }`}
+                >
+                  {judgment.thresholds.tierLabel} · {judgment.thresholds.hot}/
+                  {judgment.thresholds.cold}
+                </span>
+              )}
+              {judgment && (
+                <button
+                  onClick={() => setShowTierInfo((v) => !v)}
+                  className="ml-1 w-4 h-4 shrink-0 rounded-full border border-slate-600 text-slate-500 text-[9px] leading-none flex items-center justify-center hover:text-slate-300 hover:border-slate-400"
+                  aria-label="波动档位说明"
+                >
+                  i
+                </button>
+              )}
+            </h2>
+            {showTierInfo && judgment && (
+              <div className="mb-3 text-[11px] text-slate-400 leading-relaxed bg-slate-800/60 border border-slate-700/60 rounded-lg px-3 py-2">
+                {judgment.thresholds.tier === 'high'
+                  ? '高波模式：这只股票最近波动大（日均涨跌超 3%），"涨太猛了 / 跌过头了"的门槛收得更紧（85/15 分），免得信号泛滥。'
+                  : '稳健模式：这只股票最近波动温和，"涨太猛了 / 跌过头了"用常规门槛（80/20 分）。'}
+              </div>
+            )}
+            <div
+              className={`p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 ${
+                overHeat ? 'cursor-pointer hover:border-amber-500/40' : ''
+              }`}
+              onClick={() => {
+                if (overHeat) setShowZenModal(true);
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-100 text-lg">{symbol}</span>
+                  <span className="text-xs text-slate-400">{nameOf(symbol)}</span>
+                  {overHeat && (
+                    <span className="bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap shrink-0">
+                      <Flame className="w-3 h-3" /> 涨太猛
+                    </span>
+                  )}
+                  {strongHigh && (
+                    <span className="bg-sky-500/15 text-sky-400 border border-sky-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap shrink-0">
+                      <TrendingUp className="w-3 h-3" /> 稳着涨
+                    </span>
+                  )}
+                  {data.source === 'simulated' && (
+                    <span className="text-[10px] text-slate-500">演示数据</span>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-[10px] text-slate-500 mb-0.5">
+                    {lang === 'en' ? 'Rhythm Score' : '律动值'}
+                  </div>
+                  <div
+                    className={`text-4xl font-extrabold ${
+                      overHeat ? 'text-amber-400' : 'text-emerald-400'
+                    }`}
+                  >
+                    {judgment.score}
+                  </div>
+                  <div className="text-[10px] text-slate-400">{judgment.status}</div>
+                </div>
+              </div>
+              {judgment.statusDetail && (
+                <div className="mt-1.5 text-[10px] text-slate-500 leading-relaxed">
+                  {judgment.statusDetail}
+                </div>
+              )}
+
+              <div className="mt-3 flex items-center gap-2">
+                <span className="text-sm font-semibold text-slate-200 shrink-0">
+                  {fmtPrice(data.price)}
+                </span>
+                {data.priceLive ? (
+                  <span className="flex items-center gap-1 shrink-0 text-[9px]" title={data.priceTime ?? undefined}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-emerald-400">
+                      实时{quoteTimeShort ? ` ${quoteTimeShort}` : ''}
+                    </span>
+                    {data.dayChangePct != null && (
+                      <span className={data.dayChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                        {data.dayChangePct >= 0 ? '+' : ''}
+                        {data.dayChangePct}%
+                      </span>
+                    )}
+                    {data.prevClose != null && (
+                      <span className="text-slate-500">昨收 {fmtPrice(data.prevClose)}</span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-[9px] text-slate-500 shrink-0">收盘价</span>
+                )}
+                <div className="flex-1 h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full bg-gradient-to-r ${scoreGradient(
+                      judgment.score,
+                      judgment.thresholds.hot,
+                      judgment.thresholds.cold,
+                    )} transition-all duration-700`}
+                    style={{ width: `${judgment.score}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-2 text-[10px] text-slate-500">
+                位置 {judgment.pos} · 趋势 {judgment.trend} · 速度 {judgment.vel}
+              </div>
+
+              <div className="mt-2 text-xs text-slate-400 leading-relaxed">{displayAdvice}</div>
+              {!myPosition && onGoPortfolio && (
+                <button
+                  onClick={onGoPortfolio}
+                  className="mt-1.5 text-left text-[10px] text-slate-500 hover:text-slate-300 leading-relaxed"
+                >
+                  💡 持有这只？去持仓记一笔成本，下次建议按你的盈亏来说 →
+                </button>
+              )}
+              {fibHint && (
+                <div className="mt-2 text-[11px] text-amber-300/80 leading-relaxed">
+                  {fibHint}
+                </div>
+              )}
+              {overHeat && (
+                <div className="mt-2 text-[10px] text-amber-400/70">点击卡片查看冷静清单</div>
+              )}
+              <button
+                onClick={() => {
+                  setOpAction(judgment.statusKey === 'oversoldBottom' ? 'buy' : 'sell');
+                  setOpPrice(data.price ? fmtPrice(data.price) : '');
+                  setOpQty('');
+                  setOpSaved(false);
+                  setShowOpModal(true);
+                }}
+                className="mt-3 w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 font-medium transition-colors"
+              >
+                ✍️ 记一笔操作
+              </button>
             </div>
           </div>
 
