@@ -72,9 +72,9 @@ export default function SloganShow() {
         <div className="relative h-[18px]">
           <span
             aria-hidden="true"
-            className="slogan-star absolute top-0 text-[14px] leading-none text-amber-300"
+            className="slogan-star absolute top-0 whitespace-nowrap text-[14px] leading-none text-amber-300"
           >
-            ★
+            ★★★★★
           </span>
         </div>
         <p className="whitespace-nowrap overflow-hidden text-center text-[12px] tracking-wide text-slate-100 pb-2">
