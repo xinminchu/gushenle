@@ -60,6 +60,18 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
     return null;
   }
   const md = data.scanDate || '';
+  // scanDate 是 YYYY-MM-DD（最新一根日线的日期）：中文显示"数据截至 9月25日（周五收盘）"
+  function fmtScanDate(s: string): string {
+    const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return s;
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    const weekCn = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
+    const monthEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
+    const weekEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+    return en
+      ? `Data as of ${monthEn} ${Number(m[3])} (${weekEn} close)`
+      : `数据截至 ${Number(m[2])}月${Number(m[3])}日（${weekCn}收盘）`;
+  }
 
   // tone: 上下两行是栏杆（淡红底），中间行观察区（淡绿底）；某行空时显示"今日暂无"，栏杆一直在
   const row = (items: ScanItem[], label: string, sub: string | undefined, tone: 'red' | 'green') => (
@@ -122,7 +134,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-semibold text-slate-100">
           📡 {en ? 'Market Signals' : '今日信号'}
-          {md && <span className="text-[10px] font-normal text-slate-500 ml-1.5">{md}</span>}
+          {md && <span className="text-[10px] font-normal text-slate-500 ml-1.5">📅 {fmtScanDate(md)}</span>}
         </span>
         <span className="text-[10px] text-slate-500">{en ? 'data only' : '只摆数据·仅供参考'}</span>
       </div>
