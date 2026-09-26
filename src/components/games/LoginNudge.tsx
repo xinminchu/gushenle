@@ -45,15 +45,19 @@ export default function LoginNudge() {
       <ul className="mt-2.5 space-y-1.5 text-[11px] leading-relaxed text-slate-300">
         <li>
           <span className="text-emerald-300 font-semibold">✅ 归你所有：</span>
-          你的建议、游戏战绩、在线的每一分钟——全记在你名下，谁也拿不走
+          你的建议、游戏战绩——全记在你名下，谁也拿不走
         </li>
         <li>
-          <span className="text-emerald-300 font-semibold">💡 被更多人用上：</span>
-          你的创意被采纳，署你的名、发贡献值，好点子不埋没
+          <span className="text-emerald-300 font-semibold">💡 小参与，大认同：</span>
+          好创意被采纳，署你的名、发贡献值，被更多人看到、用上
         </li>
         <li>
           <span className="text-emerald-300 font-semibold">🌳 所有者回报：</span>
           等这棵树长大了，第一批浇水的人，有所有者回报
+        </li>
+        <li>
+          <span className="text-emerald-300 font-semibold">🔒 隐私放心：</span>
+          持仓、自选只存你本机，不上传；只有你主动发出的贡献，才会被大家看到
         </li>
       </ul>
 
