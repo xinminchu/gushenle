@@ -22,7 +22,7 @@ function anon() {
   return createClient(URL, ANON, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const sb = anon();
   if (!sb) return NextResponse.json({ ok: false, error: 'supabase 未配置' }, { status: 500 });
   try {
@@ -50,6 +50,15 @@ export async function GET() {
       const c = count || 0;
       if (c > bestCount) { bestCount = c; scanDate = d; }
       if (c >= 100) break; // 够全就不用再往前找
+    }
+    // ?pool=1：轻量返回全扫描池（symbol/name/score），供掷骰子"换一批"等取"律动分结果里的股票"
+    if (new URL(req.url).searchParams.get('pool') === '1') {
+      const r = await sb.from('market_scan').select('symbol,name,score').eq('scan_date', scanDate);
+      if (r.error) throw r.error;
+      const pool = ((r.data || []) as { symbol: string; name: string; score: number }[]).map(
+        (x) => ({ symbol: x.symbol, name: x.name, score: x.score }),
+      );
+      return NextResponse.json({ ok: true, scanDate, total: pool.length, pool });
     }
     // 020 没执行时（prev_change_pct 列不存在）降级：前两行照常，捡漏行留空
     let rows: Record<string, unknown>[] | null = null;

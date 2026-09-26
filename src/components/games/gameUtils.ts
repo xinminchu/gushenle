@@ -269,7 +269,8 @@ export interface BuyReveal {
 
 /**
  * 自选不足时用默认名单 + 精选股票库补齐到 n 只（按代码去重）。
- * 掷骰子（6 只）、酒鬼走位（25 只）等"随机买入"类游戏用。
+ * 顺序：自选优先 → 默认名单 → 股票库随机打乱补充。
+ * 掷骰子（6/12 只）、酒鬼走位（25 只）等"随机买入"类游戏用。
  */
 export function fillPicks(n: number): { symbol: string; name: string }[] {
   const out: { symbol: string; name: string }[] = [];
@@ -282,11 +283,41 @@ export function fillPicks(n: number): { symbol: string; name: string }[] {
   };
   for (const w of readWatchlist()) push(w.symbol, w.name);
   for (const w of DEFAULT_WATCH) push(w.symbol, w.name);
-  for (const s of STOCK_LIST) {
+  // 股票库部分打乱，保证"不够的随机补充"
+  const lib = [...STOCK_LIST];
+  for (let i = lib.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [lib[i], lib[j]] = [lib[j]!, lib[i]!];
+  }
+  for (const s of lib) {
     push(s.code, s.zh);
     if (out.length >= n) break;
   }
   return out;
+}
+
+let scanPoolCache: { symbol: string; name: string; score: number }[] | null = null;
+
+/**
+ * 取最新一次律动扫描的全量池（symbol/name/score），供"换一批"用。
+ * 结果缓存，失败返回空数组（调用方自行降级）。
+ */
+export async function fetchScanPool(): Promise<{ symbol: string; name: string; score: number }[]> {
+  if (scanPoolCache) return scanPoolCache;
+  try {
+    const r = await fetch('/api/market-scan?pool=1');
+    const j = (await r.json()) as {
+      ok?: boolean;
+      pool?: { symbol: string; name: string; score: number }[];
+    };
+    if (j.ok && Array.isArray(j.pool)) {
+      scanPoolCache = j.pool;
+      return scanPoolCache;
+    }
+  } catch {
+    /* 降级：返回空 */
+  }
+  return [];
 }
 
 /**
