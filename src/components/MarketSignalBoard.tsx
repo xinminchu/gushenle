@@ -13,7 +13,8 @@ interface ScanItem {
   name: string;
   score: number;
   changePct: number | null;
-  pattern?: 'rebound' | 'streak';
+  upStreak?: number | null;
+  downStreak?: number | null;
 }
 
 interface ScanPayload {
@@ -30,7 +31,8 @@ interface ScanPayload {
  * 🔥 涨得欢：冲高过热，按分从高到低前 5 —— 别追，当心有套（栏杆，淡红底）
  * 👀 看一眼：|综合分-50| 最小的前 5（离两头都远）—— 中间行名字暂定（淡绿底，观察中）
  * 🥶 跌得凶：分最低的 5 只（跌过头判定天然排最前）—— 慎出，不卖飞（栏杆，淡红底）
- * 不展示律动分；点一只直接跳到它的价格走势。只展示数据 + 大白话，不做买入推荐。
+ * 不展示律动分；连涨/连跌≥3 天在 tile 上打标（平盘打断）；点一只直接跳到它的价格走势。
+ * 只展示数据 + 大白话，不做买入推荐。
  */
 export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string) => void }) {
   const { lang } = useLanguage();
@@ -82,13 +84,14 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
             >
               <div className="text-[11px] font-bold text-slate-100 leading-tight">{s.symbol}</div>
               <div className="text-[9px] text-slate-500 leading-tight truncate">{s.name}</div>
-              {s.pattern && (
-                <div
-                  className={`text-[9px] leading-tight mt-0.5 ${
-                    s.pattern === 'rebound' ? 'text-emerald-300' : 'text-sky-300'
-                  }`}
-                >
-                  {s.pattern === 'rebound' ? '反弹' : '连跌'}
+              {s.upStreak != null && s.upStreak >= 3 && (
+                <div className="text-[9px] leading-tight mt-0.5 text-amber-300">
+                  📈{s.upStreak}连涨
+                </div>
+              )}
+              {s.downStreak != null && s.downStreak >= 3 && (
+                <div className="text-[9px] leading-tight mt-0.5 text-sky-300">
+                  📉{s.downStreak}连跌
                 </div>
               )}
               <div
@@ -140,6 +143,11 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
         {en
           ? '📌 Hot: be cautious entering, don\u2019t get trapped at the top; Oversold: be cautious exiting, don\u2019t sell the bottom; Take a look: far from both extremes — all three describe conditions, you make your own calls.'
           : '📌 涨得欢：慎入，防套牢；跌得凶：慎出，不卖飞；看一眼：离两头都远——三行都是状态，买卖自己定。'}
+      </div>
+      <div className="mt-1 text-[10px] leading-relaxed text-slate-600">
+        {en
+          ? '📊 Streaks count consecutive up/down closes; shown only at 3+ days, a flat day breaks the streak.'
+          : '📊 连涨/连跌按收盘价连续天数算，满 3 天才标，平盘打断。'}
       </div>
     </div>
   );

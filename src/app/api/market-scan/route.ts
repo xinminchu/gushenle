@@ -11,6 +11,10 @@ export interface ScanItem {
   changePct: number | null;
   prevChangePct: number | null;
   inflowEst: number | null;
+  /** 连涨天数（030 未执行时为 null，前端不显示标签） */
+  upStreak?: number | null;
+  /** 连跌天数（030 未执行时为 null，前端不显示标签） */
+  downStreak?: number | null;
   /** 捡漏形态：rebound=昨天跌今天涨 / streak=连跌两天 */
   pattern?: 'rebound' | 'streak';
 }
@@ -60,21 +64,23 @@ export async function GET(req: Request) {
       );
       return NextResponse.json({ ok: true, scanDate, total: pool.length, pool });
     }
-    // 020 没执行时（prev_change_pct 列不存在）降级：前两行照常，捡漏行留空
+    // 030 没执行时（up_streak/down_streak 列不存在）降级：三行照常，连涨连跌标不显示
     let rows: Record<string, unknown>[] | null = null;
-    let withPrev = true;
+    let withStreak = true;
     try {
       const r = await sb
         .from('market_scan')
-        .select('symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est')
+        .select(
+          'symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est,up_streak,down_streak',
+        )
         .eq('scan_date', scanDate);
       if (r.error) throw r.error;
       rows = r.data;
     } catch {
-      withPrev = false;
+      withStreak = false;
       const r2 = await sb
         .from('market_scan')
-        .select('symbol,name,score,status_key,change_pct,inflow_est')
+        .select('symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est')
         .eq('scan_date', scanDate);
       if (r2.error) throw r2.error;
       rows = r2.data;
@@ -85,8 +91,10 @@ export async function GET(req: Request) {
       score: r.score as number,
       statusKey: (r.status_key as string) || '',
       changePct: r.change_pct as number | null,
-      prevChangePct: withPrev ? (r.prev_change_pct as number | null) : null,
+      prevChangePct: r.prev_change_pct as number | null,
       inflowEst: r.inflow_est as number | null,
+      upStreak: withStreak ? (r.up_streak as number | null) : null,
+      downStreak: withStreak ? (r.down_streak as number | null) : null,
     }));
 
     // 第一行：涨得欢 —— 冲高过热，按分从高到低取 5

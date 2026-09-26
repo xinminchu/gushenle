@@ -639,4 +639,17 @@ create policy "wish_claims own insert"
 -- 修改/删除只走 service_role（站长服务端审批），RLS 不开放
 `,
   },
+  {
+    version: "030_market_scan_streaks",
+    name: "今日信号连涨连跌：market_scan 加 up_streak/down_streak 列",
+    sql: `-- 030_market_scan_streaks.sql
+-- 给 market_scan 加连涨/连跌天数列，供「今日信号」N连涨/N连跌标签用：
+-- 口径 = 从最新一根日线往前数，连续收涨（收跌）天数；平盘（0%）打断；两者互斥。
+-- 前端只在天数≥3 时显示标签，不足 3 天不标记。
+
+alter table public.market_scan
+  add column if not exists up_streak integer,
+  add column if not exists down_streak integer;
+`,
+  },
 ];
