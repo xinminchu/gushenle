@@ -122,8 +122,8 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
         row(data.find || [], `🙇 ${FIND_LABEL}`, en ? 'score ≤ 30, down yesterday' : '分≤30 · 昨天跌')}
       <div className="mt-2 text-[10px] leading-relaxed text-slate-500">
         {en
-          ? '📌 Hot means don\u2019t chase, low means don\u2019t catch the falling knife, steady means the trend is fine — all three describe conditions, none is a buy call.'
-          : '📌 涨得欢是提醒别追高，姿态低是提醒别抄底，稳着涨是说趋势还行——三行都是状态描述，都不叫你买。'}
+          ? '📌 Hot: be cautious entering, don\u2019t get trapped at the top; Low: be cautious exiting, don\u2019t sell the bottom; Middle: not too hot, not falling — all three describe conditions, you make your own calls.'
+          : '📌 涨得欢：慎入，防套牢；姿态低：慎出，不卖飞；中间这行：涨得不猛、跌得不惨——三行都是状态，买卖自己定。'}
       </div>
     </div>
   );
