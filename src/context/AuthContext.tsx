@@ -64,6 +64,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // 邮件链接总是在新标签页打开：用户切回本页面时自动刷新登录态
+  useEffect(() => {
+    if (!supabase) return;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        supabase.auth.getSession().then(({ data }) => {
+          setUser(data.session?.user ?? null);
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   const sendCode = async (email: string): Promise<string | null> => {
     if (!supabase) return '登录功能尚未配置';
     const clean = email.trim().toLowerCase();

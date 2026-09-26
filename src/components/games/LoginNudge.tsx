@@ -67,6 +67,9 @@ export default function LoginNudge() {
       >
         🌱 1 分钟登录，占个位置
       </button>
+      <p className="text-[10px] text-slate-500 mt-2 text-center">
+        登录后点顶栏你的名字，随时取一个好听的昵称～
+      </p>
     </div>
   );
 }
