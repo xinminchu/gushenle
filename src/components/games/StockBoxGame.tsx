@@ -83,7 +83,7 @@ function useBlip() {
   return { blip, muted, setMuted };
 }
 
-export default function StockBoxGame() {
+export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void }) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [strip, setStrip] = useState<Pull[]>([]);
   const [pull, setPull] = useState<Pull | null>(null);
@@ -321,7 +321,7 @@ export default function StockBoxGame() {
               <span className="text-slate-600"> · 今日</span>
             </p>
           )}
-          <div className="flex gap-2 justify-center mt-3">
+          <div className="flex gap-2 justify-center mt-3 flex-wrap">
             <button
               onClick={addToWatch}
               disabled={inWatch}
@@ -333,7 +333,28 @@ export default function StockBoxGame() {
             >
               {inWatch ? '已在自选 ✓' : '＋ 加入自选'}
             </button>
+            {left <= 0 && (
+              <button
+                onClick={() => setPhase('idle')}
+                className="text-xs px-3 py-1.5 rounded-full border border-slate-600 bg-slate-800 text-slate-200"
+              >
+                ← 返回
+              </button>
+            )}
+            {left <= 0 && onGoEndorse && (
+              <button
+                onClick={onGoEndorse}
+                className="text-xs px-3 py-1.5 rounded-full border border-amber-500/60 bg-amber-500/20 text-amber-200 font-bold"
+              >
+                🤝 去认同 +5 次
+              </button>
+            )}
           </div>
+          {/* 剩余次数倒数：揭晓时也能看到 */}
+          <p className="text-center text-[11px] text-slate-500 mt-2">
+            今日剩余 <span className="text-amber-300 font-bold">{left}</span> 次
+            {left <= 0 && ' · 认同许愿可再 +5 次'}
+          </p>
         </div>
       )}
 
@@ -349,6 +370,15 @@ export default function StockBoxGame() {
           }`}
         >
           {left <= 0 ? '今日次数用完，明天再来' : pull ? '再开一次 🎁' : '开箱 🎁'}
+        </button>
+      )}
+      {/* 次数用完：给出去认同的路 */}
+      {left <= 0 && phase !== 'spinning' && onGoEndorse && (
+        <button
+          onClick={onGoEndorse}
+          className="w-full py-2.5 rounded-2xl text-sm font-bold border border-amber-500/50 bg-amber-500/15 text-amber-300 active:scale-[0.98] transition"
+        >
+          🤝 去许愿池认同，每条 +5 次
         </button>
       )}
       {phase === 'spinning' && (

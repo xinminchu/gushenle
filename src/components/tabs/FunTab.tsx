@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Flame, X, Trophy } from 'lucide-react';
 import { loadStats, recordPlay, recordSession, GAME_ICONS, type GameId, type GameStat } from '@/lib/gameStats';
@@ -28,12 +28,21 @@ export default function FunTab() {
   const [activeGame, setActiveGame] = useState<string | null>(null);
   const [stats, setStats] = useState<Record<GameId, GameStat> | null>(null);
   const { user } = useAuth();
+  const wishPoolRef = useRef<HTMLDivElement>(null);
 
   // 打开游戏即记一次游玩（统一口径）
   const openGame = (id: string) => {
     recordSession(id as GameId);
     setStats(loadStats());
     setActiveGame(id);
+  };
+
+  // 盲盒次数用完 → 关弹窗，平滑滚到许愿池认同
+  const goEndorse = () => {
+    setActiveGame(null);
+    setTimeout(() => {
+      wishPoolRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
   };
 
   // 每次进入娱乐页刷新战绩；监听 iframe 游戏的结算事件
@@ -258,7 +267,9 @@ export default function FunTab() {
       </div>
 
       {/* 游戏许愿池 */}
-      <WishPool />
+      <div ref={wishPoolRef} className="scroll-mt-4">
+        <WishPool />
+      </div>
 
       {/* 游戏全屏/Modal 弹窗容器 */}
       {activeGame && (
@@ -292,7 +303,7 @@ export default function FunTab() {
               {activeGame === 'encyclopedia' && <EncyclopediaGame />}
               {activeGame === 'wheel' && <WheelGame />}
               {activeGame === 'bowl' && <BowlGame />}
-              {activeGame === 'stockbox' && <StockBoxGame />}
+              {activeGame === 'stockbox' && <StockBoxGame onGoEndorse={goEndorse} />}
             </div>
           </div>
         </div>
