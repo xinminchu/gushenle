@@ -22,6 +22,8 @@ export interface ScanRow {
   score: number;
   statusKey: string;
   changePct: number | null;
+  /** 前一日涨跌幅（%），供「低分捡漏」看 昨天跌/连跌 用 */
+  prevChangePct: number | null;
   /** 昨日估算净流入（美元；flows.ts 确定性估算，非逐笔数据） */
   inflowEst: number | null;
   /** 最新一根日线的日期 YYYY-MM-DD（即本次扫描的数据日期） */
@@ -44,6 +46,9 @@ export async function scanOne(symbol: string): Promise<ScanRow | null> {
   const prev = series[n - 2].close;
   const last = series[n - 1].close;
   const changePct = prev > 0 ? Number((((last - prev) / prev) * 100).toFixed(2)) : null;
+  const prevPrev = series[n - 3].close;
+  const prevChangePct =
+    prevPrev > 0 ? Number((((prev - prevPrev) / prevPrev) * 100).toFixed(2)) : null;
   let inflowEst: number | null = null;
   try {
     const f = estimateFlows(series, sym);
@@ -58,6 +63,7 @@ export async function scanOne(symbol: string): Promise<ScanRow | null> {
     score: j.score,
     statusKey: j.statusKey ?? '',
     changePct,
+    prevChangePct,
     inflowEst,
     barDate: series[n - 1].date.slice(0, 10),
   };
@@ -86,6 +92,7 @@ export async function upsertScanRows(rows: ScanRow[]): Promise<{ ok: boolean; er
     score: r.score,
     status_key: r.statusKey,
     change_pct: r.changePct,
+    prev_change_pct: r.prevChangePct,
     inflow_est: r.inflowEst,
   }));
   const { error } = await sb.from('market_scan').upsert(payload, {

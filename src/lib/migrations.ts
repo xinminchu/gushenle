@@ -437,4 +437,16 @@ create policy "market_scan 公开读"
 -- 写操作只走 service_role（扫描 API 服务端直写），不给普通用户写权限。
 `,
   },
+  {
+    version: "020_market_scan_prev_change",
+    name: "市场扫描表加前日涨跌幅（低分捡漏用）",
+    sql: `-- 020_market_scan_prev_change.sql
+-- 给 market_scan 加前一日涨跌幅列，供「低分捡漏」用：
+-- 捡漏规则 = 律动分≤30 且 前日跌 (prev_change_pct<0)，
+-- 再看当日：涨→反弹，跌→连跌。
+
+alter table public.market_scan
+  add column if not exists prev_change_pct numeric;
+`,
+  },
 ];

@@ -9,7 +9,10 @@ export interface ScanItem {
   score: number;
   statusKey: string;
   changePct: number | null;
+  prevChangePct: number | null;
   inflowEst: number | null;
+  /** 捡漏形态：rebound=昨天跌今天涨 / streak=连跌两天 */
+  pattern?: 'rebound' | 'streak';
 }
 
 function anon() {
@@ -35,7 +38,7 @@ export async function GET() {
     const scanDate = latest[0].scan_date as string;
     const { data: rows, error: e2 } = await sb
       .from('market_scan')
-      .select('symbol,name,score,status_key,change_pct,inflow_est')
+      .select('symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est')
       .eq('scan_date', scanDate);
     if (e2) throw e2;
     const items: ScanItem[] = (rows || []).map((r) => ({
@@ -44,6 +47,7 @@ export async function GET() {
       score: r.score,
       statusKey: r.status_key || '',
       changePct: r.change_pct,
+      prevChangePct: r.prev_change_pct,
       inflowEst: r.inflow_est,
     }));
 
@@ -55,6 +59,25 @@ export async function GET() {
     const cold = items
       .filter((i) => i.statusKey === 'oversoldBottom')
       .sort((a, b) => a.score - b.score)
+      .slice(0, 5);
+
+    // 第三行：低分捡漏 —— 律动分≤30 且 昨天跌；
+    // 当天涨=反弹（已有买盘，排前面），当天还跌=连跌；同类按分从低到高
+    const LOW_SCORE = 30;
+    const find = items
+      .filter(
+        (i) =>
+          i.score <= LOW_SCORE &&
+          i.prevChangePct != null &&
+          i.prevChangePct < 0 &&
+          i.changePct != null &&
+          i.changePct !== 0,
+      )
+      .map((i) => ({ ...i, pattern: (i.changePct as number) > 0 ? ('rebound' as const) : ('streak' as const) }))
+      .sort((a, b) => {
+        if (a.pattern !== b.pattern) return a.pattern === 'rebound' ? -1 : 1;
+        return a.score - b.score;
+      })
       .slice(0, 5);
 
     // 大盘
@@ -74,6 +97,7 @@ export async function GET() {
       total: items.length,
       hot,
       cold,
+      find,
       qqq: idx('QQQ'),
       spy: idx('SPY'),
       inflowTop,

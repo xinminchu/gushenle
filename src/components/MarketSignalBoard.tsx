@@ -3,15 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 
-/** 首页两行的大白话标题（用户定版：涨得欢 / 跌得凶） */
+/** 首页三行的大白话标题（用户定版） */
 const HOT_LABEL = '涨得欢';
 const COLD_LABEL = '跌得凶';
+const FIND_LABEL = '低分捡漏';
 
 interface ScanItem {
   symbol: string;
   name: string;
   score: number;
   changePct: number | null;
+  pattern?: 'rebound' | 'streak';
 }
 
 interface ScanPayload {
@@ -20,12 +22,14 @@ interface ScanPayload {
   scanDate?: string;
   hot?: ScanItem[];
   cold?: ScanItem[];
+  find?: ScanItem[];
 }
 
 /**
- * 首页「今日信号」：每天收盘后批处理扫精选池，取
- * 🔥 涨得欢 / 🧊 跌得凶各前 5。
- * 只展示数据 + 大白话信号，不做买入推荐。
+ * 首页「今日信号」：每天收盘后批处理扫精选池
+ * 🔥 涨得欢 / 🧊 跌得凶 各前 5
+ * 🔍 低分捡漏：律动分≤30 且 昨天跌 —— 当天涨标「反弹」，还跌标「连跌」
+ * 只展示数据 + 大白话，不做买入推荐。
  */
 export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string) => void }) {
   const { lang } = useLanguage();
@@ -45,15 +49,16 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
     };
   }, []);
 
-  if (!data || !data.hot || !data.cold || (data.hot.length === 0 && data.cold.length === 0)) {
+  if (!data || !data.hot || !data.cold || (data.hot.length === 0 && data.cold.length === 0 && (data.find || []).length === 0)) {
     return null;
   }
   const md = data.scanDate ? data.scanDate.slice(5).replace('-', '/') : '';
 
-  const row = (items: ScanItem[], label: string) => (
+  const row = (items: ScanItem[], label: string, sub?: string) => (
     <div className="mb-2 last:mb-0">
       <div className="mb-1.5">
         <span className="text-xs font-semibold text-slate-200">{label}</span>
+        {sub && <span className="text-[10px] text-slate-500 ml-1.5">{sub}</span>}
       </div>
       <div className="grid grid-cols-5 gap-1.5">
         {items.map((s) => {
@@ -69,6 +74,15 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
               <div className="text-[10px] text-amber-300 font-semibold tabular-nums mt-0.5">
                 {s.score}分
               </div>
+              {s.pattern && (
+                <div
+                  className={`text-[9px] leading-tight mt-0.5 ${
+                    s.pattern === 'rebound' ? 'text-emerald-300' : 'text-sky-300'
+                  }`}
+                >
+                  {s.pattern === 'rebound' ? '反弹' : '连跌'}
+                </div>
+              )}
               <div
                 className={`text-[9px] tabular-nums ${
                   s.changePct == null
@@ -98,6 +112,8 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
       </div>
       {data.hot.length > 0 && row(data.hot, `🔥 ${HOT_LABEL}`)}
       {data.cold.length > 0 && row(data.cold, `🧊 ${COLD_LABEL}`)}
+      {(data.find || []).length > 0 &&
+        row(data.find || [], `🔍 ${FIND_LABEL}`, en ? 'score ≤ 30, down yesterday' : '分≤30 · 昨天跌')}
     </div>
   );
 }
