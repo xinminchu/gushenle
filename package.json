@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "NODE_OPTIONS='--max-old-space-size=1024' next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "node scripts/patch-next-ios15.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.23.0",
