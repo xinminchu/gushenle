@@ -230,23 +230,33 @@ export default function FunTab() {
             <button
               key={game.id}
               onClick={() => openGame(game.id)}
-              className={`relative bg-slate-800/80 border border-slate-700 hover:border-emerald-500/50 active:scale-[0.97] rounded-xl text-left transition-all ${
+              className={`relative overflow-hidden bg-slate-800/80 border border-slate-700 hover:border-emerald-500/50 active:scale-[0.97] rounded-xl text-left transition-all ${
                 compact ? 'p-2' : 'p-3'
               }`}
             >
+              {/* 大图标背景：右侧半透明，不抢文字 */}
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none select-none absolute right-0 top-1/2 -translate-y-1/2 leading-none opacity-[0.16] ${
+                  compact ? 'text-[58px]' : 'text-[76px]'
+                }`}
+              >
+                {game.icon}
+              </span>
               {game.hot && (
-                <span className="absolute top-1.5 right-1.5 bg-amber-500/20 text-amber-400 text-[9px] px-1 py-0.5 rounded flex items-center gap-0.5">
+                <span className="absolute top-1 right-1 z-10 bg-amber-500/25 text-amber-300 text-[9px] px-1 py-px rounded flex items-center gap-0.5">
                   <Flame className="w-2.5 h-2.5" /> 热门
                 </span>
               )}
-              <div className={compact ? 'text-xl mb-1' : 'text-2xl mb-1.5'}>{game.icon}</div>
-              <div
-                className={`font-bold text-slate-100 leading-snug ${
-                  compact ? 'text-[10px]' : 'text-xs'
-                } ${game.hot ? 'pr-7' : ''}`}
-              >
-                {game.name}
-              </div>
+              {/* 前景文字：预留徽标条，名称一行显示完 */}
+              <div className={`relative ${compact ? 'pt-[18px]' : 'pt-5'}`}>
+                <div
+                  className={`font-bold text-slate-100 leading-tight whitespace-nowrap ${
+                    compact ? 'text-[10px]' : 'text-xs'
+                  }`}
+                >
+                  {game.name}
+                </div>
               {game.credit && (
                 <div className="text-[9px] text-violet-300/80 mt-0.5 truncate">💡 {game.credit}</div>
               )}
@@ -268,6 +278,7 @@ export default function FunTab() {
                 ) : (
                   '还没玩过，来试试'
                 )}
+              </div>
               </div>
             </button>
           );
