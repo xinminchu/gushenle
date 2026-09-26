@@ -9,7 +9,7 @@ import { GAME_NAMES, GAME_ICONS, GameId } from '@/lib/gameStats';
  * 数据走 /api/leaderboard（service_role 聚合，只含登录玩家）。
  * 接口不可用（没配 key / 表空）时整个组件自动隐藏。
  *
- * - 整块可收放（状态记本地，默认展开）
+ * - 整块可收放（状态记本地，默认收起，省页面空间）
  * - 榜单切换用多排小图标网格（图标与娱乐页 tile 一一对应，见 GAME_ICONS），
  *   桌面端悬停出游戏名，手机端点选后下方显示当前榜单名
  */
@@ -69,7 +69,7 @@ function IconTab({
 export default function Leaderboard() {
   const [data, setData] = useState<BoardData | null>(null);
   const [tab, setTab] = useState<'all' | GameId>('all');
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     try {

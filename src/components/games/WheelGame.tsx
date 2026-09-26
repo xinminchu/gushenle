@@ -239,12 +239,14 @@ export default function WheelGame() {
             <span className="text-violet-300/80">💡 创意：@vipdongxia</span>
           </p>
           {err && <p className="text-xs text-rose-300 px-1">{err}</p>}
-          <button
-            onClick={start}
-            className="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-base font-bold"
-          >
-            开始转转盘
-          </button>
+          <div className="sticky bottom-0 -mx-3 px-3 pt-2 pb-2 bg-slate-900/95 backdrop-blur-sm border-t border-slate-800/60">
+            <button
+              onClick={start}
+              className="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-base font-bold shadow-lg"
+            >
+              开始转转盘
+            </button>
+          </div>
         </div>
       )}
 

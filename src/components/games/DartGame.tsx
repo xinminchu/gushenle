@@ -276,12 +276,14 @@ export default function DartGame() {
             <span className="text-violet-300/80">💡 创意来自 @大西洋龙虾</span>
           </p>
           {err && <p className="text-[11px] text-rose-300 px-1">{err}</p>}
-          <button
-            onClick={start}
-            className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
-          >
-            摆好飞镖盘
-          </button>
+          <div className="sticky bottom-0 -mx-3 px-3 pt-2 pb-2 bg-slate-900/95 backdrop-blur-sm border-t border-slate-800/60">
+            <button
+              onClick={start}
+              className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold shadow-lg"
+            >
+              摆好飞镖盘
+            </button>
+          </div>
         </div>
       )}
 
