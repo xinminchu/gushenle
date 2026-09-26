@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useNickname } from '@/hooks/useNickname';
 import { isAdminEmail } from '@/lib/admin';
 import { REPLY_DRAFTS } from '@/lib/replyDrafts';
+import { grantEndorseBonus, BONUS_PER_ENDORSE } from '@/lib/stockbox';
 
 interface Wish {
   id: string;
@@ -65,13 +66,16 @@ export default function WishPool() {
   const isAdmin = isAdminEmail(user?.email);
 
   const normalize = (rows: object[]): Wish[] =>
-    rows.map((w) => ({
-      adopted: false,
-      reply_text: null,
-      replied_at: null,
-      bonus_points: 0,
-      ...(w as Wish),
-    }));
+    rows.map((w) => {
+      const r = w as Partial<Wish>;
+      return {
+        ...(w as Wish),
+        adopted: r.adopted ?? false,
+        reply_text: r.reply_text ?? null,
+        replied_at: r.replied_at ?? null,
+        bonus_points: r.bonus_points ?? 0,
+      };
+    });
 
   /** EaaS v0 · 拉取展示中留言的认同情况；023 没跑（表不存在）时静默隐藏认同区 */
   const loadEndorsements = useCallback(
@@ -196,6 +200,10 @@ export default function WishPool() {
           display_name: (nickname || '股友').slice(0, 20),
         });
         if (error) throw error;
+        // EaaS v0 联动：认同一条留言，股票盲盒 +5 次（每条终身只加一次）
+        const bonus = grantEndorseBonus(w.id);
+        setMsg(bonus ? `已认同！股票盲盒 +${BONUS_PER_ENDORSE} 次 🎁` : '已认同');
+        setTimeout(() => setMsg(''), 3000);
       }
       await loadEndorsements(wishes.map((x) => x.id));
     } catch {
@@ -427,6 +435,9 @@ export default function WishPool() {
                     {st.count > st.names.length ? ` 等 ${st.count} 人` : ''}
                     认同了这条
                   </span>
+                )}
+                {!st?.mine && (
+                  <span className="text-[10px] text-slate-600 shrink-0">认同+{BONUS_PER_ENDORSE}次盲盒</span>
                 )}
               </div>
             )}

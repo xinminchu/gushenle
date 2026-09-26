@@ -4,12 +4,22 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { STOCK_LIST, findStock } from '@/lib/stockList';
 import { recordPlay } from '@/lib/gameStats';
 import { loadWatchlist, saveWatchlist } from '@/lib/watchlist';
+import {
+  loadDaily,
+  saveDaily,
+  todayStr,
+  totalPlaysToday,
+  playsLeft,
+  bonusPlays,
+  MAX_DAILY_FREE,
+} from '@/lib/stockbox';
 
 /**
  * 🎁 股票盲盒：CS 开箱式玩法，股票主题。
  * - 点开箱 → 股票条横向滚动减速 → 落定揭晓一只真股票
  * - 稀有度五档（普通/稀有/史诗/传说/金色传说），纯游戏设定，与投资价值无关
- * - 每日免费 5 次；开出的股票可一键加入自选；图鉴收集放本地
+ * - 每日免费 10 次；许愿池认同一条留言 +5 次（每条终身只加一次）
+ * - 开出的股票可一键加入自选；图鉴收集放本地
  * - 底部明示：游戏稀有度 ≠ 投资建议
  */
 
@@ -28,9 +38,7 @@ const SSR_CODES = ['AAPL', 'MSFT', 'AMZN', 'META', 'GOOGL', 'AMD', 'AVGO', 'NFLX
 const SR_CODES = ['UBER', 'ABNB', 'SQ', 'PYPL', 'SNOW', 'CRWD', 'DDOG', 'NET', 'OKTA', 'PANW', 'ANET', 'MRVL', 'QCOM', 'ARM', 'ASML', 'DIS', 'NKE', 'SBUX', 'KO', 'PEP', 'WMT', 'COST', 'HD', 'LLY', 'JNJ', 'XOM', 'CVX', 'NIO', 'LI', 'XPEV', 'RKLB', 'IONQ', 'OKLO', 'SMR', 'ASTS', 'LUNR'];
 const R_CODES = ['SHOP', 'TEAM', 'WDAY', 'NOW', 'FTNT', 'ZS', 'TXN', 'ADI', 'NXPI', 'LRCX', 'AMAT', 'KLAC', 'EA', 'TTWO', 'RBLX', 'HOOD', 'SOFI', 'AFRM', 'UPST', 'LCID', 'RIVN', 'ENPH', 'FSLR', 'SOUN', 'RCAT', 'AVAV', 'KTOS', 'JOBY', 'ACHR', 'MP', 'LAC', 'RIOT', 'MARA', 'CLSK', 'HUT', 'IREN', 'SPCX'];
 
-const MAX_DAILY = 5;
 const DEX_KEY = 'gushenle_stockbox_dex_v1';
-const DAILY_KEY = 'gushenle_stockbox_daily_v1';
 const STRIP_LEN = 48;
 const SPIN_MS = 3400;
 
@@ -43,11 +51,6 @@ interface Pull {
   tier: Tier;
 }
 
-const todayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
 function loadDex(): string[] {
   try {
     const j = JSON.parse(localStorage.getItem(DEX_KEY) || '[]');
@@ -55,14 +58,6 @@ function loadDex(): string[] {
   } catch {
     return [];
   }
-}
-
-function loadDaily(): { date: string; count: number } {
-  try {
-    const j = JSON.parse(localStorage.getItem(DAILY_KEY) || '{}');
-    if (j.date === todayStr() && typeof j.count === 'number') return j;
-  } catch {}
-  return { date: todayStr(), count: 0 };
 }
 
 /** 极简音效：滚动 tick + 揭晓和弦，无外部资源 */
@@ -157,8 +152,9 @@ export default function StockBoxGame() {
   const openBox = () => {
     if (phase === 'spinning') return;
     const d = loadDaily();
-    if (d.count >= MAX_DAILY) {
-      setHint(`今日 ${MAX_DAILY} 次已开完，明天再来试手气`);
+    const total = totalPlaysToday();
+    if (d.count >= total) {
+      setHint(`今日 ${total} 次已开完，明天再来试手气`);
       return;
     }
     setHint('');
@@ -199,7 +195,7 @@ export default function StockBoxGame() {
         blip(660, 0.12, 'triangle', 0.06);
         setTimeout(() => blip(880, 0.2, 'triangle', 0.06), 120);
         const nd = { date: todayStr(), count: d.count + 1 };
-        try { localStorage.setItem(DAILY_KEY, JSON.stringify(nd)); } catch {}
+        saveDaily(nd);
         setDaily(nd);
         setDex((prev) => {
           const next = prev.includes(result.code) ? prev : [...prev, result.code];
@@ -222,7 +218,9 @@ export default function StockBoxGame() {
     setHint(`已加入自选，去今日页看它的律动诊断`);
   };
 
-  const left = MAX_DAILY - daily.count;
+  const usedToday = daily.date === todayStr() ? daily.count : 0;
+  const left = playsLeft(usedToday);
+  const bonus = bonusPlays();
   const dexByTier = tiers.map((t) => ({
     tier: t,
     got: t.codes.filter((c) => dex.includes(c)).length,
@@ -236,6 +234,7 @@ export default function StockBoxGame() {
           <h3 className="text-base font-bold text-slate-100">🎁 股票盲盒</h3>
           <p className="text-[11px] text-slate-400 mt-0.5">
             创意 💡 @icey.bulbasa · 今日剩余 <span className="text-amber-300 font-bold">{left}</span> 次
+            <span className="text-slate-500">（免费{MAX_DAILY_FREE}{bonus > 0 ? `＋认同加成${bonus}` : ''}）</span>
           </p>
         </div>
         <div className="flex gap-1.5">
