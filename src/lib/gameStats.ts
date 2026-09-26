@@ -51,6 +51,26 @@ export const GAME_NAMES: Record<GameId, string> = {
   bowl: '猜碗选股',
 };
 
+/**
+ * 每个游戏的小 logo（emoji），与娱乐页游戏 tile 一一对应、互不重复。
+ * 英雄榜图标网格与 FunTab tile 共用这一份，新增游戏时只改这里。
+ */
+export const GAME_ICONS: Record<GameId, string> = {
+  clipper: '✂️',
+  cool30: '🎱',
+  bigtech: '🏢',
+  kline: '📦',
+  cutloss: '🔪',
+  holdback: '🚫',
+  newstrap: '📰',
+  dca: '💰',
+  dart: '🎯',
+  mole: '🔨',
+  encyclopedia: '📚',
+  wheel: '🎡',
+  bowl: '🥣',
+};
+
 const emptyStat = (): GameStat => ({ plays: 0, totalScore: 0, best: 0, banked: 0 });
 
 function blank(): Record<GameId, GameStat> {

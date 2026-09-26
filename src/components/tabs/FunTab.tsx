@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Flame, X, Trophy } from 'lucide-react';
-import { loadStats, recordPlay, recordSession, type GameId, type GameStat } from '@/lib/gameStats';
+import { loadStats, recordPlay, recordSession, GAME_ICONS, type GameId, type GameStat } from '@/lib/gameStats';
 import { useAuth } from '@/context/AuthContext';
 import WishPool from '../games/WishPool';
 import Leaderboard from '../games/Leaderboard';
@@ -67,59 +67,59 @@ export default function FunTab() {
     {
       id: 'clipper',
       name: '韭菜咯咯乐',
-      icon: '✂️',
+      icon: GAME_ICONS.clipper,
       level: '🟢 极低',
       hot: true,
     },
     {
       id: 'cool30',
       name: '沉思撞球 30 秒',
-      icon: '🎱',
+      icon: GAME_ICONS.cool30,
       level: '🟢 极低',
       hot: true,
     },
     {
       id: 'bigtech',
       name: '美股巨头大乱斗',
-      icon: '🏢',
+      icon: GAME_ICONS.bigtech,
       level: '🟡 中等',
     },
     {
       id: 'kline',
       name: '历史 K 线盲盒',
-      icon: '📦',
+      icon: GAME_ICONS.kline,
       level: '🟡 中等',
     },
     {
       id: 'cutloss',
       name: '割肉还是卧倒',
-      icon: '🔪',
+      icon: GAME_ICONS.cutloss,
       level: '🟡 中等',
       hot: true,
     },
     {
       id: 'holdback',
       name: '忍住别追高',
-      icon: '🚫',
+      icon: GAME_ICONS.holdback,
       level: '🟡 中等',
       hot: true,
     },
     {
       id: 'newstrap',
       name: '消息面陷阱',
-      icon: '📰',
+      icon: GAME_ICONS.newstrap,
       level: '🟡 中等',
     },
     {
       id: 'dca',
       name: '定投 vs 梭哈',
-      icon: '💰',
+      icon: GAME_ICONS.dca,
       level: '🟢 极低',
     },
     {
       id: 'dart',
       name: '飞镖选股',
-      icon: '🎯',
+      icon: GAME_ICONS.dart,
       level: '🟢 极低',
       hot: true,
       credit: '@大西洋龙虾',
@@ -127,7 +127,7 @@ export default function FunTab() {
     {
       id: 'mole',
       name: '高管打地鼠',
-      icon: '🔨',
+      icon: GAME_ICONS.mole,
       level: '🟢 极低',
       hot: true,
       credit: '@麻牛',
@@ -135,7 +135,7 @@ export default function FunTab() {
     {
       id: 'encyclopedia',
       name: '股票大百科',
-      icon: '📚',
+      icon: GAME_ICONS.encyclopedia,
       level: '🟢 极低',
       hot: true,
       credit: '@ecfollower',
@@ -143,7 +143,7 @@ export default function FunTab() {
     {
       id: 'wheel',
       name: '转转盘买股',
-      icon: '🎡',
+      icon: GAME_ICONS.wheel,
       level: '🟢 极低',
       hot: true,
       credit: '@vipdongxia',
@@ -151,7 +151,7 @@ export default function FunTab() {
     {
       id: 'bowl',
       name: '猜碗选股',
-      icon: '🥣',
+      icon: GAME_ICONS.bowl,
       level: '🟢 极低',
       hot: true,
       credit: '@路过',
