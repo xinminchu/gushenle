@@ -481,4 +481,47 @@ alter table public.market_scan
   add column if not exists prev_change_pct numeric;
 `,
   },
+  {
+    version: "023_wish_endorsements",
+    name: "许愿池：认同表（EaaS v0 · 认同即定价）",
+    sql: `-- 023_wish_endorsements.sql
+-- 许愿池"认同"功能：EaaS v0 的核心动作。认同 = 具名支持（认同 = 认可 + 同频），
+-- 认同者公开署名，天然有成本；一条留言的认同数即它的"定价"。
+-- 规则：登录可认同，不可给自己认同，每人每条限一次，可取消。
+-- 在 Supabase Dashboard -> SQL Editor 中执行一次即可，
+-- 或用站内「管理」→ 数据库迁移一键执行。
+
+create table if not exists public.wish_endorsements (
+  id uuid primary key default gen_random_uuid(),
+  wish_id uuid not null references public.game_wishes(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  display_name text not null default '',
+  created_at timestamptz not null default now(),
+  unique (wish_id, user_id)
+);
+
+create index if not exists idx_wish_endorsements_wish
+  on public.wish_endorsements (wish_id);
+
+alter table public.wish_endorsements enable row level security;
+
+-- 所有人可看（认同名单公开：全网都是同桌人）
+drop policy if exists "wish_endorsements 公开读" on public.wish_endorsements;
+create policy "wish_endorsements 公开读"
+  on public.wish_endorsements for select
+  using (true);
+
+-- 登录用户只能以自己的身份认同（防冒名）
+drop policy if exists "wish_endorsements 本人可认同" on public.wish_endorsements;
+create policy "wish_endorsements 本人可认同"
+  on public.wish_endorsements for insert
+  with check (auth.uid() is not null and auth.uid() = user_id);
+
+-- 只能取消自己的认同
+drop policy if exists "wish_endorsements 本人可取消" on public.wish_endorsements;
+create policy "wish_endorsements 本人可取消"
+  on public.wish_endorsements for delete
+  using (auth.uid() is not null and auth.uid() = user_id);
+`,
+  },
 ];

@@ -21,6 +21,13 @@ interface Wish {
   bonus_points: number; // 017：被采纳的额外奖励分（默认 0）
 }
 
+/** EaaS v0 · 认同：某条留言收到的具名认同（认同 = 认可 + 同频，认同即定价） */
+interface EndorseInfo {
+  count: number;
+  names: string[];
+  mine: boolean;
+}
+
 const KIND_META = {
   idea: { label: '游戏设想', icon: <Lightbulb className="w-3 h-3" />, chip: 'bg-violet-500/15 text-violet-300 border-violet-500/30' },
   review: { label: '玩家评价', icon: <MessageSquareHeart className="w-3 h-3" />, chip: 'bg-sky-500/15 text-sky-300 border-sky-500/30' },
@@ -52,6 +59,9 @@ export default function WishPool() {
   const [replyText, setReplyText] = useState('');
   const [replyBusy, setReplyBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [endorsements, setEndorsements] = useState<Record<string, EndorseInfo>>({});
+  const [endorseReady, setEndorseReady] = useState(false); // 023 没跑时隐藏认同区
+  const [endorseBusy, setEndorseBusy] = useState<string | null>(null);
   const isAdmin = isAdminEmail(user?.email);
 
   const normalize = (rows: object[]): Wish[] =>
@@ -63,10 +73,46 @@ export default function WishPool() {
       ...(w as Wish),
     }));
 
+  /** EaaS v0 · 拉取展示中留言的认同情况；023 没跑（表不存在）时静默隐藏认同区 */
+  const loadEndorsements = useCallback(
+    async (ids: string[]) => {
+      if (!supabase || ids.length === 0) {
+        setEndorsements({});
+        setEndorseReady(false);
+        return;
+      }
+      try {
+        const r = await supabase
+          .from('wish_endorsements')
+          .select('wish_id,user_id,display_name')
+          .in('wish_id', ids)
+          .order('created_at', { ascending: true })
+          .limit(600);
+        if (r.error) throw r.error;
+        const map: Record<string, EndorseInfo> = {};
+        for (const e of (r.data || []) as {
+          wish_id: string;
+          user_id: string;
+          display_name: string;
+        }[]) {
+          const m = map[e.wish_id] ?? (map[e.wish_id] = { count: 0, names: [], mine: false });
+          m.count += 1;
+          if (m.names.length < 3) m.names.push(e.display_name || '股友');
+          if (user && e.user_id === user.id) m.mine = true;
+        }
+        setEndorsements(map);
+        setEndorseReady(true);
+      } catch {
+        setEndorsements({});
+        setEndorseReady(false);
+      }
+    },
+    [user]
+  );
+
   const load = useCallback(async () => {
     if (!supabase) return;
-    try {
-      // 四档降级：017 没跑就没有 bonus_points 列，009 没跑就没有 reply 列，006 没跑就没有 adopted 列
+    try {      // 四档降级：017 没跑就没有 bonus_points 列，009 没跑就没有 reply 列，006 没跑就没有 adopted 列
       const tries = [
         'id,user_id,nickname,kind,content,created_at,adopted,reply_text,replied_at,bonus_points',
         'id,user_id,nickname,kind,content,created_at,adopted,reply_text,replied_at',
@@ -86,6 +132,7 @@ export default function WishPool() {
         }
       }
       setWishes(rows);
+      await loadEndorsements(rows.map((r) => r.id));
       if (user) {
         // 贡献值 = Σ(10 + bonus_points)：被采纳的留言额外 +40；
         // bonus_points 列不存在（017 没跑）时降级回按条数 ×10
@@ -113,11 +160,50 @@ export default function WishPool() {
     } catch {
       /* 忽略 */
     }
-  }, [user]);
+  }, [user, loadEndorsements]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  /** EaaS v0 · 认同/取消认同：具名，公开，不可给自己认同 */
+  const toggleEndorse = async (w: Wish) => {
+    if (!supabase || endorseBusy) return;
+    if (!user) {
+      setMsg('登录后可认同');
+      setTimeout(() => setMsg(''), 3000);
+      return;
+    }
+    if (w.user_id && w.user_id === user.id) {
+      setMsg('自己的许愿不用认同啦～');
+      setTimeout(() => setMsg(''), 3000);
+      return;
+    }
+    setEndorseBusy(w.id);
+    try {
+      const st = endorsements[w.id];
+      if (st?.mine) {
+        const { error } = await supabase
+          .from('wish_endorsements')
+          .delete()
+          .eq('wish_id', w.id)
+          .eq('user_id', user.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('wish_endorsements').insert({
+          wish_id: w.id,
+          user_id: user.id,
+          display_name: (nickname || '股友').slice(0, 20),
+        });
+        if (error) throw error;
+      }
+      await loadEndorsements(wishes.map((x) => x.id));
+    } catch {
+      /* 023 没跑或网络问题：静默 */
+    } finally {
+      setEndorseBusy(null);
+    }
+  };
 
   const submit = async () => {
     const text = content.trim();
@@ -287,7 +373,9 @@ export default function WishPool() {
             许愿池空空如也——来许第一个愿吧 🌱
           </p>
         )}
-        {wishes.map((w) => (
+        {wishes.map((w) => {
+          const st = endorsements[w.id];
+          return (
           <div key={w.id} className="bg-slate-800/40 border border-slate-700/60 rounded-xl px-3 py-2.5">
             <div className="flex items-center gap-1.5 mb-1">
               <span className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border ${KIND_META[w.kind].chip}`}>
@@ -317,6 +405,31 @@ export default function WishPool() {
               )}
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">{w.content}</p>
+
+            {/* EaaS v0 · 认同区：具名认同，认同即定价（023 没跑时整行隐藏） */}
+            {endorseReady && (
+              <div className="mt-1.5 flex items-center gap-2 min-w-0">
+                <button
+                  onClick={() => toggleEndorse(w)}
+                  disabled={endorseBusy === w.id}
+                  className={`shrink-0 flex items-center gap-1 text-[10px] px-2 py-1 rounded-full border disabled:opacity-50 ${
+                    st?.mine
+                      ? 'bg-amber-500/25 text-amber-200 border-amber-400/50 font-semibold'
+                      : 'text-amber-300/90 border-amber-500/30 bg-amber-500/10'
+                  }`}
+                >
+                  🤝 {st?.mine ? '已认同' : '认同'}
+                  {st && st.count > 0 ? `（${st.count}）` : ''}
+                </button>
+                {st && st.count > 0 && (
+                  <span className="text-[10px] text-slate-500 truncate">
+                    {st.names.join('、')}
+                    {st.count > st.names.length ? ` 等 ${st.count} 人` : ''}
+                    认同了这条
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Mas 官方回复：所有人可见 */}
             {w.reply_text && (
@@ -408,7 +521,8 @@ export default function WishPool() {
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
