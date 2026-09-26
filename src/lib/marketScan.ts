@@ -26,6 +26,8 @@ export interface ScanRow {
   prevChangePct: number | null;
   /** 昨日估算净流入（美元；flows.ts 确定性估算，非逐笔数据） */
   inflowEst: number | null;
+  /** 近20天累计净流入（flows.ts 确定性估算；正=买入多），供中间行过滤用 */
+  flow20d: number | null;
   /** 连涨天数：从最新一根日线往前数，连续收涨天数；平盘打断 */
   upStreak: number;
   /** 连跌天数：从最新一根日线往前数，连续收跌天数；平盘打断 */
@@ -59,9 +61,13 @@ export async function scanOne(symbol: string): Promise<ScanRow | null> {
   let downStreak = 0;
   for (let k = n - 1; k >= 1 && series[k].close < series[k - 1].close; k--) downStreak++;
   let inflowEst: number | null = null;
+  let flow20d: number | null = null;
   try {
     const f = estimateFlows(series, sym);
-    if (f && f.days.length > 0) inflowEst = Math.round(f.days[f.days.length - 1].flow);
+    if (f && f.days.length > 0) {
+      inflowEst = Math.round(f.days[f.days.length - 1].flow);
+      flow20d = Math.round(f.net);
+    }
   } catch {
     /* 资金流算不出不影响整行 */
   }
@@ -74,6 +80,7 @@ export async function scanOne(symbol: string): Promise<ScanRow | null> {
     changePct,
     prevChangePct,
     inflowEst,
+    flow20d,
     upStreak,
     downStreak,
     barDate: series[n - 1].date.slice(0, 10),
@@ -105,6 +112,7 @@ export async function upsertScanRows(rows: ScanRow[]): Promise<{ ok: boolean; er
     change_pct: r.changePct,
     prev_change_pct: r.prevChangePct,
     inflow_est: r.inflowEst,
+    flow_20d: r.flow20d,
     up_streak: r.upStreak,
     down_streak: r.downStreak,
   }));

@@ -15,6 +15,8 @@ export interface ScanItem {
   upStreak?: number | null;
   /** 连跌天数（030 未执行时为 null，前端不显示标签） */
   downStreak?: number | null;
+  /** 近20天累计净流入（031 未执行时为 null，中间行退回不过滤） */
+  flow20d?: number | null;
   /** 捡漏形态：rebound=昨天跌今天涨 / streak=连跌两天 */
   pattern?: 'rebound' | 'streak';
 }
@@ -64,26 +66,32 @@ export async function GET(req: Request) {
       );
       return NextResponse.json({ ok: true, scanDate, total: pool.length, pool });
     }
-    // 030 没执行时（up_streak/down_streak 列不存在）降级：三行照常，连涨连跌标不显示
+    // 031 没执行时（flow_20d 列不存在）降级：中间行退回"离50最近"不过滤；
+    // 030 没执行时（up_streak/down_streak 不存在）降级：连涨连跌标不显示
+    const COLS_FULL =
+      'symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est,up_streak,down_streak,flow_20d';
+    const COLS_NO_FLOW20 =
+      'symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est,up_streak,down_streak';
+    const COLS_BASE = 'symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est';
     let rows: Record<string, unknown>[] | null = null;
     let withStreak = true;
+    let withFlow20 = true;
     try {
-      const r = await sb
-        .from('market_scan')
-        .select(
-          'symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est,up_streak,down_streak',
-        )
-        .eq('scan_date', scanDate);
+      const r = await sb.from('market_scan').select(COLS_FULL).eq('scan_date', scanDate);
       if (r.error) throw r.error;
       rows = r.data;
     } catch {
-      withStreak = false;
-      const r2 = await sb
-        .from('market_scan')
-        .select('symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est')
-        .eq('scan_date', scanDate);
-      if (r2.error) throw r2.error;
-      rows = r2.data;
+      try {
+        withFlow20 = false;
+        const r2 = await sb.from('market_scan').select(COLS_NO_FLOW20).eq('scan_date', scanDate);
+        if (r2.error) throw r2.error;
+        rows = r2.data;
+      } catch {
+        withStreak = false;
+        const r3 = await sb.from('market_scan').select(COLS_BASE).eq('scan_date', scanDate);
+        if (r3.error) throw r3.error;
+        rows = r3.data;
+      }
     }
     const items: ScanItem[] = (rows || []).map((r) => ({
       symbol: r.symbol as string,
@@ -95,6 +103,7 @@ export async function GET(req: Request) {
       inflowEst: r.inflow_est as number | null,
       upStreak: withStreak ? (r.up_streak as number | null) : null,
       downStreak: withStreak ? (r.down_streak as number | null) : null,
+      flow20d: withFlow20 ? (r.flow_20d as number | null) : null,
     }));
 
     // 第一行：涨得欢 —— 冲高过热，按分从高到低取 5
@@ -112,13 +121,49 @@ export async function GET(req: Request) {
       .sort((a, b) => a.score - b.score)
       .slice(0, 5);
 
-    // 第二行：看一眼 —— 离两头都远：|综合分-50| 最小的 5 只；
-    // 涨得欢/跌得凶里已占的不重复出现
+    // 第二行：看一眼 —— 离50由近到远，50上下成对比较，留"近20天买入多"者：
+    // 每对（50下方离50最近一只，50上方离50最近一只）：净流入为正者入选，
+    // 净流出/数据缺失跳过；两个都为正时取前一日涨幅（changePct）大者，涨幅打平取离50近者；
+    // 每对比较完左右指针各往前推一格，直到取满 5 只。涨得欢/跌得凶已占的不重复出现。
+    // 031 未执行时（flow20d 全 null）退回"离50最近"不过滤。
     const coldSymbols = new Set(cold.map((c) => c.symbol));
-    const middle = items
-      .filter((i) => !hotSymbols.has(i.symbol) && !coldSymbols.has(i.symbol))
-      .sort((a, b) => Math.abs(a.score - 50) - Math.abs(b.score - 50) || b.score - a.score)
-      .slice(0, 5);
+    let middle: ScanItem[];
+    if (!withFlow20) {
+      middle = items
+        .filter((i) => !hotSymbols.has(i.symbol) && !coldSymbols.has(i.symbol))
+        .sort((a, b) => Math.abs(a.score - 50) - Math.abs(b.score - 50) || b.score - a.score)
+        .slice(0, 5);
+    } else {
+      const isInflow = (s: ScanItem) => s.flow20d != null && s.flow20d > 0;
+      const below = items
+        .filter((i) => !hotSymbols.has(i.symbol) && !coldSymbols.has(i.symbol) && i.score < 50)
+        .sort((a, b) => b.score - a.score); // 离50由近到远
+      const above = items
+        .filter((i) => !hotSymbols.has(i.symbol) && !coldSymbols.has(i.symbol) && i.score >= 50)
+        .sort((a, b) => a.score - b.score); // 离50由近到远
+      middle = [];
+      let bi = 0;
+      let ai = 0;
+      while (middle.length < 5 && (bi < below.length || ai < above.length)) {
+        const l = bi < below.length ? below[bi] : null;
+        const r = ai < above.length ? above[ai] : null;
+        const lIn = !!l && isInflow(l);
+        const rIn = !!r && isInflow(r);
+        if (lIn && rIn && l && r) {
+          const lc = l.changePct ?? -1e9;
+          const rc = r.changePct ?? -1e9;
+          if (rc !== lc) middle.push(rc > lc ? r : l);
+          else middle.push(Math.abs(r.score - 50) <= Math.abs(l.score - 50) ? r : l);
+        } else if (lIn && l) {
+          middle.push(l);
+        } else if (rIn && r) {
+          middle.push(r);
+        }
+        // 左右各往前推一格：净流出的就地跳过
+        if (l) bi++;
+        if (r) ai++;
+      }
+    }
 
     // 大盘
     const idx = (s: string) => items.find((i) => i.symbol === s) || null;
@@ -138,6 +183,8 @@ export async function GET(req: Request) {
       hot,
       middle,
       cold,
+      /** 中间行是否经过"近20天净流入为正"过滤（031 未执行时为 false） */
+      flowFilter: withFlow20,
       qqq: idx('QQQ'),
       spy: idx('SPY'),
       inflowTop,

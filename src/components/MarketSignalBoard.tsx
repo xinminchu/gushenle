@@ -24,12 +24,15 @@ interface ScanPayload {
   hot?: ScanItem[];
   middle?: ScanItem[];
   cold?: ScanItem[];
+  /** 中间行是否经过"近20天净流入为正"过滤 */
+  flowFilter?: boolean;
 }
 
 /**
  * 首页「今日信号」：每天收盘后批处理扫精选池，摆三行
  * 🔥 涨得欢：冲高过热，按分从高到低前 5 —— 别追，当心有套（栏杆，淡红底）
- * 👀 看一眼：|综合分-50| 最小的前 5（离两头都远）—— 中间行名字暂定（淡绿底，观察中）
+ * 👀 看一眼：离50由近到远、50上下成对比较，留近20天净流入为正者；
+ *   都为正取前一日涨幅大者 —— 中间行名字暂定（淡绿底，观察中）
  * 🥶 跌得凶：分最低的 5 只（跌过头判定天然排最前）—— 慎出，不卖飞（栏杆，淡红底）
  * 不展示律动分；连涨/连跌≥3 天在 tile 上打标（平盘打断）；点一只直接跳到它的价格走势。
  * 只展示数据 + 大白话，不做买入推荐。
@@ -144,7 +147,18 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
         en ? 'don\u2019t chase, avoid getting trapped' : '别追，当心有套',
         'red',
       )}
-      {row(data.middle || [], `👀 ${MIDDLE_LABEL}`, en ? 'closest to score 50' : '离50分最近', 'green')}
+      {row(
+        data.middle || [],
+        `👀 ${MIDDLE_LABEL}`,
+        en
+          ? data.flowFilter
+            ? 'near 50 · 20-day net inflow'
+            : 'closest to score 50'
+          : data.flowFilter
+            ? '离50近 · 近20天买入多'
+            : '离50分最近',
+        'green',
+      )}
       {row(
         data.cold || [],
         `🥶 ${COLD_LABEL}`,
@@ -160,6 +174,11 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
         {en
           ? '📊 Streaks count consecutive up/down closes; shown only at 3+ days, a flat day breaks the streak.'
           : '📊 连涨/连跌按收盘价连续天数算，满 3 天才标，平盘打断。'}
+      </div>
+      <div className="mt-1 text-[10px] leading-relaxed text-slate-600">
+        {en
+          ? '👀 Middle: pairs nearest to 50 above/below; keep 20-day net inflow; both positive → larger last-day gain wins.'
+          : '👀 中间行取法：离50由近到远、上下成对比较，留近20天买入多者；都多时取前一日涨幅大者。'}
       </div>
     </div>
   );
