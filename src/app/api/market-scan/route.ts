@@ -94,10 +94,11 @@ export async function GET(req: Request) {
       .filter((i) => i.statusKey === 'overheated')
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
-    // （跌得凶仍在接口里算，前端不再展示）
-    const cold = items
-      .filter((i) => i.statusKey === 'oversoldBottom')
-      .sort((a, b) => a.score - b.score)
+    // 第二行：稳着涨 —— 趋势健康但没过热：
+    // 状态为高位强势/涨势加速（分≥60 且 未过热），按分从高到低取 5
+    const steady = items
+      .filter((i) => i.statusKey === 'hotStrong' || i.statusKey === 'risingAccel')
+      .sort((a, b) => b.score - a.score)
       .slice(0, 5);
 
     // 第二行：姿态低 —— 律动分≤30 且 昨天跌；
@@ -135,7 +136,7 @@ export async function GET(req: Request) {
       scanDate,
       total: items.length,
       hot,
-      cold,
+      steady,
       find,
       qqq: idx('QQQ'),
       spy: idx('SPY'),
