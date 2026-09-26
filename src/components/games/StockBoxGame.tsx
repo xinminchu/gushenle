@@ -334,12 +334,6 @@ export default function StockBoxGame() {
             >
               {inWatch ? '已在自选 ✓' : '＋ 加入自选'}
             </button>
-            <button
-              onClick={() => { setPhase('idle'); openBox(); }}
-              className="text-xs px-3 py-1.5 rounded-full border border-slate-600 bg-slate-800 text-slate-200"
-            >
-              再来一次 🎲
-            </button>
           </div>
         </div>
       )}
