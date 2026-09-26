@@ -196,17 +196,23 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     }
   }, [focusSymbol, setFocusSymbol]);
 
-  // 自选变化后，当前标的若被删则回到第一只。
-  // 注意：从持仓/关注跳过来的标的可能根本不在自选里（手动加的关注），
-  // 这种"从没进过自选"的不算被删，不能弹回第一只——只在"曾经在、现在没了"时回弹。
-  const wasInWatchlist = useRef(false);
+  // 自选变化后，当前标的若"被删掉"才回到第一只。
+  // 从信号牌点进来的标的可能根本不在自选里——那不算被删，不能回弹。
+  // 所以只跟 watchlist 走：对比变化前后的名单，当前标的"曾经在、现在没了"才回弹。
+  const prevWatchlistRef = useRef<string[] | null>(null);
   useEffect(() => {
-    const inList = watchlist.some((i) => i.symbol === symbol);
-    if (wasInWatchlist.current && !inList && watchlist.length > 0) {
-      setSymbol(watchlist[0].symbol);
+    const cur = watchlist.map((i) => i.symbol);
+    const prev = prevWatchlistRef.current;
+    if (prev !== null && cur.length > 0) {
+      const wasIn = prev.includes(symbol);
+      const nowIn = cur.includes(symbol);
+      if (wasIn && !nowIn) {
+        setSymbol(cur[0]);
+      }
     }
-    wasInWatchlist.current = inList;
-  }, [watchlist, symbol]);
+    prevWatchlistRef.current = cur;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchlist]);
 
   // 收盘后自动刷新：页面开着过夜，第二天自动拉取最新收盘价
   const autoTick = useMarketAutoRefresh(
