@@ -14,6 +14,7 @@ import { getRhythm, invalidateRhythm } from '@/lib/market';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 import { useWatchlist } from './WatchlistContext';
 import DiscoverStocks from './DiscoverStocks';
+import CompanyIntro from './CompanyIntro';
 import { STOCK_NAMES } from '@/lib/stockAliases';
 import {
   CODE_CORRECTIONS,
@@ -1086,6 +1087,12 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               </button>
             </div>
           </div>
+
+          {/* 🏢 公司介绍：大白话一句话 + 板块/主题标签（诊断卡下方） */}
+          {(() => {
+            const info = findStock(symbol);
+            return info ? <CompanyIntro info={info} /> : null;
+          })()}
 
           {/* 筹码分布 + 资金流向：并排小面板 */}
           <div className="grid grid-cols-2 gap-2">
