@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   fillPicks,
   fetchScanPool,
-  prepareBuyReveal,
+  prepareBuyRevealResilient,
   fmtPct,
   type BuyRevealItem,
 } from './gameUtils';
@@ -135,21 +135,21 @@ export default function DiceGame() {
     setCandidates(fillPicks(c === 2 ? 12 : 6));
   };
 
-  /** 发牌：拉取候选的"昨日"+后5天数据 */
+  /** 发牌：拉取候选的"昨日"+后5天数据（缺数据的名额自动补位） */
   const deal = async (picks: Pick[]) => {
     setPhase('loading');
     setErr('');
     const n = picks.length;
-    const r = await prepareBuyReveal(picks);
-    if (!r || r.items.length < n) {
+    const r = await prepareBuyRevealResilient(picks);
+    if (!r) {
       setErr('行情数据没拉全，换个网络再试一次');
       setPhase('setup');
       return;
     }
-    setCandidates(picks.slice(0, n));
-    setStocks(r.items.slice(0, n));
-    setDayLabel(r.dayLabel);
-    setQqq5(r.qqq5);
+    setCandidates(r.picks.slice(0, n));
+    setStocks(r.reveal.items.slice(0, n));
+    setDayLabel(r.reveal.dayLabel);
+    setQqq5(r.reveal.qqq5);
     setFaces(diceCount === 2 ? [1, 1] : [1]);
     setPhase('ready');
   };

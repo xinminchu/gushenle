@@ -154,9 +154,9 @@ export default function DartGame() {
     const qqqSeries = all[all.length - 1];
     const items: { w: { symbol: string; name: string }; s: Candle[] }[] = [];
     wl.forEach((w, i) => {
-      if (all[i] && all[i]!.length >= 60) items.push({ w, s: all[i]! });
+      if (all[i] && all[i]!.length >= 40) items.push({ w, s: all[i]! });
     });
-    if (items.length < 3 || !qqqSeries || qqqSeries.length < 60) {
+    if (items.length < 3 || !qqqSeries || qqqSeries.length < 40) {
       setErr('行情数据没拉全，换个网络再试一次');
       return false;
     }

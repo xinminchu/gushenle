@@ -66,16 +66,30 @@ export function normalizeSeries(raw: unknown[]): Candle[] {
     });
 }
 
-/** 拉某只股票全部历史 K 线；失败返回 null（调用方用兜底）。 */
+/** 拉某只股票全部历史 K 线；失败返回 null（调用方用兜底）。
+ * 带内存缓存：同一局内/换一批重试时不再重复请求。 */
+const seriesCache = new Map<string, Promise<Candle[] | null>>();
 export async function fetchSeries(symbol: string): Promise<Candle[] | null> {
-  try {
-    const r = await fetch(`/api/rhythm?symbol=${encodeURIComponent(symbol)}&range=ALL`);
-    const j = (await r.json()) as { series?: unknown[] };
-    const s = normalizeSeries(j.series || []);
-    return s.length >= 30 ? s : null;
-  } catch {
-    return null;
+  const sym = symbol.toUpperCase();
+  let p = seriesCache.get(sym);
+  if (!p) {
+    p = (async () => {
+      try {
+        const r = await fetch(`/api/rhythm?symbol=${encodeURIComponent(sym)}&range=ALL`);
+        const j = (await r.json()) as { series?: unknown[] };
+        const s = normalizeSeries(j.series || []);
+        return s.length >= 30 ? s : null;
+      } catch {
+        return null;
+      }
+    })();
+    seriesCache.set(sym, p);
   }
+  return p.then((s) => {
+    // 失败不缓存：重试时可以再拉一次
+    if (!s) seriesCache.delete(sym);
+    return s;
+  });
 }
 
 /** 本地兜底：随机生成 n 根 K 线（日期倒推至今天） */
@@ -321,6 +335,14 @@ export async function fetchScanPool(): Promise<{ symbol: string; name: string; s
 }
 
 /**
+ * 揭晓数据至少需要的 K 线根数。
+ * 随机窗口逻辑只需要约 30 根；取 40 留余量。
+ * 注意：律动扫描池的入库门槛是 22 根，所以池子里会有 22–39 根的"新股"，
+ * 发牌时缺数据的名额会自动用股票库补位（见 prepareBuyRevealResilient）。
+ */
+const MIN_HISTORY = 40;
+
+/**
  * 通用"买入揭晓"数据准备：随机挑历史某一天当"昨日"，
  * 算每只候选的昨日涨跌 + 后 5 天涨跌 + QQQ 后 5 天。
  * 供"随机买入"类游戏共用（飞镖/骰子/酒鬼走位逻辑同源）。
@@ -334,9 +356,9 @@ export async function prepareBuyReveal(
   const qqqSeries = all[all.length - 1];
   const items: { w: { symbol: string; name: string }; s: Candle[] }[] = [];
   picks.forEach((w, i) => {
-    if (all[i] && all[i]!.length >= 60) items.push({ w, s: all[i]! });
+    if (all[i] && all[i]!.length >= MIN_HISTORY) items.push({ w, s: all[i]! });
   });
-  if (items.length < 3 || !qqqSeries || qqqSeries.length < 60) return null;
+  if (items.length < 3 || !qqqSeries || qqqSeries.length < MIN_HISTORY) return null;
   const maps = items.map(({ s }) => {
     const m = new Map<string, number>();
     s.forEach((c, i) => m.set(c.date, i));
@@ -369,4 +391,30 @@ export async function prepareBuyReveal(
     };
   }
   return null;
+}
+
+/**
+ * 有弹性的发牌：先正常拉；有候选缺数据（比如扫描池里的上市不久的新股），
+ * 就用股票库随机补位再拉一次，保证名额凑满。
+ * 返回最终使用的候选名单（顺序即格子顺序）+ 揭晓数据；实在凑不齐返回 null。
+ */
+export async function prepareBuyRevealResilient(
+  picks: { symbol: string; name: string }[],
+): Promise<{ reveal: BuyReveal; picks: { symbol: string; name: string }[] } | null> {
+  const n = picks.length;
+  if (n < 3) return null;
+  let r = await prepareBuyReveal(picks);
+  if (r && r.items.length >= n) return { reveal: r, picks };
+  // 补位：已拉到数据的保留原位，缺的名额从股票库随机补
+  const okSyms = new Set((r?.items || []).map((it) => it.symbol.toUpperCase()));
+  const kept = picks.filter((p) => okSyms.has(p.symbol.toUpperCase()));
+  const need = n - kept.length;
+  const extra = fillPicks(need + 10)
+    .filter((p) => !okSyms.has(p.symbol.toUpperCase()))
+    .slice(0, need);
+  if (extra.length < need) return null;
+  const finalPicks = [...kept, ...extra];
+  r = await prepareBuyReveal(finalPicks);
+  if (!r || r.items.length < n) return null;
+  return { reveal: r, picks: finalPicks };
 }

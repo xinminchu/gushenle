@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { fillPicks, prepareBuyReveal, fmtPct, type BuyRevealItem } from './gameUtils';
+import { fillPicks, prepareBuyRevealResilient, fmtPct, type BuyRevealItem } from './gameUtils';
 import { recordPlay } from '@/lib/gameStats';
 
 type Phase = 'setup' | 'loading' | 'ready' | 'walking' | 'bought' | 'reveal';
@@ -47,15 +47,15 @@ export default function DrunkardGame() {
   const start = async () => {
     setPhase('loading');
     setErr('');
-    const r = await prepareBuyReveal(candidates);
-    if (!r || r.items.length < N * N) {
+    const r = await prepareBuyRevealResilient(candidates);
+    if (!r) {
       setErr('行情数据没拉全，换个网络再试一次');
       setPhase('setup');
       return;
     }
-    setStocks(r.items);
-    setDayLabel(r.dayLabel);
-    setQqq5(r.qqq5);
+    setStocks(r.reveal.items);
+    setDayLabel(r.reveal.dayLabel);
+    setQqq5(r.reveal.qqq5);
     posRef.current = { r: 2, c: 2 };
     setPos({ r: 2, c: 2 });
     setTrail([]);

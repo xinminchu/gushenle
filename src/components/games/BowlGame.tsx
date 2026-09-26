@@ -45,7 +45,7 @@ export default function BowlGame() {
     const pool = readWatchlist();
     const w = pool[Math.floor(Math.random() * pool.length)];
     const [series, qqqSeries] = await Promise.all([fetchSeries(w.symbol), fetchSeries('QQQ')]);
-    if (!series || series.length < 60 || !qqqSeries || qqqSeries.length < 60) return null;
+    if (!series || series.length < 40 || !qqqSeries || qqqSeries.length < 40) return null;
     const qMap = new Map<string, number>();
     qqqSeries.forEach((c, i) => qMap.set(c.date, i));
     for (let t = 0; t < 30; t++) {
