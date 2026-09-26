@@ -20,6 +20,7 @@ const DcaGame = dynamic(() => import('../games/DcaGame'), { ssr: false });
 const DartGame = dynamic(() => import('../games/DartGame'), { ssr: false });
 const MoleGame = dynamic(() => import('../games/MoleGame'), { ssr: false });
 const BowlGame = dynamic(() => import('../games/BowlGame'), { ssr: false });
+const StockBoxGame = dynamic(() => import('../games/StockBoxGame'), { ssr: false });
 const EncyclopediaGame = dynamic(() => import('../games/EncyclopediaGame'), { ssr: false });
 const WheelGame = dynamic(() => import('../games/WheelGame'), { ssr: false });
 
@@ -156,6 +157,14 @@ export default function FunTab() {
       hot: true,
       credit: '@路过',
     },
+    {
+      id: 'stockbox',
+      name: '股票盲盒',
+      icon: GAME_ICONS.stockbox,
+      level: '🟢 极低',
+      hot: true,
+      credit: '@icey.bulbasa',
+    },
   ];
 
   const getGameTitle = (id: string | null) => {
@@ -283,6 +292,7 @@ export default function FunTab() {
               {activeGame === 'encyclopedia' && <EncyclopediaGame />}
               {activeGame === 'wheel' && <WheelGame />}
               {activeGame === 'bowl' && <BowlGame />}
+              {activeGame === 'stockbox' && <StockBoxGame />}
             </div>
           </div>
         </div>
