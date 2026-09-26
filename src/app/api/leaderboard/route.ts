@@ -65,17 +65,20 @@ export async function GET() {
       perGame.get(r.game_id)!.push({ name, best: r.best_score || 0, plays: r.plays || 0 });
     }
 
-    const globalTop = [...perUser.values()]
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 20);
+    // 0 分的不上榜：总榜按累计分、分榜按最高分过滤；玩家数只计有分的人
+    const rankedUsers = [...perUser.values()].filter((u) => u.score > 0);
+    const globalTop = rankedUsers.sort((a, b) => b.score - a.score).slice(0, 20);
     const perGameTop: Record<string, Array<{ name: string; best: number; plays: number }>> = {};
     for (const [gid, arr] of perGame) {
-      perGameTop[gid] = arr.sort((a, b) => b.best - a.best).slice(0, 10);
+      perGameTop[gid] = arr
+        .filter((e) => e.best > 0)
+        .sort((a, b) => b.best - a.best)
+        .slice(0, 10);
     }
 
     return NextResponse.json({
       ok: true,
-      totals: { plays: totalPlays, players: perUser.size, score: totalScore },
+      totals: { plays: totalPlays, players: rankedUsers.length, score: totalScore },
       globalTop,
       perGame: perGameTop,
     });
