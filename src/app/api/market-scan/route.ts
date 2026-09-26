@@ -26,16 +26,31 @@ export async function GET() {
   const sb = anon();
   if (!sb) return NextResponse.json({ ok: false, error: 'supabase 未配置' }, { status: 500 });
   try {
-    const { data: latest, error: e1 } = await sb
+    // 取"最近3天里数据最全"的那一天：避免某次手动扫描中途停掉（如手机锁屏）
+    // 只写了几条，就把首页信号牌洗成残缺数据
+    const { data: dateRows, error: e0 } = await sb
       .from('market_scan')
       .select('scan_date')
       .order('scan_date', { ascending: false })
-      .limit(1);
-    if (e1) throw e1;
-    if (!latest || latest.length === 0) {
+      .limit(600);
+    if (e0) throw e0;
+    const dates: string[] = [];
+    for (const r of dateRows || []) {
+      const d = r.scan_date as string;
+      if (d && !dates.includes(d)) dates.push(d);
+      if (dates.length >= 3) break;
+    }
+    if (dates.length === 0) {
       return NextResponse.json({ ok: true, empty: true });
     }
-    const scanDate = latest[0].scan_date as string;
+    let scanDate = dates[0];
+    let bestCount = 0;
+    for (const d of dates) {
+      const { count } = await sb.from('market_scan').select('*', { count: 'exact', head: true }).eq('scan_date', d);
+      const c = count || 0;
+      if (c > bestCount) { bestCount = c; scanDate = d; }
+      if (c >= 100) break; // 够全就不用再往前找
+    }
     // 020 没执行时（prev_change_pct 列不存在）降级：前两行照常，捡漏行留空
     let rows: Record<string, unknown>[] | null = null;
     let withPrev = true;
