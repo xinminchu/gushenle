@@ -123,7 +123,7 @@ export async function GET(req: Request) {
 
     // 第二行：看一眼 —— 离50由近到远，50上下成对比较，留"近20天买入多"者：
     // 每对（50下方离50最近一只，50上方离50最近一只）：净流入为正者入选，
-    // 净流出/数据缺失跳过；两个都为正时取前一日涨幅（changePct）大者，涨幅打平取离50近者；
+    // 净流出/数据缺失跳过；两个都为正时取20天净流入大者，净流入打平取离50近者；
     // 每对比较完左右指针各往前推一格，直到取满 5 只。涨得欢/跌得凶已占的不重复出现。
     // 031 未执行、或列已建但快照里还没有 flow_20d 数据：退回"离50最近"不过滤。
     const coldSymbols = new Set(cold.map((c) => c.symbol));
@@ -151,9 +151,9 @@ export async function GET(req: Request) {
         const lIn = !!l && isInflow(l);
         const rIn = !!r && isInflow(r);
         if (lIn && rIn && l && r) {
-          const lc = l.changePct ?? -1e9;
-          const rc = r.changePct ?? -1e9;
-          if (rc !== lc) middle.push(rc > lc ? r : l);
+          const lf = l.flow20d ?? -1e18;
+          const rf = r.flow20d ?? -1e18;
+          if (rf !== lf) middle.push(rf > lf ? r : l);
           else middle.push(Math.abs(r.score - 50) <= Math.abs(l.score - 50) ? r : l);
         } else if (lIn && l) {
           middle.push(l);
