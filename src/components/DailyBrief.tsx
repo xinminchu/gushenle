@@ -249,9 +249,9 @@ export default function DailyBrief() {
                 )}
                 <p className="text-slate-400">
                   📡 全市场扫描（{pre.market.total}只）：{pre.market.hotCount}只
-                  <span className="text-amber-300">「涨太猛了」</span>，
+                  <span className="text-amber-300">「涨得欢」</span>，
                   {pre.market.coldCount}只
-                  <span className="text-sky-300">「跌过头了」</span>
+                  <span className="text-sky-300">「跌得凶」</span>
                 </p>
               </div>
             )}

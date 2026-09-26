@@ -47,7 +47,7 @@ export async function GET() {
       inflowEst: r.inflow_est,
     }));
 
-    // 两行：涨太猛了（先别追）/ 跌过头了（别急着割），各取 5
+    // 两行：涨得欢 / 跌得凶，各取 5
     const hot = items
       .filter((i) => i.statusKey === 'overheated')
       .sort((a, b) => b.score - a.score)

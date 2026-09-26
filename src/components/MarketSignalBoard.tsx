@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
-import { STATUS_LABELS } from '@/lib/rhythm';
+
+/** 首页两行的大白话标题（用户定版：涨得欢 / 跌得凶） */
+const HOT_LABEL = '涨得欢';
+const COLD_LABEL = '跌得凶';
 
 interface ScanItem {
   symbol: string;
@@ -21,7 +24,7 @@ interface ScanPayload {
 
 /**
  * 首页「今日信号」：每天收盘后批处理扫精选池，取
- * 🔥 涨太猛了（先别追）/ 🧊 跌过头了（别急着割）各前 5。
+ * 🔥 涨得欢 / 🧊 跌得凶各前 5。
  * 只展示数据 + 大白话信号，不做买入推荐。
  */
 export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string) => void }) {
@@ -47,11 +50,10 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
   }
   const md = data.scanDate ? data.scanDate.slice(5).replace('-', '/') : '';
 
-  const row = (items: ScanItem[], label: string, hint: string) => (
+  const row = (items: ScanItem[], label: string) => (
     <div className="mb-2 last:mb-0">
-      <div className="flex items-baseline justify-between mb-1.5">
+      <div className="mb-1.5">
         <span className="text-xs font-semibold text-slate-200">{label}</span>
-        <span className="text-[10px] text-slate-500">{hint}</span>
       </div>
       <div className="grid grid-cols-5 gap-1.5">
         {items.map((s) => {
@@ -94,18 +96,8 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
         </span>
         <span className="text-[10px] text-slate-500">{en ? 'data only' : '只摆数据·仅供参考'}</span>
       </div>
-      {data.hot.length > 0 &&
-        row(
-          data.hot,
-          `🔥 ${STATUS_LABELS.overheated}`,
-          en ? "don't chase" : '先别追',
-        )}
-      {data.cold.length > 0 &&
-        row(
-          data.cold,
-          `🧊 ${STATUS_LABELS.oversoldBottom}`,
-          en ? "don't sell the bottom" : '别急着割',
-        )}
+      {data.hot.length > 0 && row(data.hot, `🔥 ${HOT_LABEL}`)}
+      {data.cold.length > 0 && row(data.cold, `🧊 ${COLD_LABEL}`)}
     </div>
   );
 }
