@@ -64,3 +64,18 @@ nav {
     color: #cbd5e1;
   }
 }
+
+/* 页头 slogan：金黄五角星在标语上方左右游动。纯 CSS，零网络请求 */
+@keyframes slogan-star-slide {
+  0%, 100% { left: 2px; }
+  50% { left: calc(100% - 16px); }
+}
+.slogan-star {
+  animation: slogan-star-slide 7s ease-in-out infinite;
+  text-shadow:
+    0 0 10px rgba(252, 211, 77, 0.9),
+    0 0 22px rgba(252, 211, 77, 0.4);
+}
+@media (prefers-reduced-motion: reduce) {
+  .slogan-star { animation: none; }
+}

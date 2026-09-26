@@ -237,7 +237,7 @@ export default function FunTab() {
               {/* 大图标背景：右侧半透明，不抢文字 */}
               <span
                 aria-hidden="true"
-                className={`pointer-events-none select-none absolute right-0 top-1/2 -translate-y-1/2 leading-none opacity-[0.16] ${
+                className={`pointer-events-none select-none absolute right-0 top-1/2 -translate-y-1/2 leading-none opacity-[0.32] ${
                   compact ? 'text-[58px]' : 'text-[76px]'
                 }`}
               >

@@ -9,6 +9,8 @@ import { useEffect, useState } from 'react';
  */
 const fmtNY = new Intl.DateTimeFormat('zh-CN', {
   timeZone: 'America/New_York',
+  month: '2-digit',
+  day: '2-digit',
   hour: '2-digit',
   minute: '2-digit',
   second: '2-digit',
@@ -16,6 +18,8 @@ const fmtNY = new Intl.DateTimeFormat('zh-CN', {
 });
 const fmtBJ = new Intl.DateTimeFormat('zh-CN', {
   timeZone: 'Asia/Shanghai',
+  month: '2-digit',
+  day: '2-digit',
   hour: '2-digit',
   minute: '2-digit',
   second: '2-digit',
@@ -32,8 +36,9 @@ export default function WorldClock() {
     return () => clearInterval(id);
   }, []);
 
-  const ny = now ? fmtNY.format(now) : '--:--:--';
-  const bj = now ? fmtBJ.format(now) : '--:--:--';
+  // zh-CN 输出 "09/26 17:20:49"，换成华人习惯的 09-26
+  const ny = now ? fmtNY.format(now).replace(/\//g, '-') : '--/-- --:--:--';
+  const bj = now ? fmtBJ.format(now).replace(/\//g, '-') : '--/-- --:--:--';
 
   return (
     <div className="flex items-center justify-between px-4 pt-1.5 text-[10px] tabular-nums select-none">
