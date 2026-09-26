@@ -59,7 +59,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
   }
   const md = data.scanDate || '';
 
-  // tone: 上下两行是栏杆（淡红底），中间行观察区（淡绿底）
+  // tone: 上下两行是栏杆（淡红底），中间行观察区（淡绿底）；某行空时显示"今日暂无"，栏杆一直在
   const row = (items: ScanItem[], label: string, sub: string | undefined, tone: 'red' | 'green') => (
     <div
       className={`mb-2 last:mb-0 rounded-lg border px-2 py-2 ${
@@ -70,6 +70,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
         <span className="text-xs font-semibold text-slate-200">{label}</span>
         {sub && <span className="text-[10px] text-slate-500 ml-1.5">{sub}</span>}
       </div>
+      {items.length > 0 ? (
       <div className="grid grid-cols-5 gap-1.5">
         {items.map((s) => {
           const up = (s.changePct ?? 0) > 0;
@@ -105,6 +106,11 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
           );
         })}
       </div>
+      ) : (
+        <div className="text-[10px] text-slate-500 py-2 text-center">
+          {en ? 'none today' : '今日暂无'}
+        </div>
+      )}
     </div>
   );
 
@@ -117,22 +123,19 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
         </span>
         <span className="text-[10px] text-slate-500">{en ? 'data only' : '只摆数据·仅供参考'}</span>
       </div>
-      {data.hot.length > 0 &&
-        row(
-          data.hot,
-          `🔥 ${HOT_LABEL}`,
-          en ? 'don\u2019t chase, avoid getting trapped' : '别追，当心有套',
-          'red',
-        )}
-      {(data.middle || []).length > 0 &&
-        row(data.middle || [], `👀 ${MIDDLE_LABEL}`, en ? 'closest to score 50' : '离50分最近', 'green')}
-      {(data.cold || []).length > 0 &&
-        row(
-          data.cold || [],
-          `🥶 ${COLD_LABEL}`,
-          en ? 'oversold, don\u2019t sell the bottom' : '跌过头了 · 慎出，不卖飞',
-          'red',
-        )}
+      {row(
+        data.hot,
+        `🔥 ${HOT_LABEL}`,
+        en ? 'don\u2019t chase, avoid getting trapped' : '别追，当心有套',
+        'red',
+      )}
+      {row(data.middle || [], `👀 ${MIDDLE_LABEL}`, en ? 'closest to score 50' : '离50分最近', 'green')}
+      {row(
+        data.cold || [],
+        `🥶 ${COLD_LABEL}`,
+        en ? 'oversold, don\u2019t sell the bottom' : '跌过头了 · 慎出，不卖飞',
+        'red',
+      )}
       <div className="mt-2 text-[10px] leading-relaxed text-slate-500">
         {en
           ? '📌 Hot: be cautious entering, don\u2019t get trapped at the top; Oversold: be cautious exiting, don\u2019t sell the bottom; Take a look: far from both extremes — all three describe conditions, you make your own calls.'
