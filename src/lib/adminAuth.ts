@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { ADMIN_EMAIL } from './admin';
+import { getAdminRole } from './admin';
 
 /**
  * 服务端管理员鉴权（/api/admin/* 共用）：
- * 从 Authorization: Bearer <access_token> 验签，邮箱必须为站长邮箱。
+ * 从 Authorization: Bearer <access_token> 验签，邮箱必须在管理员角色表里
+ * （Founder / Co-founder 都有管理权限）。
  * 返回 user 或 null。
  */
 export async function requireAdmin(req: NextRequest) {
@@ -18,7 +19,7 @@ export async function requireAdmin(req: NextRequest) {
   });
   const { data, error } = await sb.auth.getUser(token);
   if (error || !data.user) return null;
-  if ((data.user.email || '').toLowerCase() !== ADMIN_EMAIL) return null;
+  if (!getAdminRole(data.user.email)) return null;
   return data.user;
 }
 

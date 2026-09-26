@@ -7,7 +7,7 @@ import { MIGRATIONS } from '@/lib/migrations';
  * 管理员数据库迁移：一键执行 supabase/migrations 里的 SQL。
  *
  * - 身份：请求头 Authorization: Bearer <access_token>，服务端验签后要求
- *   user.email === ADMIN_EMAIL（站长邮箱），其他人 403。
+ *   邮箱在管理员角色表里（Founder / Co-founder），其他人 403。
  * - 执行：直连 Postgres（环境变量 SUPABASE_DB_URL），按 version 顺序跑
  *   MIGRATIONS 里尚未执行的条目，每条包在事务里，成功记入
  *   public.schema_migrations。

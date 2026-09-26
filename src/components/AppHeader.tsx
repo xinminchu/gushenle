@@ -5,7 +5,7 @@ import { UserRound, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useNickname } from '@/hooks/useNickname';
-import { isAdminEmail } from '@/lib/admin';
+import { isAdminEmail, getAdminRole, ADMIN_ROLE_LABEL } from '@/lib/admin';
 import LoginModal from './modals/LoginModal';
 import AdminToolsModal from './modals/AdminToolsModal';
 
@@ -19,6 +19,7 @@ export default function AppHeader() {
 
   const shortName = useNickname(user?.email);
   const isAdmin = isAdminEmail(user?.email);
+  const adminRole = getAdminRole(user?.email);
 
   return (
     <div className="max-w-md mx-auto">
@@ -42,6 +43,11 @@ export default function AppHeader() {
                 >
                   <UserRound className="w-3.5 h-3.5 text-emerald-400" />
                   <span className="max-w-[72px] truncate">{shortName}</span>
+                  {adminRole && (
+                    <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold leading-tight">
+                      {ADMIN_ROLE_LABEL[adminRole]}
+                    </span>
+                  )}
                   <LogOut className="w-3 h-3 text-slate-500" />
                 </button>
               ) : (
