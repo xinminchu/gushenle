@@ -32,3 +32,21 @@ export function serviceClient() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+/**
+ * 普通登录用户鉴权（非管理员接口用）：
+ * 从 Authorization: Bearer <access_token> 验签，返回 user 或 null。
+ */
+export async function requireUser(req: NextRequest) {
+  const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const auth = req.headers.get('authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!token || !URL || !ANON) return null;
+  const sb = createClient(URL, ANON, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await sb.auth.getUser(token);
+  if (error || !data.user) return null;
+  return data.user;
+}

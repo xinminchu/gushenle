@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Radar,
+  UserCheck,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { REPLY_DRAFTS } from '@/lib/replyDrafts';
@@ -31,9 +32,9 @@ interface RunResult {
   error?: string;
 }
 
-type Tab = 'migrate' | 'reply' | 'scan';
+type Tab = 'migrate' | 'reply' | 'scan' | 'claims';
 
-/** 站长专属工具箱：数据库迁移 + Mas 回复草稿轮盘 + 市场扫描 */
+/** 站长专属工具箱：数据库迁移 + Mas 回复草稿轮盘 + 市场扫描 + 认领审核 */
 export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>('migrate');
   return (
@@ -69,6 +70,15 @@ export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
               <Radar className="w-4 h-4 text-amber-400" />
               市场扫描
             </button>
+            <button
+              onClick={() => setTab('claims')}
+              className={`flex items-center gap-1.5 text-sm font-semibold px-2.5 py-1.5 rounded-lg ${
+                tab === 'claims' ? 'text-slate-100 bg-slate-800' : 'text-slate-500'
+              }`}
+            >
+              <UserCheck className="w-4 h-4 text-violet-400" />
+              认领审核
+            </button>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-300 p-1">
             <X className="w-4 h-4" />
@@ -80,8 +90,10 @@ export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
             <MigratePane />
           ) : tab === 'reply' ? (
             <ReplyDraftsPane />
-          ) : (
+          ) : tab === 'scan' ? (
             <ScanPane />
+          ) : (
+            <ClaimsPane />
           )}
         </div>
       </div>
@@ -453,6 +465,136 @@ function ScanPane() {
       <p className="text-[11px] text-slate-500 leading-relaxed">
         约 200 只股票，分片依次扫描，需要几分钟，请勿关闭弹窗。
       </p>
+    </div>
+  );
+}
+
+/* ---------------- 昵称认领审核 ---------------- */
+
+interface Claim {
+  id: string;
+  nickname: string;
+  claimer_user_id: string;
+  claimer_nickname: string;
+  status: string;
+  created_at: string;
+}
+
+function ClaimsPane() {
+  const [loading, setLoading] = useState(true);
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
+  async function token(): Promise<string> {
+    const { data } = await supabase!.auth.getSession();
+    return data.session?.access_token ?? '';
+  }
+
+  async function refresh() {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/wish-claim?status=pending');
+      const j = await res.json();
+      if (!res.ok || !j.ok) throw new Error(j.error || '加载失败');
+      const list: Claim[] = j.claims || [];
+      setClaims(list);
+      // 每个昵称下可认领的留言数
+      const m: Record<string, number> = {};
+      for (const c of list) {
+        const r = await supabase!
+          .from('game_wishes')
+          .select('id', { count: 'exact', head: true })
+          .eq('nickname', c.nickname)
+          .is('user_id', null);
+        m[c.nickname] = r.count ?? 0;
+      }
+      setCounts(m);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '加载失败');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  async function decide(id: string, action: 'approve' | 'reject') {
+    setBusy(id);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/wish-claim', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${await token()}`,
+        },
+        body: JSON.stringify({ claim_id: id, action }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j.ok) throw new Error(j.error || '操作失败');
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '操作失败');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (loading) {
+    return <p className="text-xs text-slate-500 text-center py-6">加载中…</p>;
+  }
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-slate-400 leading-relaxed">
+        匿名留言的认领申请：通过后，该昵称下所有未认领留言归到认领人名下，
+        贡献值自动重算。冒领风险请人工掂量——看看留言内容像不像同一个人。
+      </p>
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-xs text-red-300 break-words">
+          {error}
+        </div>
+      )}
+      {claims.length === 0 && !error && (
+        <p className="text-xs text-slate-600 text-center py-6">没有待审的认领申请 🎉</p>
+      )}
+      {claims.map((c) => (
+        <div key={c.id} className="bg-slate-800/60 border border-slate-700 rounded-xl p-3 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-slate-100">「{c.nickname}」</span>
+            <span className="text-[10px] text-slate-500">
+              {counts[c.nickname] ?? '…'} 条留言待归属
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            认领人快照：{c.claimer_nickname || '（无历史留言）'}
+            <span className="text-slate-600"> · {c.claimer_user_id.slice(0, 8)}</span>
+          </p>
+          <p className="text-[10px] text-slate-600">
+            申请于 {new Date(c.created_at).toLocaleString('zh-CN', { hour12: false })}
+          </p>
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={() => decide(c.id, 'approve')}
+              disabled={busy === c.id}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold rounded-lg py-1.5"
+            >
+              {busy === c.id ? '处理中…' : '通过'}
+            </button>
+            <button
+              onClick={() => decide(c.id, 'reject')}
+              disabled={busy === c.id}
+              className="flex-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-200 text-xs font-bold rounded-lg py-1.5"
+            >
+              拒绝
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

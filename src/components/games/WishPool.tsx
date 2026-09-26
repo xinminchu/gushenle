@@ -63,6 +63,9 @@ export default function WishPool() {
   const [endorsements, setEndorsements] = useState<Record<string, EndorseInfo>>({});
   const [endorseReady, setEndorseReady] = useState(false); // 023 没跑时隐藏认同区
   const [endorseBusy, setEndorseBusy] = useState<string | null>(null);
+  const [claimBusy, setClaimBusy] = useState<string | null>(null);
+  const [pendingClaims, setPendingClaims] = useState<Set<string>>(new Set());
+  const [claimReady, setClaimReady] = useState(false); // 028 没跑时隐藏认领入口
   const isAdmin = isAdminEmail(user?.email);
 
   const normalize = (rows: object[]): Wish[] =>
@@ -168,7 +171,8 @@ export default function WishPool() {
 
   useEffect(() => {
     load();
-  }, [load]);
+    loadClaims();
+  }, [load, loadClaims]);
 
   /** EaaS v0 · 认同/取消认同：具名，公开，不可给自己认同 */
   const toggleEndorse = async (w: Wish) => {
@@ -213,6 +217,45 @@ export default function WishPool() {
     }
   };
 
+  /** EaaS v0 · 拉取待审认领（028 没跑时静默隐藏认领入口） */
+  const loadClaims = useCallback(async () => {
+    try {
+      const res = await fetch('/api/wish-claim?status=pending');
+      const j = await res.json();
+      if (!res.ok || !j.ok) throw new Error(j.error || 'fail');
+      setPendingClaims(new Set((j.claims || []).map((c: { nickname: string }) => c.nickname)));
+      setClaimReady(true);
+    } catch {
+      setPendingClaims(new Set());
+      setClaimReady(false);
+    }
+  }, []);
+
+  /** 认领该昵称：站长审批后，该昵称下所有未认领留言归到我名下 */
+  const claimNickname = async (w: Wish) => {
+    if (!supabase || !user) return;
+    setClaimBusy(w.nickname);
+    try {
+      const res = await fetch('/api/wish-claim', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${await authToken()}`,
+        },
+        body: JSON.stringify({ nickname: w.nickname }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j.ok) throw new Error(j.error || '认领失败');
+      setMsg(`已提交认领「${w.nickname}」，等站长审核～`);
+      await loadClaims();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : '认领失败');
+    } finally {
+      setClaimBusy(null);
+      setTimeout(() => setMsg(''), 4000);
+    }
+  };
+
   const submit = async () => {
     const text = content.trim();
     if (!text) {
@@ -223,10 +266,14 @@ export default function WishPool() {
       setMsg('留言功能还没准备好，稍后再试');
       return;
     }
+    if (!user && !guestName.trim()) {
+      setMsg('匿名留言请填个昵称，以后认领得靠它～');
+      return;
+    }
     setPosting(true);
     setMsg('');
     try {
-      const name = user ? nickname || '股友' : guestName.trim() || '匿名股友';
+      const name = user ? nickname || '股友' : guestName.trim();
       const { error } = await supabase.from('game_wishes').insert({
         user_id: user ? user.id : null,
         nickname: name.slice(0, 20),
@@ -324,7 +371,7 @@ export default function WishPool() {
       </div>
       <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
         想玩什么股票主题游戏？直接许愿——你的设想可能变成下一个游戏，贡献者榜上有名。
-        {!user && <span className="text-slate-400">可匿名留言，登录后留言计贡献值。</span>}
+        {!user && <span className="text-slate-400">匿名留言请填昵称（以后登录可认领），登录后留言计贡献值。</span>}
       </p>
 
       {/* 发表区 */}
@@ -358,7 +405,7 @@ export default function WishPool() {
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
               maxLength={20}
-              placeholder="昵称（可选）"
+              placeholder="昵称（必填）"
               className="w-28 bg-slate-900/80 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 placeholder:text-slate-600 outline-none focus:border-sky-500"
             />
           )}
@@ -399,6 +446,20 @@ export default function WishPool() {
                 <span className="text-[10px] text-amber-400/80">
                   +{10 + (w.bonus_points || 0)} 贡献
                 </span>
+              )}
+              {/* EaaS v0 · 昵称认领：登录用户可认领无人认领的具名留言，站长审批 */}
+              {claimReady && user && !w.user_id && w.nickname !== '匿名股友' && (
+                pendingClaims.has(w.nickname) ? (
+                  <span className="text-[10px] text-slate-500">📥 审核中</span>
+                ) : (
+                  <button
+                    onClick={() => claimNickname(w)}
+                    disabled={claimBusy === w.nickname}
+                    className="text-[10px] text-sky-400/90 underline underline-offset-2 disabled:opacity-50"
+                  >
+                    {claimBusy === w.nickname ? '提交中…' : '📥 认领'}
+                  </button>
+                )
               )}
               <span className="text-[10px] text-slate-600 ml-auto">{fmtTime(w.created_at)}</span>
               {user && w.user_id === user.id && (
