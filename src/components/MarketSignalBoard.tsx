@@ -6,7 +6,7 @@ import { useLanguage } from '@/context/LanguageContext';
 /** 首页三行的大白话标题（用户定版） */
 const HOT_LABEL = '涨得欢';
 const COLD_LABEL = '跌得凶';
-const FIND_LABEL = '低分捡漏';
+const FIND_LABEL = '姿态低';
 
 interface ScanItem {
   symbol: string;
@@ -28,7 +28,7 @@ interface ScanPayload {
 /**
  * 首页「今日信号」：每天收盘后批处理扫精选池
  * 🔥 涨得欢 / 🧊 跌得凶 各前 5
- * 🔍 低分捡漏：律动分≤30 且 昨天跌 —— 当天涨标「反弹」，还跌标「连跌」
+ * 🙇 姿态低：律动分≤30 且 昨天跌 —— 当天涨标「反弹」，还跌标「连跌」
  * 只展示数据 + 大白话，不做买入推荐。
  */
 export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string) => void }) {
@@ -113,7 +113,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
       {data.hot.length > 0 && row(data.hot, `🔥 ${HOT_LABEL}`)}
       {data.cold.length > 0 && row(data.cold, `🧊 ${COLD_LABEL}`)}
       {(data.find || []).length > 0 &&
-        row(data.find || [], `🔍 ${FIND_LABEL}`, en ? 'score ≤ 30, down yesterday' : '分≤30 · 昨天跌')}
+        row(data.find || [], `🙇 ${FIND_LABEL}`, en ? 'score ≤ 30, down yesterday' : '分≤30 · 昨天跌')}
     </div>
   );
 }

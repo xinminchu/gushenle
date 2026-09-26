@@ -22,7 +22,7 @@ export interface ScanRow {
   score: number;
   statusKey: string;
   changePct: number | null;
-  /** 前一日涨跌幅（%），供「低分捡漏」看 昨天跌/连跌 用 */
+  /** 前一日涨跌幅（%），供「姿态低」看 昨天跌/连跌 用 */
   prevChangePct: number | null;
   /** 昨日估算净流入（美元；flows.ts 确定性估算，非逐笔数据） */
   inflowEst: number | null;

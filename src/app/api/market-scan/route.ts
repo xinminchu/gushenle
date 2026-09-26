@@ -99,7 +99,7 @@ export async function GET(req: Request) {
       .sort((a, b) => a.score - b.score)
       .slice(0, 5);
 
-    // 第三行：低分捡漏 —— 律动分≤30 且 昨天跌；
+    // 第三行：姿态低 —— 律动分≤30 且 昨天跌；
     // 当天涨=反弹（已有买盘，排前面），当天还跌=连跌；同类按分从低到高
     const LOW_SCORE = 30;
     const find = items
