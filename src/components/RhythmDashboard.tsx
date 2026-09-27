@@ -753,14 +753,14 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               ))}
             </div>
 
-            {/* 图表类型切换 + 区间高低点标注 */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex bg-slate-800 rounded-lg p-0.5 text-[11px]">
+            {/* 图表类型切换 + 区间高低点标注（窄屏自动换行，按钮文字不折行） */}
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <div className="flex bg-slate-800 rounded-lg p-0.5 text-[11px] shrink-0">
                 {(['candle', 'line', 'ohlc'] as const).map((t) => (
                   <button
                     key={t}
                     onClick={() => setChartTypeOverride(t)}
-                    className={`px-2.5 py-1 rounded-md transition-colors ${
+                    className={`px-2.5 py-1 rounded-md transition-colors whitespace-nowrap ${
                       chartType === t ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
@@ -769,12 +769,12 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                 ))}
               </div>
               {chartType !== 'ohlc' && (
-                <div className="flex gap-1.5">
+                <div className="flex gap-1.5 shrink-0 ml-auto">
                   {fibRangeOk && (
                     <Tip text="在图上画黄金分割参考线（金色虚线），只标大家都在看的位置，不算命">
                       <button
                         onClick={() => setShowFib((v) => !v)}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                        className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors whitespace-nowrap ${
                           showFib
                             ? 'border-yellow-600/50 text-yellow-400 bg-yellow-500/10'
                             : 'border-slate-700 text-slate-500 hover:text-slate-300'
@@ -787,7 +787,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   <Tip text="显示 / 隐藏当前区间最高价和最低价的虚线">
                     <button
                       onClick={() => setShowRangeHL((v) => !v)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                      className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors whitespace-nowrap ${
                         showRangeHL
                           ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10'
                           : 'border-slate-700 text-slate-500 hover:text-slate-300'
@@ -799,7 +799,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   <Tip text="年内最高/最低、50日均线、黄金分割回撤：细虚线，只标大家都在看的位置">
                     <button
                       onClick={() => setShowKeyLevels((v) => !v)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                      className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors whitespace-nowrap ${
                         showKeyLevels
                           ? 'border-violet-500/50 text-violet-300 bg-violet-500/10'
                           : 'border-slate-700 text-slate-500 hover:text-slate-300'
