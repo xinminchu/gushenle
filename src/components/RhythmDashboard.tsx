@@ -149,6 +149,16 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const [showCheckup, setShowCheckup] = useState(false);
   /** 黄金分割参考线：开关 + 组合方案 + 波段窗口（调参用） */
   const [showFib, setShowFib] = useState(false);
+  /** 开关键价位：打开时自动关掉黄金分割（关键价位本来就含回撤线，避免堆叠）；关闭不影响对方 */
+  const toggleKeyLevels = () => {
+    if (!showKeyLevels) setShowFib(false);
+    setShowKeyLevels(!showKeyLevels);
+  };
+  /** 开关黄金分割：打开时自动关掉关键价位；关闭不影响对方 */
+  const toggleFib = () => {
+    if (!showFib) setShowKeyLevels(false);
+    setShowFib(!showFib);
+  };
   /** 黄金分割组合：默认完整五线（别处常见），点开面板直接选组合 */
   const [fibCombo, setFibCombo] = useState<FibComboId>('full');
   const [data, setData] = useState<RhythmResponse | null>(null);
@@ -370,11 +380,15 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     const yd = wlData[symbol];
     return yd ? computeKeyLevels(yd) : null;
   }, [wlData, symbol]);
-  /** 体检第 3 项用的年内最高价（1Y 数据没到就先空着，不瞎判） */
-  const yearHigh = useMemo(() => {
+  /** 体检第 3 项用的三档高点：近3月（66个交易日）/ 近1年；历史档由体检弹窗自己拉 ALL 数据补 */
+  const highs = useMemo(() => {
     const yd = wlData[symbol];
-    if (!yd) return null;
-    return actualHighLow(yd.series)?.high ?? null;
+    if (!yd) return { m3: null as number | null, y1: null as number | null };
+    const s = yd.series;
+    return {
+      m3: actualHighLow(s.slice(-66))?.high ?? null,
+      y1: actualHighLow(s)?.high ?? null,
+    };
   }, [wlData, symbol]);
   /** 诊断卡多空一句话：由律动三因子自动拼 */
   const bullBear = useMemo(
@@ -773,7 +787,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   {fibRangeOk && (
                     <Tip text="在图上画黄金分割参考线（金色虚线），只标大家都在看的位置，不算命">
                       <button
-                        onClick={() => setShowFib((v) => !v)}
+                        onClick={toggleFib}
                         className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors whitespace-nowrap ${
                           showFib
                             ? 'border-yellow-600/50 text-yellow-400 bg-yellow-500/10'
@@ -796,9 +810,9 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                       区间高低点
                     </button>
                   </Tip>
-                  <Tip text="年内最高/最低、50日均线、黄金分割回撤：细虚线，只标大家都在看的位置">
+                  <Tip text="年内最高/最低、50日均线、黄金分割回撤：细虚线，只标大家都在看的位置。打开会自动关掉黄金分割，避免堆叠">
                     <button
-                      onClick={() => setShowKeyLevels((v) => !v)}
+                      onClick={toggleKeyLevels}
                       className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors whitespace-nowrap ${
                         showKeyLevels
                           ? 'border-violet-500/50 text-violet-300 bg-violet-500/10'
@@ -1379,7 +1393,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
           score={judgment.score}
           hot={judgment.thresholds.hot}
           statusKey={judgment.statusKey}
-          yearHigh={yearHigh}
+          highs={highs}
           price={data.price}
           series={data.series}
           onClose={() => setShowCheckup(false)}

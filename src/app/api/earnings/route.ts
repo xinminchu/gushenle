@@ -47,17 +47,17 @@ export async function GET(req: NextRequest) {
   try {
     const events: EarningsEvent[] = [];
     const startDt = new Date(start + 'T12:00:00');
+    const dates: string[] = [];
     for (let i = 0; i < days; i++) {
       const dt = new Date(startDt);
       dt.setDate(dt.getDate() + i);
-      const ds = dt.toISOString().slice(0, 10);
-      let rows: any[] = [];
-      try {
-        rows = await rowsForDate(ds);
-      } catch {
-        continue;
-      }
-      for (const row of rows) {
+      dates.push(dt.toISOString().slice(0, 10));
+    }
+    // 并行拉（原来是顺序 await，冷缓存时 14 个请求串行太慢）；单个日期失败按空处理
+    const allRows = await Promise.all(dates.map((ds) => rowsForDate(ds).catch(() => [] as any[])));
+    for (let i = 0; i < dates.length; i++) {
+      const ds = dates[i];
+      for (const row of allRows[i]) {
         const sym = String(row.symbol || '').toUpperCase();
         if (symbols.has(sym)) {
           events.push({

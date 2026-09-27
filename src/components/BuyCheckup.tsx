@@ -7,6 +7,10 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, AlertTriangle, XCircle, Minus, X } from 'lucide-react';
 import type { RhythmPoint, StatusKey } from '@/lib/rhythm';
 import { loadPositions } from '@/lib/positions';
+import { loadOperations } from '@/lib/operations';
+import { getRhythm } from '@/lib/market';
+import { actualHighLow } from '@/lib/brief';
+import { fmtMoney } from '@/lib/currency';
 
 type Icon = 'ok' | 'warn' | 'bad' | 'na';
 
@@ -23,8 +27,8 @@ interface BuyCheckupProps {
   /** 过热阈值（波动自适应那套） */
   hot: number;
   statusKey?: StatusKey;
-  /** 年内最高价（拿不到时传 null，该项显示"—"） */
-  yearHigh: number | null;
+  /** 三档高点：近3月 / 近1年（1Y 数据没到时为 null，该档跳过不瞎判；历史档弹窗自己拉 ALL 补） */
+  highs: { m3: number | null; y1: number | null };
   price: number;
   series: RhythmPoint[];
   onClose: () => void;
@@ -43,31 +47,60 @@ const zhDate = (ds: string) => {
   return `${parseInt(m[1], 10)}月${parseInt(m[2], 10)}日`;
 };
 
+/** 财报查询的模块级客户端缓存：symbol -> 结果，TTL 1 小时（失败不缓存，下次打开重试） */
+type EarnVal = 'none' | 'error' | { date: string; session: string };
+const earnCache = new Map<string, { at: number; val: EarnVal }>();
+const EARN_CACHE_TTL = 60 * 60 * 1000;
+
 export default function BuyCheckup({
   symbol,
   name,
   score,
   hot,
-  yearHigh,
+  highs,
   price,
   series,
   onClose,
 }: BuyCheckupProps) {
-  // 财报：14 天内有没有这只的财报（走现有 /api/earnings，不新增接口）
+  // 财报：14 天内有没有这只的财报（走现有 /api/earnings，不新增接口；模块级缓存 1 小时）
   const [earnState, setEarnState] = useState<'loading' | 'none' | 'error' | { date: string; session: string }>('loading');
 
   useEffect(() => {
     let cancelled = false;
+    const key = symbol.toUpperCase();
+    const hit = earnCache.get(key);
+    if (hit && Date.now() - hit.at < EARN_CACHE_TTL) {
+      setEarnState(hit.val);
+      return;
+    }
+    setEarnState('loading');
     fetch(`/api/earnings?days=14&symbols=${encodeURIComponent(symbol)}`)
       .then((r) => r.json())
       .then((json) => {
         if (cancelled) return;
         const ev = (json.events ?? [])[0];
-        setEarnState(ev ? { date: ev.date, session: ev.session } : 'none');
+        const val: EarnVal = ev ? { date: ev.date, session: ev.session } : 'none';
+        earnCache.set(key, { at: Date.now(), val });
+        setEarnState(val);
       })
       .catch(() => {
         if (!cancelled) setEarnState('error');
       });
+    return () => {
+      cancelled = true;
+    };
+  }, [symbol]);
+
+  // 历史高点：ALL 区间（服务端近 3 年日线），回来自动补上第三档；拿不到就不显示该档
+  const [allHigh, setAllHigh] = useState<number | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getRhythm(symbol, 'ALL')
+      .then((d) => {
+        if (cancelled) return;
+        setAllHigh(actualHighLow(d.series)?.high ?? null);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -103,35 +136,83 @@ export default function BuyCheckup({
     });
   }
 
-  // 3. 位置高吗（距年内高点）
-  if (yearHigh == null || yearHigh <= 0) {
-    checks.push({ icon: 'na', title: '位置', detail: '年内高点数据还没到，不瞎判' });
-  } else {
-    const dist = ((yearHigh - price) / yearHigh) * 100;
-    if (dist <= 3) {
-      checks.push({ icon: 'bad', title: '位置很高', detail: '就在年内高点边上，现在买等于接最后一棒' });
-    } else if (dist <= 8) {
-      checks.push({ icon: 'warn', title: '位置偏高', detail: `离年内高点只剩 ${dist.toFixed(0)}%，性价比一般` });
+  // 3. 位置高吗（三档：近3月 / 近1年 / 历史，取离得最近的一档判；拿不到的档直接跳过）
+  {
+    const tiers: Array<[string, number | null]> = [
+      ['3月高点', highs.m3],
+      ['年内高点', highs.y1],
+      ['历史高点', allHigh],
+    ];
+    const dists: number[] = [];
+    const labels: string[] = [];
+    for (const [label, h] of tiers) {
+      if (h == null || h <= 0 || price <= 0) continue;
+      const d = ((h - price) / h) * 100;
+      dists.push(d);
+      labels.push(`离${label} ${d.toFixed(0)}%`);
+    }
+    if (dists.length === 0) {
+      checks.push({ icon: 'na', title: '位置', detail: '高点数据还没到，不瞎判' });
     } else {
-      checks.push({ icon: 'ok', title: '位置还行', detail: `离年内高点还有 ${dist.toFixed(0)}%，不算贵` });
+      const d = Math.min(...dists);
+      const detail = labels.join(' · ');
+      if (d <= 3) {
+        checks.push({ icon: 'bad', title: '位置很高', detail: `${detail}——现在买基本是接最后一棒` });
+      } else if (d <= 8) {
+        checks.push({ icon: 'warn', title: '位置偏高', detail: `${detail}，性价比一般` });
+      } else {
+        checks.push({ icon: 'ok', title: '位置还行', detail: `${detail}，不算贵` });
+      }
     }
   }
 
-  // 4. 仓位重吗（按成本算占比；没记持仓不瞎判）
+  // 4. 仓位 + 历史操作：有现持仓看占比和浮动盈亏；空仓但有历史操作就总结历史；都没有不瞎判
   if (typeof window !== 'undefined') {
     const positions = loadPositions();
     const mine = positions.find((p) => p.symbol.toUpperCase() === symbol.toUpperCase());
-    if (!mine) {
-      checks.push({ icon: 'na', title: '仓位', detail: '没记持仓，不瞎判' });
-    } else {
+    const ops = loadOperations().filter((o) => (o.symbol || '').toUpperCase() === symbol.toUpperCase());
+    if (mine) {
       const total = positions.reduce((a, p) => a + p.shares * p.avgCost, 0);
       const w = total > 0 ? (mine.shares * mine.avgCost) / total : 0;
       const pct = (w * 100).toFixed(0);
+      const pnl = (price - mine.avgCost) * mine.shares;
+      const pnlPct = mine.avgCost > 0 ? ((price - mine.avgCost) / mine.avgCost) * 100 : 0;
+      const sign = pnl >= 0 ? '+' : '-';
+      const pnlStr = `浮动盈亏 ${sign}${fmtMoney(symbol, Math.abs(pnl))}（${sign}${Math.abs(pnlPct).toFixed(1)}%）`;
       if (w >= 0.3) {
-        checks.push({ icon: 'warn', title: '仓位已重', detail: `这只已占 ${pct}% 仓位（按成本），再加就重了` });
+        checks.push({ icon: 'warn', title: '仓位已重', detail: `这只已占 ${pct}% 仓位（按成本），再加就重了；${pnlStr}` });
       } else {
-        checks.push({ icon: 'ok', title: '仓位不重', detail: `已持有，占 ${pct}% 仓位（按成本）` });
+        checks.push({ icon: 'ok', title: '仓位不重', detail: `已持有，占 ${pct}% 仓位（按成本）；${pnlStr}` });
       }
+    } else if (ops.length > 0) {
+      const buys = ops.filter((o) => o.action === 'buy');
+      const sells = ops.filter((o) => o.action === 'sell');
+      const sumQty = (list: typeof ops) => list.reduce((a, o) => a + (o.qty ?? 0), 0);
+      const sumCost = (list: typeof ops) => list.reduce((a, o) => a + (o.qty != null ? o.qty * o.price : 0), 0);
+      const bq = sumQty(buys);
+      const sq = sumQty(sells);
+      const avgB = bq > 0 ? sumCost(buys) / bq : null;
+      const avgS = sq > 0 ? sumCost(sells) / sq : null;
+      const lines: string[] = [];
+      if (avgB != null) lines.push(`累计买入 ${bq} 股（均价 ${fmtMoney(symbol, avgB)}）`);
+      else if (buys.length > 0) lines.push(`买入过 ${buys.length} 笔（没记数量）`);
+      if (avgS != null) lines.push(`累计卖出 ${sq} 股（均价 ${fmtMoney(symbol, avgS)}）`);
+      else if (sells.length > 0) lines.push(`卖出过 ${sells.length} 笔（没记数量）`);
+      if (avgB != null && avgS != null && sq > 0) {
+        const realized = (avgS - avgB) * sq;
+        const rsign = realized >= 0 ? '+' : '-';
+        lines.push(`已实现估算 ${rsign}${fmtMoney(symbol, Math.abs(realized))}`);
+      }
+      const recent = ops.slice(0, 3).map((o) => {
+        const act = o.action === 'buy' ? '买入' : '卖出';
+        const q = o.qty != null ? ` ${o.qty}股` : '';
+        const th = o.thesis ? `（${o.thesis}）` : '';
+        return `${zhDate(o.date)} ${act}${q} @${fmtMoney(symbol, o.price)}${th}`;
+      });
+      if (recent.length > 0) lines.push(`最近：${recent.join('；')}`);
+      checks.push({ icon: 'ok', title: '当前空仓', detail: lines.join('；') });
+    } else {
+      checks.push({ icon: 'na', title: '仓位', detail: '没记持仓，不瞎判' });
     }
   } else {
     checks.push({ icon: 'na', title: '仓位', detail: '没记持仓，不瞎判' });
