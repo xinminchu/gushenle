@@ -162,7 +162,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
       {row(
         data.cold || [],
         `🥶 ${COLD_LABEL}`,
-        en ? 'lowest scores · don\u2019t sell the bottom, don\u2019t catch the knife' : '分最低的5只 · 不割肉，不抄底',
+        en ? 'don\u2019t sell the bottom, don\u2019t catch the knife' : '不割肉，不抄底',
         'red',
       )}
       <div className="mt-2 text-[10px] leading-relaxed text-slate-500">
