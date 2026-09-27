@@ -15,6 +15,7 @@ import type { ColorScheme } from '@/lib/colorScheme';
 import { upHex, downHex } from '@/lib/colorScheme';
 import type { FibLevel } from '@/lib/fibonacci';
 import { fibRatioLabel } from '@/lib/fibonacci';
+import type { KeyLevel } from '@/lib/brief';
 
 export type ChartType = 'candle' | 'line' | 'ohlc';
 
@@ -33,6 +34,10 @@ interface RhythmChartProps {
   fibScaleLevels?: FibLevel[] | null;
   /** 最后一根日线收盘线的标注：盘中=昨收，收盘后=收盘价（原来是图表库自动画的无名线，看着像实时价） */
   prevCloseLabel?: { price: number; text: string } | null;
+  /** 关键价位线：年高 / 年低 / MA50 / 黄金分割回撤（细虚线 + 轴上小标签） */
+  keyLevels?: KeyLevel[] | null;
+  /** 是否显示关键价位线 */
+  showKeyLevels?: boolean;
 }
 
 /** 四线图图例颜色（中性色，不跟涨跌配色走） */
@@ -61,6 +66,8 @@ export default function RhythmChart({
   fibLevels,
   fibScaleLevels,
   prevCloseLabel,
+  keyLevels,
+  showKeyLevels = false,
 }: RhythmChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const UP = upHex(scheme);
@@ -135,6 +142,23 @@ export default function RhythmChart({
       });
     };
 
+    /** 关键价位线：细虚线 + 轴上小标签，不参与自动缩放（超出可视范围就自然裁掉） */
+    const drawKeyLevels = (s: {
+      createPriceLine: (opts: CreatePriceLineOptions) => unknown;
+    }) => {
+      if (!showKeyLevels || !keyLevels || keyLevels.length === 0) return;
+      for (const k of keyLevels) {
+        s.createPriceLine({
+          price: k.price,
+          color: k.color,
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: k.label,
+        });
+      }
+    };
+
     if (chartType === 'candle') {
       const candles = chart.addSeries(CandlestickSeries, {
         upColor: UP,
@@ -180,6 +204,7 @@ export default function RhythmChart({
       }
       drawFibLines(candles);
       drawPrevCloseLine(candles);
+      drawKeyLevels(candles);
     } else if (chartType === 'ohlc') {
       // 四线：开/高/低/收。极值线本身已展示区间上下沿，不再画虚线。
       const mk = (key: 'open' | 'high' | 'low' | 'close', color: string, width: 1 | 2) => {
@@ -238,6 +263,7 @@ export default function RhythmChart({
       }
       drawFibLines(area);
       drawPrevCloseLine(area);
+      drawKeyLevels(area);
     }
     // 黄金分割线画出可视范围时，把价格轴缩放到能看见它们。
     // lightweight-charts 的 priceLine 不参与自动缩放，所以用一条全透明的线
@@ -276,7 +302,7 @@ export default function RhythmChart({
       ro.disconnect();
       chart.remove();
     };
-  }, [series, height, chartType, showRangeHL, fibLevels, fibScaleLevels, scheme, UP, DOWN, prevCloseLabel]);
+  }, [series, height, chartType, showRangeHL, fibLevels, fibScaleLevels, scheme, UP, DOWN, prevCloseLabel, keyLevels, showKeyLevels]);
 
   if (series.length === 0) {
     return (
@@ -293,7 +319,11 @@ export default function RhythmChart({
     <div className="relative w-full" style={{ height }}>
       <div ref={containerRef} className="w-full h-full" />
       {/* 区间高低点图例：放左上角，不压右侧价格轴 */}
-      {(hl || (fibLevels && fibLevels.length > 0) || prevCloseLabel) && chartType !== 'ohlc' && (
+      {(hl ||
+        (fibLevels && fibLevels.length > 0) ||
+        prevCloseLabel ||
+        (showKeyLevels && keyLevels && keyLevels.length > 0)) &&
+        chartType !== 'ohlc' && (
         <div className="absolute top-1 left-1 flex items-center gap-2 text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
           {prevCloseLabel && (
             <span>
@@ -317,6 +347,12 @@ export default function RhythmChart({
             <span>
               <span className="inline-block w-2.5 h-0 border-t border-dashed border-yellow-600/80 mr-1 align-middle" />
               黄金分割
+            </span>
+          )}
+          {showKeyLevels && keyLevels && keyLevels.length > 0 && (
+            <span>
+              <span className="inline-block w-2.5 h-0 border-t border-dashed border-slate-400/70 mr-1 align-middle" />
+              关键价位
             </span>
           )}
         </div>

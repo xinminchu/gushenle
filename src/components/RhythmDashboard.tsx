@@ -30,6 +30,10 @@ import { loadPositions } from '@/lib/positions';
 import { useColorScheme, schemeLabel, upText, downText } from '@/lib/colorScheme';
 import { useLanguage } from '@/context/LanguageContext';
 import MarketSignalBoard from './MarketSignalBoard';
+import StockBriefs from './StockBriefs';
+import BuyCheckup from './BuyCheckup';
+import { useWatchlistData } from '@/hooks/useWatchlistData';
+import { bullBearLines, computeKeyLevels, actualHighLow } from '@/lib/brief';
 import {
   findSwing,
   fibLevels,
@@ -140,6 +144,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   // 图表类型：3M 及以内默认 K线，长区间默认收盘线；用户手动切换后记住选择（切区间时重置）
   const [chartTypeOverride, setChartTypeOverride] = useState<ChartType | null>(null);
   const [showRangeHL, setShowRangeHL] = useState(true);
+  /** 关键价位线（年高/年低/MA50/黄金分割回撤）：默认开，可关 */
+  const [showKeyLevels, setShowKeyLevels] = useState(true);
+  /** 买入前体检弹窗 */
+  const [showCheckup, setShowCheckup] = useState(false);
   /** 黄金分割参考线：开关 + 组合方案 + 波段窗口（调参用） */
   const [showFib, setShowFib] = useState(false);
   /** 黄金分割组合：默认完整五线（别处常见），点开面板直接选组合 */
@@ -353,6 +361,28 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
 
   // 精选名单代码集合：全市场搜索时排除（精选优先，带中文名）
   const curatedCodes = useMemo(() => new Set(STOCK_LIST.map((s) => s.code)), []);
+
+  /* ---------- 新增四功能的数据接线 ---------- */
+  /** 自选股全量 1Y 数据：播报和关键价位共用，每只只拉一次 */
+  const wlSymbols = useMemo(() => watchlist.map((i) => i.symbol), [watchlist]);
+  const wlData = useWatchlistData(wlSymbols);
+  /** 当前标的的关键价位线（年高/年低/MA50/黄金分割回撤） */
+  const keyLevels = useMemo(() => {
+    const yd = wlData[symbol];
+    return yd ? computeKeyLevels(yd) : null;
+  }, [wlData, symbol]);
+  /** 体检第 3 项用的年内最高价（1Y 数据没到就先空着，不瞎判） */
+  const yearHigh = useMemo(() => {
+    const yd = wlData[symbol];
+    if (!yd) return null;
+    return actualHighLow(yd.series)?.high ?? null;
+  }, [wlData, symbol]);
+  /** 诊断卡多空一句话：由律动三因子自动拼 */
+  const bullBear = useMemo(
+    () => (judgment ? bullBearLines(judgment.pos, judgment.trend, judgment.vel) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [judgment?.pos, judgment?.trend, judgment?.vel],
+  );
 
   const resetAddTips = () => {
     setAddError('');
@@ -767,6 +797,18 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                       区间高低点
                     </button>
                   </Tip>
+                  <Tip text="年内最高/最低、50日均线、黄金分割回撤：细虚线，只标大家都在看的位置">
+                    <button
+                      onClick={() => setShowKeyLevels((v) => !v)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                        showKeyLevels
+                          ? 'border-violet-500/50 text-violet-300 bg-violet-500/10'
+                          : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      关键价位
+                    </button>
+                  </Tip>
                 </div>
               )}
             </div>
@@ -805,6 +847,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               fibLevels={fibChartLevels}
               fibScaleLevels={fibScaleLevels}
               prevCloseLabel={prevCloseLabel}
+              keyLevels={keyLevels}
+              showKeyLevels={showKeyLevels}
             />
             {/* 黄金分割说明：组合的具体文字放图下方 */}
             {showFib && fibRangeOk && (
@@ -1061,6 +1105,18 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               <div className="mt-2 text-[10px] text-slate-500">
                 位置 {judgment.pos} · 趋势 {judgment.trend} · 速度 {judgment.vel}
               </div>
+              {bullBear && (
+                <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed">
+                  <div>
+                    <span className="text-slate-500">多头：</span>
+                    <span className="text-slate-300">{bullBear.bull}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">空头：</span>
+                    <span className="text-slate-300">{bullBear.bear}</span>
+                  </div>
+                </div>
+              )}
 
               <div className="mt-2 text-xs text-slate-400 leading-relaxed">{displayAdvice}</div>
               {!myPosition && onGoPortfolio && (
@@ -1079,20 +1135,42 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               {overHeat && (
                 <div className="mt-2 text-[10px] text-amber-400/70">点击卡片查看冷静清单</div>
               )}
-              <button
-                onClick={() => {
-                  setOpAction(judgment.statusKey === 'oversoldBottom' ? 'buy' : 'sell');
-                  setOpPrice(data.price ? fmtPrice(data.price) : '');
-                  setOpQty('');
-                  setOpSaved(false);
-                  setShowOpModal(true);
-                }}
-                className="mt-3 w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 font-medium transition-colors"
-              >
-                ✍️ 记一笔操作
-              </button>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => setShowCheckup(true)}
+                  className="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 font-medium transition-colors"
+                >
+                  🩺 买入前体检
+                </button>
+                <button
+                  onClick={() => {
+                    setOpAction(judgment.statusKey === 'oversoldBottom' ? 'buy' : 'sell');
+                    setOpPrice(data.price ? fmtPrice(data.price) : '');
+                    setOpQty('');
+                    setOpSaved(false);
+                    setShowOpModal(true);
+                  }}
+                  className="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 font-medium transition-colors"
+                >
+                  ✍️ 记一笔操作
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* 📣 一句话播报：每只自选股一句（异动+位置+律动+行动提示），点一行跳过去看 */}
+          <StockBriefs
+            symbols={wlSymbols}
+            nameOf={nameOf}
+            dataMap={wlData}
+            loading={Object.keys(wlData).length === 0}
+            onPick={(s) => {
+              setSymbol(s);
+              requestAnimationFrame(() => {
+                priceChartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              });
+            }}
+          />
 
           {/* 🏢 公司介绍：大白话一句话 + 板块/主题标签（诊断卡下方） */}
           {(() => {
@@ -1307,6 +1385,20 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
             )}
           </div>
         </div>
+      )}
+      {/* 🩺 买入前体检：5 道检查，拦住一时冲动 */}
+      {showCheckup && data && judgment && (
+        <BuyCheckup
+          symbol={symbol}
+          name={nameOf(symbol)}
+          score={judgment.score}
+          hot={judgment.thresholds.hot}
+          statusKey={judgment.statusKey}
+          yearHigh={yearHigh}
+          price={data.price}
+          series={data.series}
+          onClose={() => setShowCheckup(false)}
+        />
       )}
     </div>
   );
