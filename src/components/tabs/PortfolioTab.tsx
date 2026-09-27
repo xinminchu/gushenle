@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, X, RefreshCw, Briefcase, GripVertical, Pencil, BookOpen } from 'lucide-react';
 import { useWatchlist } from '@/components/WatchlistContext';
 import { loadPositions, savePositions, holdingDays, sectorOf, type Position } from '@/lib/positions';
@@ -11,7 +11,9 @@ import { loadUniverse, findInUniverse } from '@/lib/universe';
 import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
 import type { RhythmResponse } from '@/lib/rhythm';
 import { useColorScheme, upText, downText } from '@/lib/colorScheme';
+import { useWatchlistData } from '@/hooks/useWatchlistData';
 import CostCalculator from '@/components/CostCalculator';
+import StockBriefs from '@/components/StockBriefs';
 import StockStory from '@/components/portfolio/StockStory';
 import { fmtMoney } from '@/lib/currency';
 
@@ -195,6 +197,10 @@ export default function PortfolioTab({
     fetchQuotes(positions);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [[...positions.map((p) => p.symbol)].sort().join(',')]); // 排序后不重拉行情
+
+  /* ---------- 一句话播报：自选股每天一句（走市场共享缓存，跟今日页同源） ---------- */
+  const briefSymbols = useMemo(() => watchlist.map((w) => w.symbol), [watchlist]);
+  const briefData = useWatchlistData(briefSymbols);
 
   /* ---------- 本周关注 ---------- */
   const focusSymbols = focus.items.map((i) => i.symbol);
@@ -845,6 +851,19 @@ export default function PortfolioTab({
             </button>
           ))}
       </div>
+
+      {/* 📣 一句话播报：自选股每天一句，看完顺手「＋关注」进本周冷静池 */}
+      <StockBriefs
+        symbols={briefSymbols}
+        nameOf={nameOf}
+        dataMap={briefData}
+        loading={Object.keys(briefData).length === 0}
+        onPick={onViewSymbol}
+        onAddFocus={addFocus}
+        focusSymbols={focusSymbols}
+        positionSymbols={positions.map((p) => p.symbol)}
+        focusFull={focus.items.length >= FOCUS_MAX}
+      />
 
       {/* 添加持仓 */}
       {positions.length > 0 && !showAdd && (

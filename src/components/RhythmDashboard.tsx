@@ -30,7 +30,6 @@ import { loadPositions } from '@/lib/positions';
 import { useColorScheme, schemeLabel, upText, downText } from '@/lib/colorScheme';
 import { useLanguage } from '@/context/LanguageContext';
 import MarketSignalBoard from './MarketSignalBoard';
-import StockBriefs from './StockBriefs';
 import BuyCheckup from './BuyCheckup';
 import { useWatchlistData } from '@/hooks/useWatchlistData';
 import { bullBearLines, computeKeyLevels, actualHighLow } from '@/lib/brief';
@@ -362,8 +361,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   // 精选名单代码集合：全市场搜索时排除（精选优先，带中文名）
   const curatedCodes = useMemo(() => new Set(STOCK_LIST.map((s) => s.code)), []);
 
-  /* ---------- 新增四功能的数据接线 ---------- */
-  /** 自选股全量 1Y 数据：播报和关键价位共用，每只只拉一次 */
+  /* ---------- 关键价位 + 体检用的自选股 1Y 数据 ---------- */
+  /** 自选股全量 1Y 数据：关键价位线用，每只只拉一次（播报已搬到持仓页，用自己的 hook） */
   const wlSymbols = useMemo(() => watchlist.map((i) => i.symbol), [watchlist]);
   const wlData = useWatchlistData(wlSymbols);
   /** 当前标的的关键价位线（年高/年低/MA50/黄金分割回撤） */
@@ -1157,20 +1156,6 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               </div>
             </div>
           </div>
-
-          {/* 📣 一句话播报：每只自选股一句（异动+位置+律动+行动提示），点一行跳过去看 */}
-          <StockBriefs
-            symbols={wlSymbols}
-            nameOf={nameOf}
-            dataMap={wlData}
-            loading={Object.keys(wlData).length === 0}
-            onPick={(s) => {
-              setSymbol(s);
-              requestAnimationFrame(() => {
-                priceChartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              });
-            }}
-          />
 
           {/* 🏢 公司介绍：大白话一句话 + 板块/主题标签（诊断卡下方） */}
           {(() => {
