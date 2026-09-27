@@ -418,9 +418,16 @@ export default function DiceGame() {
           </div>
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center">
             <p className="text-sm font-bold text-slate-100">
-              🎲 天意已定！买入 {pick.name}（{pick.symbol}）
+              🎲 天意已定！买入 {numLabel(pickIndex)}
+              {pick.name}（{pick.symbol}）
             </p>
             <p className="text-xs text-slate-400 mt-1">"昨日"涨幅 {fmtPct(pick.pct)}</p>
+            {diceCount === 2 && (
+              <p className="text-[11px] text-slate-500 mt-1">
+                第一颗 {faces[0]} 点→{faces[0]! <= 3 ? '上半区①-⑥' : '下半区⑦-⑫'}，
+                第二颗 {faces[1]} 点→区内第 {faces[1]} 只
+              </p>
+            )}
           </div>
           <button
             onClick={reveal}
