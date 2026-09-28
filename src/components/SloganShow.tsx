@@ -64,21 +64,22 @@ function SloganBackdrop() {
   );
 }
 
-/** 页头 slogan 区：金黄五角星在上方左右游动 + 红绿折线背景 + 四句标语 */
+/** 页头 slogan 区：免责声明跑马灯 + 红绿折线背景 + 四句标语 */
 export default function SloganShow() {
   const { lang } = useLanguage();
   const en = lang === 'en';
+  const disclaimer = en
+    ? 'This site provides free information only — it is not a trading platform. Nothing on this site is investment advice; all content is for reference only.'
+    : '本站仅提供免费资讯，非交易平台；本站所有信息皆非投资建议性质，仅供参考。';
   return (
     <div className="relative overflow-hidden">
       <SloganBackdrop />
       <div className="relative px-4">
-        <div className="relative h-[18px]">
-          <span
-            aria-hidden="true"
-            className="slogan-star absolute top-0 whitespace-nowrap text-[14px] leading-none text-amber-300"
-          >
-            ★★★★★
-          </span>
+        <div className="relative h-[18px] overflow-hidden" aria-label={disclaimer}>
+          <div className="gsl-marquee text-[12px] leading-[18px] text-amber-200/90">
+            <span>{disclaimer}　　　　</span>
+            <span aria-hidden="true">{disclaimer}　　　　</span>
+          </div>
         </div>
         <p className="whitespace-nowrap overflow-hidden text-center text-[12px] tracking-wide text-slate-100 pb-2">
           {en ? (
