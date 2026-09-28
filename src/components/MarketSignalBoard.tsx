@@ -33,7 +33,7 @@ interface ScanPayload {
  * 🔥 涨得欢：冲高过热，按分从高到低前 5 —— 慎追，当心套牢（栏杆，淡红底）
  * 👀 看一眼：离50由近到远、50上下成对比较，留近20天净流入为正者；
  *   都为正取20天净流入大者 —— 中间行名字暂定（淡绿底，观察中）
- * 🥶 跌得凶：分最低的 5 只（跌过头判定天然排最前）—— 不割肉，不抄底（栏杆，淡红底）
+ * 🥶 跌得凶：分最低的 5 只（跌过头判定天然排最前）—— 慎割肉，慎抄底（栏杆，淡红底）
  * 不展示律动分；连涨/连跌≥3 天在 tile 上打标（平盘打断）；点一只直接跳到它的价格走势。
  * 只展示数据 + 大白话，不做买入推荐。
  */
@@ -162,13 +162,13 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
       {row(
         data.cold || [],
         `🥶 ${COLD_LABEL}`,
-        en ? 'don\u2019t sell the bottom, don\u2019t catch the knife' : '不割肉，不抄底',
+        en ? 'be careful about selling the bottom or catching the knife' : '慎割肉，慎抄底',
         'red',
       )}
       <div className="mt-2 text-[10px] leading-relaxed text-slate-500">
         {en
-          ? '📌 Hot: don\u2019t chase, beware of getting trapped; Cold: neither sell the bottom nor catch the knife; Take a look: net inflow — all three describe conditions, you make your own calls.'
-          : '📌 涨得欢：慎追，当心套牢；跌得凶：不割肉，不抄底；看一眼：买入多——三行都是状态，买卖自己定。'}
+          ? '📌 Hot: don\u2019t chase, beware of getting trapped; Cold: be careful about selling the bottom or catching the knife; Take a look: net inflow — all three describe conditions, you make your own calls.'
+          : '📌 涨得欢：慎追，当心套牢；跌得凶：慎割肉，慎抄底；看一眼：买入多——三行都是状态，买卖自己定。'}
       </div>
       <div className="mt-1 text-[10px] leading-relaxed text-slate-600">
         {en

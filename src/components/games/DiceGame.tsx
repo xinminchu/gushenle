@@ -253,7 +253,7 @@ export default function DiceGame() {
           <p className="text-xs text-slate-300 leading-relaxed bg-slate-800/60 border border-slate-700 rounded-xl p-3">
             买股全看天意：候选股票一字排开，
             <span className="text-slate-100 font-semibold">掷出几点就"买入"第几只</span>，
-            再看它后 5 天能不能跑赢大盘。骰子从不追高，也从不割肉。
+            再看它后 5 天能不能跑赢大盘。骰子慎追高，也慎割肉。
           </p>
 
           {/* 骰子数量 */}

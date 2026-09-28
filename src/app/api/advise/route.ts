@@ -43,7 +43,7 @@ function candidateReason(
     case 'bottomUp':
       return `律动 ${s} 分，${STATUS_LABELS[statusKey]}，下跌动能衰竭，位置不高，适合分批留意。`;
     case 'sideways':
-      return `律动 ${s} 分，${STATUS_LABELS[statusKey]}，方向不明但位置适中，不追高也不抄底的心态参与。`;
+      return `律动 ${s} 分，${STATUS_LABELS[statusKey]}，方向不明但位置适中，慎追高、慎抄底的心态参与。`;
     case 'oversoldBottom':
       return `律动 ${s} 分，${STATUS_LABELS[statusKey]}，只适合小仓位分批试，跌过头也可能继续跌，别重仓。`;
     case 'hotStrong':
