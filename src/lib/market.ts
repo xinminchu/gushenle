@@ -26,9 +26,10 @@ function fetchWithTimeout(url: string): Promise<Response> {
 export function getRhythm(
   symbol: string,
   range: string,
-  opts?: { force?: boolean },
+  opts?: { force?: boolean; lang?: 'zh' | 'en' },
 ): Promise<RhythmResponse> {
-  const key = `${symbol}:${range}`;
+  const lang = opts?.lang ?? 'zh';
+  const key = `${symbol}:${range}:${lang}`;
   const hit = cache.get(key);
   if (!opts?.force && hit) {
     const ttl = hit.data.priceLive ? TTL_LIVE_MS : TTL_CLOSED_MS;
@@ -37,7 +38,7 @@ export function getRhythm(
   const ongoing = inflight.get(key);
   if (ongoing) return ongoing;
 
-  const url = `/api/rhythm?symbol=${encodeURIComponent(symbol)}&range=${encodeURIComponent(range)}`;
+  const url = `/api/rhythm?symbol=${encodeURIComponent(symbol)}&range=${encodeURIComponent(range)}&lang=${lang}`;
   const attempt = (n: number): Promise<RhythmResponse> =>
     fetchWithTimeout(url)
       .then((res) => {

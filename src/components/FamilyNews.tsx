@@ -10,6 +10,7 @@ import {
   formatDateCN,
   todayStr,
   type CalEvent,
+  sessionLabel,
 } from '@/lib/financeCalendar';
 import { loadWatchlist } from '@/lib/watchlist';
 import type { NewsItem } from '@/app/api/news/route';
@@ -84,7 +85,7 @@ export default function FamilyNews() {
             title: '发布财报',
             kind: 'earnings' as const,
             symbol: e.symbol,
-            note: e.session,
+            note: sessionLabel(e.session ?? '', 'zh'),
           }));
         }
       } catch {

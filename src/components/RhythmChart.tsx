@@ -38,6 +38,7 @@ interface RhythmChartProps {
   keyLevels?: KeyLevel[] | null;
   /** 是否显示关键价位线 */
   showKeyLevels?: boolean;
+  lang?: 'zh' | 'en';
 }
 
 /** 四线图图例颜色（中性色，不跟涨跌配色走） */
@@ -68,10 +69,12 @@ export default function RhythmChart({
   prevCloseLabel,
   keyLevels,
   showKeyLevels = false,
+  lang = 'zh',
 }: RhythmChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const UP = upHex(scheme);
   const DOWN = downHex(scheme);
+  const en = lang === 'en';
   // 区间高低点数值：画在左上角 HTML 图例里，避免压住右侧价格轴
   const [hl, setHl] = useState<{ hi: number; lo: number } | null>(null);
 
@@ -188,7 +191,7 @@ export default function RhythmChart({
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
           axisLabelVisible: false,
-          title: '区间最高',
+          title: en ? 'Range high' : '区间最高',
         });
         candles.createPriceLine({
           price: loV,
@@ -196,7 +199,7 @@ export default function RhythmChart({
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
           axisLabelVisible: false,
-          title: '区间最低',
+          title: en ? 'Range low' : '区间最低',
         });
         setHl({ hi, lo: loV });
       } else {
@@ -247,7 +250,7 @@ export default function RhythmChart({
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
           axisLabelVisible: false,
-          title: '区间最高',
+          title: en ? 'Range high' : '区间最高',
         });
         area.createPriceLine({
           price: lo,
@@ -255,7 +258,7 @@ export default function RhythmChart({
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
           axisLabelVisible: false,
-          title: '区间最低',
+          title: en ? 'Range low' : '区间最低',
         });
         setHl({ hi, lo });
       } else {
@@ -302,7 +305,7 @@ export default function RhythmChart({
       ro.disconnect();
       chart.remove();
     };
-  }, [series, height, chartType, showRangeHL, fibLevels, fibScaleLevels, scheme, UP, DOWN, prevCloseLabel, keyLevels, showKeyLevels]);
+  }, [series, height, chartType, showRangeHL, fibLevels, fibScaleLevels, scheme, UP, DOWN, prevCloseLabel, keyLevels, showKeyLevels, lang]);
 
   if (series.length === 0) {
     return (
@@ -310,7 +313,7 @@ export default function RhythmChart({
         className="flex items-center justify-center text-slate-500 text-sm bg-slate-900 rounded-2xl border border-slate-800"
         style={{ height }}
       >
-        暂无走势数据
+        {en ? 'No chart data' : '暂无走势数据'}
       </div>
     );
   }
@@ -335,24 +338,24 @@ export default function RhythmChart({
             <>
               <span>
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500/70 mr-1" />
-                区间最高 {hl.hi.toFixed(2)}
+                {en ? 'Range high' : '区间最高'} {hl.hi.toFixed(2)}
               </span>
               <span>
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500/70 mr-1" />
-                区间最低 {hl.lo.toFixed(2)}
+                {en ? 'Range low' : '区间最低'} {hl.lo.toFixed(2)}
               </span>
             </>
           )}
           {fibLevels && fibLevels.length > 0 && (
             <span>
               <span className="inline-block w-2.5 h-0 border-t border-dashed border-yellow-600/80 mr-1 align-middle" />
-              黄金分割
+              {en ? 'Fibonacci' : '黄金分割'}
             </span>
           )}
           {showKeyLevels && keyLevels && keyLevels.length > 0 && (
             <span>
               <span className="inline-block w-2.5 h-0 border-t border-dashed border-slate-400/70 mr-1 align-middle" />
-              关键价位
+              {en ? 'Key levels' : '关键价位'}
             </span>
           )}
         </div>
@@ -362,10 +365,10 @@ export default function RhythmChart({
         <div className="absolute top-1 left-1 right-16 flex flex-wrap items-center gap-x-2 gap-y-0.5 chart-legend text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
           {(
             [
-              ['最高', OHLC_COLORS.high],
-              ['最低', OHLC_COLORS.low],
-              ['开盘', OHLC_COLORS.open],
-              ['收盘', OHLC_COLORS.close],
+              [en ? 'High' : '最高', OHLC_COLORS.high],
+              [en ? 'Low' : '最低', OHLC_COLORS.low],
+              [en ? 'Open' : '开盘', OHLC_COLORS.open],
+              [en ? 'Close' : '收盘', OHLC_COLORS.close],
             ] as const
           ).map(([label, color]) => (
             <span key={label}>

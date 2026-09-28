@@ -34,10 +34,24 @@ function noteFor(y30: number): string {
   return '分母温和，估值压力不大';
 }
 
+function noteForEn(y30: number): string {
+  if (y30 >= 5.5) return 'Near 22-year highs — the denominator is pricey. Be extra careful chasing here';
+  if (y30 >= 5.0) return 'Denominator on the pricey side — valuations get pressed down';
+  if (y30 >= 4.5) return 'Denominator neutral-to-pricey — watching more and doing less is fine';
+  return 'Denominator mild — little valuation pressure';
+}
+
 function fmtDateCN(iso: string): string {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return iso;
   return `${Number(m[2])}月${Number(m[3])}日`;
+}
+
+function fmtDateEn(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return iso;
+  const monthEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${monthEn[Number(m[2]) - 1]} ${Number(m[3])}`;
 }
 
 export async function GET() {
@@ -60,7 +74,9 @@ export async function GET() {
       y10: y10 ? Math.round(y10.value * 100) / 100 : null,
       date: y30.date,
       dateCN: fmtDateCN(y30.date),
+      dateEn: fmtDateEn(y30.date),
       note: noteFor(y30.value),
+      noteEn: noteForEn(y30.value),
     };
     cache = { at: Date.now(), payload };
     return NextResponse.json(payload);

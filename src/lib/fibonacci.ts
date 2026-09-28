@@ -5,6 +5,8 @@
  * 口径：参考线，不是算命——只标"大家都在看的位置"，不预测。
  */
 
+import type { Lang } from './i18n';
+
 export interface FibPoint {
   date: string;
   high: number;
@@ -28,9 +30,13 @@ export type FibComboId = 'smart' | 'classic' | 'full' | 'deep' | 'extension';
 export interface FibCombo {
   id: FibComboId;
   name: string;
+  /** 英文名（en 模式） */
+  nameEn: string;
   ratios: number[];
   kind: 'retrace' | 'extension' | 'mixed';
   desc: string;
+  /** 英文说明（en 模式） */
+  descEn: string;
 }
 
 /** 五套组合。回测结论（2026-09-24，AAPL/NVDA/MSFT/TSLA/COIN/MSTR 近3年，
@@ -46,37 +52,52 @@ export const FIB_COMBOS: Record<FibComboId, FibCombo> = {
   smart: {
     id: 'smart',
     name: '推荐视图',
+    nameEn: 'Recommended',
     ratios: [1.272, 1.618, 0.618, 0.786],
     kind: 'mixed',
     desc: '调参收敛：上方 1.272/1.618 拦追高，下方 0.618/0.786 拦割肉，近3月窗口',
+    descEn:
+      'Tuned: 1.272/1.618 above to stop chasing, 0.618/0.786 below to stop panic-selling, 3-month window',
   },
   classic: {
     id: 'classic',
     name: '经典三线',
+    nameEn: 'Classic 3',
     ratios: [0.382, 0.5, 0.618],
     kind: 'retrace',
     desc: '回调 0.382/0.5/0.618：股民最常用的三个位置（回测触及后守住约50%/52%/59%）',
+    descEn:
+      'Retracements 0.382/0.5/0.618: the three most-watched levels (held ~50%/52%/59% after touch in backtests)',
   },
   full: {
     id: 'full',
     name: '完整五线',
+    nameEn: 'Full 5',
     ratios: [0.236, 0.382, 0.5, 0.618, 0.786],
     kind: 'retrace',
     desc: '回调全套：浅回调 0.236 到深回调 0.786（浅线多为噪音，深线更靠谱）',
+    descEn:
+      'Full retracement set: 0.236 shallow to 0.786 deep (shallow lines are mostly noise; deeper ones hold better)',
   },
   deep: {
     id: 'deep',
     name: '跌到哪里',
+    nameEn: 'Where it may fall to',
     ratios: [0.618, 0.786],
     kind: 'retrace',
     desc: '往下看：跌到这两条线附近最容易撑住（回测触及后守住约59%/68%），割肉前先看一眼',
+    descEn:
+      'Look down: these lines hold most often (~59%/68% in backtests) — check before panic-selling',
   },
   extension: {
     id: 'extension',
     name: '涨到哪里',
+    nameEn: 'Where it may rise to',
     ratios: [1.272, 1.618, 2.0, 2.618],
     kind: 'extension',
     desc: '往上看：涨破波段高点后看这里，冲到1.272附近约78%会歇一歇（回测），追高前先看一眼',
+    descEn:
+      'Look up: after breaking the swing high, watch here — ~78% pause near 1.272 (backtested). Check before chasing',
   },
 };
 
@@ -105,17 +126,28 @@ export function dirComboId(id: FibComboId, uptrend: boolean): FibComboId {
 }
 
 /** 组合说明文字（随波段方向自适应，默认按上涨波段写） */
-export function fibComboDesc(id: FibComboId, uptrend: boolean): string {
+export function fibComboDesc(id: FibComboId, uptrend: boolean, lang: Lang = 'zh'): string {
+  const combo = FIB_COMBOS[id];
   if (!uptrend) {
     if (id === 'deep')
-      return '往下看：跌破波段低点后看这里（空头下行目标），割肉前先看一眼';
+      return lang === 'en'
+        ? 'Look down: targets below the swing low (bearish) — check before selling'
+        : '往下看：跌破波段低点后看这里（空头下行目标），割肉前先看一眼';
     if (id === 'extension')
-      return '往上看：反弹到这两条线附近容易遇到阻力（回测触及后守住约59%/68%），追高前先看一眼';
+      return lang === 'en'
+        ? 'Look up: bounces often stall near these two lines (~59%/68% held in backtests) — check before chasing'
+        : '往上看：反弹到这两条线附近容易遇到阻力（回测触及后守住约59%/68%），追高前先看一眼';
     if (id === 'smart')
-      return '调参收敛：下方 1.272/1.618 看跌破目标，上方 0.618/0.786 看反弹阻力，近3月窗口';
+      return lang === 'en'
+        ? 'Tuned: 1.272/1.618 below as breakdown targets, 0.618/0.786 above as bounce resistance, 3-month window'
+        : '调参收敛：下方 1.272/1.618 看跌破目标，上方 0.618/0.786 看反弹阻力，近3月窗口';
   }
-  return FIB_COMBOS[id].desc;
+  return lang === 'en' ? combo.descEn : combo.desc;
 }
+
+/** 组合名（按语言） */
+export const fibComboName = (id: FibComboId, lang: Lang = 'zh'): string =>
+  lang === 'en' ? FIB_COMBOS[id].nameEn : FIB_COMBOS[id].name;
 
 /**
  * 波段窗口（交易日）：固定近3月（60 个交易日），与律动诊断锚定一致。
@@ -247,8 +279,15 @@ const KIND_LABEL: Record<FibLevelKind, string> = {
   'target-down': '下方目标位',
 };
 
-export function fibKindLabel(kind: FibLevelKind): string {
-  return KIND_LABEL[kind];
+const KIND_LABEL_EN: Record<FibLevelKind, string> = {
+  support: 'support',
+  resistance: 'resistance',
+  'target-up': 'upside target',
+  'target-down': 'downside target',
+};
+
+export function fibKindLabel(kind: FibLevelKind, lang: Lang = 'zh'): string {
+  return lang === 'en' ? KIND_LABEL_EN[kind] : KIND_LABEL[kind];
 }
 
 /**
@@ -266,6 +305,7 @@ export interface FibPlainAdviceInput {
   /** 持仓盈亏百分比（%），null = 没查到持仓 */
   pnlPct: number | null;
   fmt: (n: number) => string;
+  lang?: Lang;
 }
 
 /**
@@ -273,8 +313,9 @@ export interface FibPlainAdviceInput {
  * 口径：每句都带数字或动作，不说空话；拦追高 / 拦割肉，不预测。
  */
 export function fibPlainAdvice(input: FibPlainAdviceInput): string[] | null {
-  const { price, levels, swing, pnlPct, fmt } = input;
+  const { price, levels, swing, pnlPct, fmt, lang = 'zh' } = input;
   if (!(price > 0) || levels.length === 0) return null;
+  const en = lang === 'en';
   const r1 = (n: number) => Math.round(n * 10) / 10;
   const above = levels
     .filter((l) => l.price > price)
@@ -286,29 +327,52 @@ export function fibPlainAdvice(input: FibPlainAdviceInput): string[] | null {
   const dn = below[0] ?? null;
   const distUp = up ? ((up.price - price) / price) * 100 : null;
   const distDn = dn ? ((price - dn.price) / price) * 100 : null;
-  const name = (lv: FibLevel) => `${fibRatioLabel(lv)}${fibKindLabel(lv.kind)}`;
+  const name = (lv: FibLevel) => `${fibRatioLabel(lv)} ${fibKindLabel(lv.kind, lang)}`;
   const has = pnlPct != null;
   const pnl = pnlPct ?? 0;
-  const pnlTxt =
-    pnl > 0.05 ? `赚 ${r1(pnl)}%` : pnl < -0.05 ? `亏 ${r1(Math.abs(pnl))}%` : '没赚没亏';
+  const pnlTxt = en
+    ? pnl > 0.05
+      ? `up ${r1(pnl)}%`
+      : pnl < -0.05
+        ? `down ${r1(Math.abs(pnl))}%`
+        : 'flat'
+    : pnl > 0.05
+      ? `赚 ${r1(pnl)}%`
+      : pnl < -0.05
+        ? `亏 ${r1(Math.abs(pnl))}%`
+        : '没赚没亏';
 
   const lines: string[] = [];
 
   // 第一句：在哪（已有多少、离上下多远）
   if (!up && !dn) {
-    lines.push(`现价 ${fmt(price)}，上下都没有参考线了。`);
+    lines.push(en ? `Price ${fmt(price)} — no reference lines above or below.` : `现价 ${fmt(price)}，上下都没有参考线了。`);
   } else if (!up) {
-    lines.push(`现价 ${fmt(price)} 已经站在所有参考线之上——上面没有线，是最容易追高的位置。`);
+    lines.push(
+      en
+        ? `Price ${fmt(price)} is above every reference line — the easiest place to chase.`
+        : `现价 ${fmt(price)} 已经站在所有参考线之上——上面没有线，是最容易追高的位置。`,
+    );
   } else if (!dn) {
-    lines.push(`现价 ${fmt(price)} 已经跌破所有参考线——下面没有支撑可看，别伸手接。`);
+    lines.push(
+      en
+        ? `Price ${fmt(price)} has broken below every reference line — no support to watch. Don't catch it.`
+        : `现价 ${fmt(price)} 已经跌破所有参考线——下面没有支撑可看，别伸手接。`,
+    );
   } else {
     const swingGain =
       swing.uptrend && swing.low > 0 ? ((price - swing.low) / swing.low) * 100 : null;
     const gainTxt =
-      swingGain != null && swingGain > 0.05 ? `这一波从 ${fmt(swing.low)} 已涨 ${r1(swingGain)}%，` : '';
+      swingGain != null && swingGain > 0.05
+        ? en
+          ? `up ${r1(swingGain)}% from ${fmt(swing.low)} this swing, `
+          : `这一波从 ${fmt(swing.low)} 已涨 ${r1(swingGain)}%，`
+        : '';
     lines.push(
-      `现价 ${fmt(price)}，${gainTxt}离上方${name(up)} ${fmt(up.price)}还有 ${r1(distUp!)}%，` +
-        `离下方${name(dn)} ${fmt(dn.price)}有 ${r1(distDn!)}% 空间。`
+      en
+        ? `Price ${fmt(price)}, ${gainTxt}${r1(distUp!)}% below the ${name(up)} at ${fmt(up.price)}, ${r1(distDn!)}% above the ${name(dn)} at ${fmt(dn.price)}.`
+        : `现价 ${fmt(price)}，${gainTxt}离上方${name(up)} ${fmt(up.price)}还有 ${r1(distUp!)}%，` +
+            `离下方${name(dn)} ${fmt(dn.price)}有 ${r1(distDn!)}% 空间。`,
     );
   }
 
@@ -317,46 +381,88 @@ export function fibPlainAdvice(input: FibPlainAdviceInput): string[] | null {
   if (has) {
     if (!up) {
       lines.push(
-        pnl >= 0
-          ? `你${pnlTxt}，上面没线了，别再加仓——分批走一点，落袋为安。`
-          : `你还${pnlTxt}，趁高把仓位降一降，别等回落。`
+        en
+          ? pnl >= 0
+            ? `You're ${pnlTxt} with no lines above — don't add. Trim a little, bank it.`
+            : `You're ${pnlTxt} — use the height to lighten up before it fades.`
+          : pnl >= 0
+            ? `你${pnlTxt}，上面没线了，别再加仓——分批走一点，落袋为安。`
+            : `你还${pnlTxt}，趁高把仓位降一降，别等回落。`,
       );
     } else if (distUp! <= NEAR) {
       lines.push(
-        pnl >= 0
-          ? `摸到${name(up)}了，别再追了——你${pnlTxt}，分批走一点。`
-          : `反弹到${name(up)}，你还${pnlTxt}——这是减亏窗口，分批走，别等跌回去。`
+        en
+          ? pnl >= 0
+            ? `Touching the ${name(up)} — stop chasing. You're ${pnlTxt}; trim a little.`
+            : `Bounced to the ${name(up)} and you're ${pnlTxt} — a window to trim losses. Sell in batches; don't wait for it to fall back.`
+          : pnl >= 0
+            ? `摸到${name(up)}了，别再追了——你${pnlTxt}，分批走一点。`
+            : `反弹到${name(up)}，你还${pnlTxt}——这是减亏窗口，分批走，别等跌回去。`,
       );
     } else if (dn && distDn! <= NEAR) {
       lines.push(
-        pnl >= 0
-          ? `跌到${name(dn)}附近了，拿住别慌，等它站稳再说。`
-          : `跌到${name(dn)}附近，你${pnlTxt}——割在地板上最亏，拿住等企稳。`
+        en
+          ? pnl >= 0
+            ? `Near the ${name(dn)} — hold steady, wait for it to stabilize.`
+            : `Near the ${name(dn)} and you're ${pnlTxt} — selling at the floor hurts most. Hold for stabilization.`
+          : pnl >= 0
+            ? `跌到${name(dn)}附近了，拿住别慌，等它站稳再说。`
+            : `跌到${name(dn)}附近，你${pnlTxt}——割在地板上最亏，拿住等企稳。`,
       );
     } else if (pnl >= 15) {
-      lines.push(`离${name(up)}还有 ${r1(distUp!)}%，${pnlTxt}垫着，拿得住；到 ${fmt(up.price)} 一带再分批。`);
+      lines.push(
+        en
+          ? `${r1(distUp!)}% below the ${name(up)} — ${pnlTxt} cushion, you can hold; trim near ${fmt(up.price)}.`
+          : `离${name(up)}还有 ${r1(distUp!)}%，${pnlTxt}垫着，拿得住；到 ${fmt(up.price)} 一带再分批。`,
+      );
     } else if (pnl >= 0) {
-      lines.push(`${pnlTxt}，离${name(up)}还有 ${r1(distUp!)}%，继续拿，但别加仓。`);
+      lines.push(
+        en
+          ? `${pnlTxt}, ${r1(distUp!)}% below the ${name(up)} — keep holding, but don't add.`
+          : `${pnlTxt}，离${name(up)}还有 ${r1(distUp!)}%，继续拿，但别加仓。`,
+      );
     } else {
-      lines.push(`还${pnlTxt}，离${name(up)}还有 ${r1(distUp!)}%，拿着等反弹，到 ${fmt(up.price)} 一带是减亏机会。`);
+      lines.push(
+        en
+          ? `${pnlTxt}, ${r1(distUp!)}% below the ${name(up)} — hold for the bounce; near ${fmt(up.price)} is your window to trim losses.`
+          : `还${pnlTxt}，离${name(up)}还有 ${r1(distUp!)}%，拿着等反弹，到 ${fmt(up.price)} 一带是减亏机会。`,
+      );
     }
   } else {
     if (!up) {
-      lines.push(`已经涨过所有参考线了，现在追=接飞刀，按兵不动。`);
+      lines.push(
+        en
+          ? `Above every reference line — chasing now is catching a falling knife. Stay put.`
+          : `已经涨过所有参考线了，现在追=接飞刀，按兵不动。`,
+      );
     } else if (distUp! <= NEAR) {
       lines.push(
-        dn
-          ? `已经涨到${name(up)}了，现在追=接飞刀；按兵不动，等回调到${name(dn)} ${fmt(dn.price)} 一带再看。`
-          : `已经涨到${name(up)}了，现在追=接飞刀，按兵不动。`
+        en
+          ? dn
+            ? `Already at the ${name(up)} — chasing is catching a falling knife. Wait for a pullback toward the ${name(dn)} near ${fmt(dn.price)}.`
+            : `Already at the ${name(up)} — chasing is catching a falling knife. Stay put.`
+          : dn
+            ? `已经涨到${name(up)}了，现在追=接飞刀；按兵不动，等回调到${name(dn)} ${fmt(dn.price)} 一带再看。`
+            : `已经涨到${name(up)}了，现在追=接飞刀，按兵不动。`,
       );
     } else if (dn && distDn! <= NEAR) {
-      lines.push(`跌到${name(dn)}附近，别急着抄底，等它站稳 2-3 天再动手。`);
+      lines.push(
+        en
+          ? `Near the ${name(dn)} — don't rush to buy the dip. Wait 2–3 days for it to stabilize.`
+          : `跌到${name(dn)}附近，别急着抄底，等它站稳 2-3 天再动手。`,
+      );
     } else if (dn) {
       lines.push(
-        `不上不下，按兵不动；真要动手，等回调到${name(dn)} ${fmt(dn.price)}附近，或者放量站上${name(up)} ${fmt(up.price)} 再说。`
+        en
+          ? `In between — stay put. If you must act, wait for a pullback near the ${name(dn)} at ${fmt(dn.price)}, or a strong break above the ${name(up)} at ${fmt(up.price)}.`
+          : `不上不下，按兵不动；真要动手，等回调到${name(dn)} ${fmt(dn.price)}附近，或者放量站上${name(up)} ${fmt(up.price)} 再说。`,
       );
     } else {
-      lines.push(`按兵不动；真要动手，等放量站上${name(up)} ${fmt(up.price)} 再说。`);
+      lines.push(
+        en
+          ? `Stay put. If you must act, wait for a strong break above the ${name(up)} at ${fmt(up.price)}.`
+          : `按兵不动；真要动手，等放量站上${name(up)} ${fmt(up.price)} 再说。`,
+      );
     }
   }
   return lines;
@@ -369,20 +475,32 @@ export function fibPlainAdvice(input: FibPlainAdviceInput): string[] | null {
 export function fibAdviceHint(
   swing: FibSwing,
   comboId: FibComboId,
-  price: number
+  price: number,
+  lang: Lang = 'zh',
 ): string | null {
   const near = nearestFibLevel(fibLevels(swing, comboId, price), price);
   if (!near || near.distPct > 1.5) return null;
   const { level } = near;
-  const at = `${fibRatioLabel(level)}${fibKindLabel(level.kind)}（$${level.price}）`;
+  const en = lang === 'en';
+  const at = en
+    ? `${fibRatioLabel(level)} ${fibKindLabel(level.kind, lang)} ($${level.price})`
+    : `${fibRatioLabel(level)}${fibKindLabel(level.kind)}（$${level.price}）`;
   switch (level.kind) {
     case 'support':
-      return `📐 现价贴近${at}——跌到这儿容易稳住，别慌着割肉`;
+      return en
+        ? `📐 Price near ${at} — dips tend to hold here. Don't panic-sell`
+        : `📐 现价贴近${at}——跌到这儿容易稳住，别慌着割肉`;
     case 'resistance':
-      return `📐 现价贴近${at}——反弹到这儿容易遇阻，别急着追`;
+      return en
+        ? `📐 Price near ${at} — bounces often stall here. Don't chase`
+        : `📐 现价贴近${at}——反弹到这儿容易遇阻，别急着追`;
     case 'target-up':
-      return `📐 现价接近${at}——涨到这儿别追高，让子弹歇会儿`;
+      return en
+        ? `📐 Price near ${at} — don't chase up here, let it rest`
+        : `📐 现价接近${at}——涨到这儿别追高，让子弹歇会儿`;
     case 'target-down':
-      return `📐 现价接近${at}——跌到这儿别急着抄底，等它站稳再说`;
+      return en
+        ? `📐 Price near ${at} — don't rush to buy the dip, wait for it to stabilize`
+        : `📐 现价接近${at}——跌到这儿别急着抄底，等它站稳再说`;
   }
 }

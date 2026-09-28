@@ -4,6 +4,8 @@
  * 覆盖主流美股（科技/半导体/金融/消费/医疗/能源/工业/通信/中概/加密概念等约 170 只）。
  */
 
+import type { Lang } from './i18n';
+
 export interface StockInfo {
   code: string;
   en: string;
@@ -20,6 +22,17 @@ export const SECTORS = [
   '科技', '半导体', '金融', '消费', '医疗',
   '能源', '工业', '通信', '公用事业', '房地产', '原材料',
 ] as const;
+
+/**
+ * 按语言取股票展示名。
+ * en：名单里有就用英文名（Apple 而不是苹果），查不到回退 storedName；
+ * zh：storedName（用户自选里的名字，可手动改）优先，没有就用中文名。
+ */
+export function displayStockName(symbol: string, lang: Lang, storedName?: string): string {
+  const info = STOCK_LIST.find((s) => s.code === symbol);
+  if (lang === 'en' && info?.en) return info.en;
+  return storedName || info?.zh || symbol;
+}
 
 export const STOCK_LIST: StockInfo[] = [
   // ---- 科技巨头 ----
@@ -323,6 +336,73 @@ export function suggestStocks(input: string, limit = 3): StockInfo[] {
   }
   return [...codeHit, ...nameHit].slice(0, limit);
 }
+
+/** 板块/主题中英对照（英文模式筛选器与标签用；新增股票沿用这些固定值，零维护） */
+const SECTOR_EN: Record<string, string> = {
+  科技: 'Tech',
+  半导体: 'Semiconductors',
+  消费: 'Consumer',
+  医疗: 'Healthcare',
+  金融: 'Finance',
+  能源: 'Energy',
+  工业: 'Industrials',
+  通信: 'Communications',
+  原材料: 'Materials',
+  房地产: 'Real Estate',
+  公用事业: 'Utilities',
+};
+const THEME_EN: Record<string, string> = {
+  AI: 'AI',
+  Meme: 'Meme',
+  eVTOL: 'eVTOL',
+  云计算: 'Cloud',
+  保险: 'Insurance',
+  共享出行: 'Ride-hailing',
+  军工: 'Defense',
+  创新药: 'Innovative drugs',
+  加密: 'Crypto',
+  医疗器械: 'Med devices',
+  医药: 'Pharma',
+  医药零售: 'Pharmacy retail',
+  医院: 'Hospitals',
+  商业航天: 'Commercial space',
+  太空: 'Space',
+  广告: 'Ads',
+  教育: 'Education',
+  数据中心: 'Data centers',
+  新能源: 'New energy',
+  旅游: 'Travel',
+  无人机: 'Drones',
+  日化: 'Household goods',
+  服装: 'Apparel',
+  机械: 'Machinery',
+  核能: 'Nuclear',
+  油服: 'Oil services',
+  流媒体: 'Streaming',
+  消费电子: 'Consumer electronics',
+  游戏: 'Gaming',
+  炼化: 'Refining',
+  烟草: 'Tobacco',
+  物流: 'Logistics',
+  电信: 'Telecom',
+  电动车: 'EV',
+  电商: 'E-commerce',
+  电池: 'Batteries',
+  石油: 'Oil',
+  社交: 'Social',
+  稀土: 'Rare earth',
+  网络安全: 'Cybersecurity',
+  美妆: 'Beauty',
+  航空: 'Airlines',
+  芯片: 'Chips',
+  量子: 'Quantum',
+  金融科技: 'Fintech',
+};
+/** 板块/主题英文名：英文模式展示用（无对照则原样返回） */
+export const sectorLabel = (zh: string, lang: 'zh' | 'en' = 'zh'): string =>
+  lang === 'en' ? SECTOR_EN[zh] ?? zh : zh;
+export const themeLabel = (zh: string, lang: 'zh' | 'en' = 'zh'): string =>
+  lang === 'en' ? THEME_EN[zh] ?? zh : zh;
 
 /** 全部主题（去重，供筛选器用） */
 export function allThemes(): string[] {

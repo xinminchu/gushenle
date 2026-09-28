@@ -48,7 +48,14 @@ export function useColorScheme() {
 }
 
 /** 页面上明确写出来的方案名 */
-export const schemeLabel = (s: ColorScheme) => (s === 'cn' ? '红涨绿跌' : '绿涨红跌');
+export const schemeLabel = (s: ColorScheme, lang: 'zh' | 'en' = 'zh') =>
+  lang === 'en'
+    ? s === 'cn'
+      ? 'red up / green down'
+      : 'green up / red down'
+    : s === 'cn'
+      ? '红涨绿跌'
+      : '绿涨红跌';
 
 /** 涨的文字颜色（Tailwind） */
 export const upText = (s: ColorScheme) => (s === 'cn' ? 'text-rose-400' : 'text-emerald-400');

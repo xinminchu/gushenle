@@ -13,14 +13,15 @@ import { fmtMoney } from '@/lib/currency';
  * 走 lib/market 共享缓存，不会多发重复请求。
  * 放在价格走势卡正下方，手机上全宽展示。
  */
-export default function ChipPanel({ symbol, compact = false }: { symbol: string; compact?: boolean }) {
+export default function ChipPanel({ symbol, compact = false, lang = 'zh' }: { symbol: string; compact?: boolean; lang?: 'zh' | 'en' }) {
+  const en = lang === 'en';
   const [open, setOpen] = useState(true);
   const [data, setData] = useState<RhythmResponse | null>(null);
 
   useEffect(() => {
     let alive = true;
     setData(null);
-    getRhythm(symbol, 'ALL')
+    getRhythm(symbol, 'ALL', { lang })
       .then((d) => {
         if (alive) setData(d);
       })
@@ -28,11 +29,11 @@ export default function ChipPanel({ symbol, compact = false }: { symbol: string;
     return () => {
       alive = false;
     };
-  }, [symbol]);
+  }, [symbol, lang]);
 
   const result = useMemo(
-    () => (data ? estimateChips(data.series, data.price, symbol) : null),
-    [data, symbol],
+    () => (data ? estimateChips(data.series, data.price, symbol, lang) : null),
+    [data, symbol, lang],
   );
 
   return (
@@ -42,10 +43,10 @@ export default function ChipPanel({ symbol, compact = false }: { symbol: string;
         className="w-full flex items-center justify-between"
       >
         <span className={`flex items-center gap-1.5 font-semibold text-slate-200 ${compact ? 'text-xs' : 'text-sm'}`}>
-          筹码分布
+          {en ? 'Cost distribution' : '筹码分布'}
           <span className="text-[10px] font-normal text-slate-500">{symbol}</span>
           <span className="text-[10px] font-normal text-slate-500 border border-slate-700 rounded px-1">
-            估算
+            {en ? 'est.' : '估算'}
           </span>
         </span>
         <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -54,21 +55,21 @@ export default function ChipPanel({ symbol, compact = false }: { symbol: string;
       {open && (
         <div className="mt-2.5">
           {data == null ? (
-            <p className="text-[10px] text-slate-500">筹码计算中…</p>
+            <p className="text-[10px] text-slate-500">{en ? 'Calculating…' : '筹码计算中…'}</p>
           ) : result == null ? (
-            <p className="text-[10px] text-slate-500">成交量数据不足，暂无筹码分布。</p>
+            <p className="text-[10px] text-slate-500">{en ? 'Not enough volume data.' : '成交量数据不足，暂无筹码分布。'}</p>
           ) : (
             <>
               <div className={`flex flex-wrap gap-x-3 gap-y-1 text-slate-400 mb-2.5 ${compact ? 'text-[10px]' : 'text-[11px]'}`}>
                 <span>
-                  获利盘 <strong className="text-emerald-400">{Math.round(result.profitRatio * 100)}%</strong>
+                  {en ? 'In profit' : '获利盘'} <strong className="text-emerald-400">{Math.round(result.profitRatio * 100)}%</strong>
                 </span>
                 <span>
-                  平均成本 <strong className="text-slate-200">{fmtMoney(symbol, result.avgCost)}</strong>
+                  {en ? 'Avg cost' : '平均成本'} <strong className="text-slate-200">{fmtMoney(symbol, result.avgCost)}</strong>
                 </span>
                 {!compact && (
                   <span>
-                    70%筹码{' '}
+                    {en ? '70% of chips' : '70%筹码'}{' '}
                     <strong className="text-slate-200">
                       {fmtMoney(symbol, result.conc70[0])}–{fmtMoney(symbol, result.conc70[1])}
                     </strong>
@@ -95,10 +96,10 @@ export default function ChipPanel({ symbol, compact = false }: { symbol: string;
               {!compact && (
                 <div className="flex gap-3 text-[10px] text-slate-600 mt-1.5 mb-2">
                   <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-sm bg-emerald-500/70 inline-block" /> 现价以下 · 获利盘
+                    <span className="w-2 h-2 rounded-sm bg-emerald-500/70 inline-block" /> {en ? 'Below price · in profit' : '现价以下 · 获利盘'}
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-sm bg-rose-500/70 inline-block" /> 现价以上 · 套牢盘
+                    <span className="w-2 h-2 rounded-sm bg-rose-500/70 inline-block" /> {en ? 'Above price · trapped' : '现价以上 · 套牢盘'}
                   </span>
                 </div>
               )}
@@ -106,7 +107,7 @@ export default function ChipPanel({ symbol, compact = false }: { symbol: string;
               <p className={`text-amber-200/90 leading-relaxed ${compact ? 'text-[10px] mt-1.5' : 'text-[11px]'}`}>💡 {result.verdict}</p>
               {!compact && (
                 <p className="text-[10px] text-slate-600 mt-1.5">
-                  按近约{result.days}个交易日日线估算，非交易所数据，仅供参考。
+                  {en ? `Estimated from ~${result.days} trading days of daily bars — not exchange data, for reference only.` : `按近约${result.days}个交易日日线估算，非交易所数据，仅供参考。`}
                 </p>
               )}
             </>

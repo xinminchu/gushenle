@@ -95,27 +95,29 @@ export function bullBearLines(
   pos: number,
   trend: number,
   vel: number,
+  lang: 'zh' | 'en' = 'zh',
 ): { bull: string; bear: string } {
+  const en = lang === 'en';
   const bullC: Array<[number, string]> = [];
   const bearC: Array<[number, string]> = [];
 
   if (pos >= 65) {
-    bullC.push([pos, '位置站得高，顺风好走']);
-    bearC.push([pos, '位置已高，追高胜率低']);
+    bullC.push([pos, en ? 'Position is high — tailwind is easy' : '位置站得高，顺风好走']);
+    bearC.push([pos, en ? 'Position is high — chasing has low win rate' : '位置已高，追高胜率低']);
   } else if (pos <= 35) {
-    bullC.push([100 - pos, '位置够低，往下空间有限']);
-    bearC.push([100 - pos, '位置这么低，市场自有它的担心']);
+    bullC.push([100 - pos, en ? 'Position is low — limited room below' : '位置够低，往下空间有限']);
+    bearC.push([100 - pos, en ? 'This low — the market has its worries' : '位置这么低，市场自有它的担心']);
   }
-  if (trend >= 65) bullC.push([trend, '趋势确实强']);
-  else if (trend <= 35) bearC.push([100 - trend, '趋势还在往下走']);
-  if (vel >= 65) bearC.push([vel, '涨太急，小心回调']);
-  else if (vel <= 35) bullC.push([100 - vel, '涨得不快，不算疯']);
+  if (trend >= 65) bullC.push([trend, en ? 'Trend is genuinely strong' : '趋势确实强']);
+  else if (trend <= 35) bearC.push([100 - trend, en ? 'Trend is still heading down' : '趋势还在往下走']);
+  if (vel >= 65) bearC.push([vel, en ? 'Up too fast — beware a pullback' : '涨太急，小心回调']);
+  else if (vel <= 35) bullC.push([100 - vel, en ? 'Not rising fast — not euphoric' : '涨得不快，不算疯']);
 
   const pick = (c: Array<[number, string]>) =>
     c.length > 0 ? c.sort((a, b) => b[0] - a[0])[0][1] : null;
   return {
-    bull: pick(bullC) ?? '没明显的多头信号',
-    bear: pick(bearC) ?? '没明显的空头信号',
+    bull: pick(bullC) ?? (en ? 'No clear bullish signal' : '没明显的多头信号'),
+    bear: pick(bearC) ?? (en ? 'No clear bearish signal' : '没明显的空头信号'),
   };
 }
 
@@ -133,16 +135,17 @@ export interface KeyLevel {
  * 黄金分割回撤 0.382 / 0.5 / 0.618。细虚线 + 轴上小标签，不喧宾夺主。
  * 需要至少 50 个点（算 MA50）；不够返回 null。
  */
-export function computeKeyLevels(d: RhythmResponse): KeyLevel[] | null {
+export function computeKeyLevels(d: RhythmResponse, lang: 'zh' | 'en' = 'zh'): KeyLevel[] | null {
   const s = d.series;
   if (s.length < 50) return null;
   const hl = actualHighLow(s);
   if (!hl) return null;
   const closes = s.map((p) => p.close);
   const ma50 = closes.slice(-50).reduce((a, b) => a + b, 0) / 50;
+  const en = lang === 'en';
   const out: KeyLevel[] = [
-    { label: '年高', price: hl.high, color: 'rgba(244,114,182,0.55)' },
-    { label: '年低', price: hl.low, color: 'rgba(56,189,248,0.55)' },
+    { label: en ? '1Y high' : '年高', price: hl.high, color: 'rgba(244,114,182,0.55)' },
+    { label: en ? '1Y low' : '年低', price: hl.low, color: 'rgba(56,189,248,0.55)' },
     { label: 'MA50', price: ma50, color: 'rgba(167,139,250,0.55)' },
   ];
   for (const r of [0.382, 0.5, 0.618]) {

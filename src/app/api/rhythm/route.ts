@@ -29,6 +29,7 @@ function buildResponse(
   full: RhythmPoint[],
   source: RhythmResponse['source'],
   live: LiveQuote | null,
+  lang: 'zh' | 'en',
 ): RhythmResponse {
   const series = sliceRange(full, rangeId);
   const closes = series.map((p) => p.close);
@@ -48,8 +49,11 @@ function buildResponse(
       ? Math.round(Math.min(100, Math.max(0, ((displayPrice - low) / (high - low)) * 100)))
       : null;
 
-  // 主判断：基于全量数据，锚定近 3 月
-  const judgment = buildJudgment(full.map((p) => p.close));
+  // 主判断：基于全量数据，锚定近 3 月（?lang=en 时诊断文案走英文）
+  const judgment = buildJudgment(
+    full.map((p) => p.close),
+    lang,
+  );
 
   const availableRanges = RANGE_DEFS.filter((d) => full.length >= d.minPoints).map(
     (d) => d.id,
@@ -79,12 +83,13 @@ function buildResponse(
 export async function GET(req: NextRequest) {
   const symbol = (req.nextUrl.searchParams.get('symbol') || 'AAPL').toUpperCase();
   const range = req.nextUrl.searchParams.get('range') || ANCHOR_RANGE_ID;
+  const lang = req.nextUrl.searchParams.get('lang') === 'en' ? 'en' : 'zh';
   const debug = req.nextUrl.searchParams.get('debug') === '1';
 
   const { series, source, errors } = await getFullSeries(symbol);
   // 实时报价失败不影响主流程，静默降级为日线收盘价
   const live = await getLiveQuote(symbol).catch(() => null);
-  const data = buildResponse(symbol, range, series, source, live);
+  const data = buildResponse(symbol, range, series, source, live, lang);
   if (debug) {
     return NextResponse.json({ ...data, _debug: { errors, fullPoints: series.length } });
   }

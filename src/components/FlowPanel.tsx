@@ -12,13 +12,14 @@ import { fmtCompactMoney } from '@/lib/currency';
  * 解读口径（跟用户对齐）：环形图红绿总和=100%，一眼看买卖对比；
  * 看占比=谁更主动，看深浅=钱新不新，看配合=结合筹码分布。
  */
-export default function FlowPanel({ symbol }: { symbol: string }) {
+export default function FlowPanel({ symbol, lang = 'zh' }: { symbol: string; lang?: 'zh' | 'en' }) {
+  const en = lang === 'en';
   const [data, setData] = useState<RhythmResponse | null>(null);
 
   useEffect(() => {
     let alive = true;
     setData(null);
-    getRhythm(symbol, '3M')
+    getRhythm(symbol, '3M', { lang })
       .then((d) => {
         if (alive) setData(d);
       })
@@ -26,11 +27,11 @@ export default function FlowPanel({ symbol }: { symbol: string }) {
     return () => {
       alive = false;
     };
-  }, [symbol]);
+  }, [symbol, lang]);
 
   const result = useMemo(
-    () => (data ? estimateFlows(data.series, symbol) : null),
-    [data, symbol],
+    () => (data ? estimateFlows(data.series, symbol, lang) : null),
+    [data, symbol, lang],
   );
 
   const buckets = useMemo(() => (result ? bucketizeFlows(result.days) : []), [result]);
@@ -40,22 +41,22 @@ export default function FlowPanel({ symbol }: { symbol: string }) {
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-3">
       <div className="flex items-center gap-1.5">
-        <span className="text-xs font-semibold text-slate-200">资金流向</span>
+        <span className="text-xs font-semibold text-slate-200">{en ? 'Money flow' : '资金流向'}</span>
         <span className="text-[10px] font-normal text-slate-500">{symbol}</span>
         <span className="text-[10px] font-normal text-slate-500 border border-slate-700 rounded px-1">
           日线估算
         </span>
       </div>
-      <p className="text-[10px] text-slate-500 mt-1 mb-2">20天里买的人和卖的人谁更用力</p>
+      <p className="text-[10px] text-slate-500 mt-1 mb-2">{en ? 'Last 20 days: buyers vs sellers, who pushed harder' : '20天里买的人和卖的人谁更用力'}</p>
 
       {data == null ? (
-        <p className="text-[10px] text-slate-500">资金计算中…</p>
+        <p className="text-[10px] text-slate-500">{en ? 'Calculating…' : '资金计算中…'}</p>
       ) : result == null ? (
-        <p className="text-[10px] text-slate-500">成交量数据不足。</p>
+        <p className="text-[10px] text-slate-500">{en ? 'Not enough volume data.' : '成交量数据不足。'}</p>
       ) : (
         <>
           <p className="text-[10px] text-slate-400 mb-1.5">
-            近{result.daysCount}日累计{' '}
+            {en ? `Last ${result.daysCount}d net` : `近${result.daysCount}日累计`}{' '}
             <strong className={result.net >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
               {result.net >= 0 ? '+' : '−'}
               {fmtCompactMoney(symbol, Math.abs(result.net))}
@@ -69,16 +70,17 @@ export default function FlowPanel({ symbol }: { symbol: string }) {
             totalOut={totalOut}
             net={result.net}
             symbol={symbol}
+            lang={lang}
           />
           <div className="mt-1.5 mb-1.5 text-[9px] text-slate-600 leading-relaxed">
-            <p>颜色越深，钱越新（近5日最深）</p>
+            <p>{en ? 'Darker = fresher money (last 5d darkest)' : '颜色越深，钱越新（近5日最深）'}</p>
           </div>
 
           <p className="text-[10px] text-amber-200/90 leading-relaxed">💡 {result.verdict}</p>
           <p className="text-[10px] text-sky-200/90 leading-relaxed mt-1">
-            👉 怎么用：{flowUsage(totalIn, totalOut)}
+            {en ? '👉 How to read: ' : '👉 怎么用：'}{flowUsage(totalIn, totalOut, lang)}
           </p>
-          <p className="text-[9px] text-slate-600 mt-1">按日线估算，非逐笔大单数据，仅供参考。</p>
+          <p className="text-[9px] text-slate-600 mt-1">{en ? 'Estimated from daily bars — not tick-level block data, for reference only.' : '按日线估算，非逐笔大单数据，仅供参考。'}</p>
         </>
       )}
     </div>
@@ -96,23 +98,26 @@ function FlowDonut({
   totalOut,
   net,
   symbol,
+  lang = 'zh',
 }: {
   buckets: FlowBucket[];
   totalIn: number;
   totalOut: number;
   net: number;
   symbol: string;
+  lang?: 'zh' | 'en';
 }) {
+  const en = lang === 'en';
   const grand = totalIn + totalOut;
   const R = 70;
   const C = 2 * Math.PI * R;
   const segs = [
-    { label: '近5日流入', short: '近5日', v: buckets[0]?.inSum ?? 0, color: '#059669' },
-    { label: '6-10日流入', short: '6-10日', v: buckets[1]?.inSum ?? 0, color: '#10b981' },
-    { label: '11-20日流入', short: '11-20日', v: buckets[2]?.inSum ?? 0, color: '#34d399' },
-    { label: '近5日流出', short: '近5日', v: buckets[0]?.outSum ?? 0, color: '#e11d48' },
-    { label: '6-10日流出', short: '6-10日', v: buckets[1]?.outSum ?? 0, color: '#f43f5e' },
-    { label: '11-20日流出', short: '11-20日', v: buckets[2]?.outSum ?? 0, color: '#fb7185' },
+    { label: en ? 'Last 5d inflow' : '近5日流入', short: en ? 'Last 5d' : '近5日', v: buckets[0]?.inSum ?? 0, color: '#059669' },
+    { label: en ? '6–10d inflow' : '6-10日流入', short: en ? '6–10d' : '6-10日', v: buckets[1]?.inSum ?? 0, color: '#10b981' },
+    { label: en ? '11–20d inflow' : '11-20日流入', short: en ? '11–20d' : '11-20日', v: buckets[2]?.inSum ?? 0, color: '#34d399' },
+    { label: en ? 'Last 5d outflow' : '近5日流出', short: en ? 'Last 5d' : '近5日', v: buckets[0]?.outSum ?? 0, color: '#e11d48' },
+    { label: en ? '6–10d outflow' : '6-10日流出', short: en ? '6–10d' : '6-10日', v: buckets[1]?.outSum ?? 0, color: '#f43f5e' },
+    { label: en ? '11–20d outflow' : '11-20日流出', short: en ? '11–20d' : '11-20日', v: buckets[2]?.outSum ?? 0, color: '#fb7185' },
   ];
   let acc = 0;
   const arcs = segs.map((s) => {
@@ -128,7 +133,7 @@ function FlowDonut({
   return (
     <div>
       <div className="flex justify-center">
-        <svg viewBox="0 0 180 180" className="w-44 h-44" role="img" aria-label="资金流向环形图">
+        <svg viewBox="0 0 180 180" className="w-44 h-44" role="img" aria-label={en ? "Money flow donut" : "资金流向环形图"}>
           {arcs.map((a, i) =>
             a.frac <= 0 ? null : (
               <circle

@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
+import { displayStockName } from '@/lib/stockList';
 
 /** 首页三行的大白话标题（用户定版；中间行名字暂定） */
-const HOT_LABEL = '涨得欢';
-const MIDDLE_LABEL = '看一眼';
-const COLD_LABEL = '跌得凶';
+const HOT_LABEL: Record<string, string> = { zh: '涨得欢', en: 'Hot' };
+const MIDDLE_LABEL: Record<string, string> = { zh: '看一眼', en: 'Worth a look' };
+const COLD_LABEL: Record<string, string> = { zh: '跌得凶', en: 'Cold' };
 
 interface ScanItem {
   symbol: string;
@@ -65,10 +66,15 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
     return null;
   }
   const md = data.scanDate || '';
-  // "2026-09-25" → "9月25日"（回补行标注用）
+  // "2026-09-25" → "9月25日" / "Sep 25"（回补行标注用）
   function shortDate(s: string): string {
     const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
-    return m ? `${Number(m[2])}月${Number(m[3])}日` : s;
+    if (!m) return s;
+    if (en) {
+      const monthEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${monthEn[Number(m[2]) - 1]} ${Number(m[3])}`;
+    }
+    return `${Number(m[2])}月${Number(m[3])}日`;
   }
   // 某行用了回补的旧数据：标注"（9月25日数据）"，跟当天数据区分开
   const asOfNote = (k: 'hot' | 'middle' | 'cold'): string => {
@@ -113,15 +119,15 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
               className="signal-tile rounded-lg border border-slate-800 bg-slate-950/60 px-1 py-1.5 text-center active:bg-slate-800"
             >
               <div className="text-[11px] font-bold text-slate-100 leading-tight">{s.symbol}</div>
-              <div className="text-[9px] text-slate-500 leading-tight truncate">{s.name}</div>
+              <div className="text-[9px] text-slate-500 leading-tight truncate">{displayStockName(s.symbol, lang, s.name)}</div>
               {s.upStreak != null && s.upStreak >= 3 && (
                 <div className="text-[9px] leading-tight mt-0.5 text-amber-300">
-                  📈{s.upStreak}连涨
+                  📈{s.upStreak}{en ? '-day rise' : '连涨'}
                 </div>
               )}
               {s.downStreak != null && s.downStreak >= 3 && (
                 <div className="text-[9px] leading-tight mt-0.5 text-sky-300">
-                  📉{s.downStreak}连跌
+                  📉{s.downStreak}{en ? '-day slide' : '连跌'}
                 </div>
               )}
               <div
@@ -158,14 +164,14 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
       </div>
       {row(
         data.hot,
-        `🔥 ${HOT_LABEL}`,
+        `🔥 ${HOT_LABEL[lang]}`,
         en ? 'don\u2019t chase, beware of getting trapped' : '慎追，当心套牢',
         'red',
         asOfNote('hot'),
       )}
       {row(
         data.middle || [],
-        `👀 ${MIDDLE_LABEL}`,
+        `👀 ${MIDDLE_LABEL[lang]}`,
         en
           ? data.flowFilter
             ? 'near 50 · 20-day net inflow'
@@ -178,7 +184,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
       )}
       {row(
         data.cold || [],
-        `🥶 ${COLD_LABEL}`,
+        `🥶 ${COLD_LABEL[lang]}`,
         en ? 'be careful about selling the bottom or catching the knife' : '慎割肉，慎抄底',
         'red',
         asOfNote('cold'),

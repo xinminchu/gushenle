@@ -11,6 +11,8 @@ import { loadOperations } from '@/lib/operations';
 import { getRhythm } from '@/lib/market';
 import { actualHighLow } from '@/lib/brief';
 import { fmtMoney } from '@/lib/currency';
+import { sessionLabel } from '@/lib/financeCalendar';
+import type { Lang } from '@/lib/i18n';
 
 type Icon = 'ok' | 'warn' | 'bad' | 'na';
 
@@ -32,6 +34,7 @@ interface BuyCheckupProps {
   price: number;
   series: RhythmPoint[];
   onClose: () => void;
+  lang?: Lang;
 }
 
 function IconGlyph({ icon }: { icon: Icon }) {
@@ -41,10 +44,12 @@ function IconGlyph({ icon }: { icon: Icon }) {
   return <Minus className="w-4 h-4 text-slate-500 shrink-0" />;
 }
 
-const zhDate = (ds: string) => {
-  const m = ds.match(/^\d{4}-(\d{2})-(\d{2})$/);
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const zhDate = (ds: string, lang: Lang = 'zh') => {
+  const m = ds.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return ds;
-  return `${parseInt(m[1], 10)}月${parseInt(m[2], 10)}日`;
+  if (lang === 'en') return `${MONTHS[parseInt(m[2], 10) - 1]} ${parseInt(m[3], 10)}`;
+  return `${parseInt(m[2], 10)}月${parseInt(m[3], 10)}日`;
 };
 
 /** 财报查询的模块级客户端缓存：symbol -> 结果，TTL 1 小时（失败不缓存，下次打开重试） */
@@ -61,7 +66,9 @@ export default function BuyCheckup({
   price,
   series,
   onClose,
+  lang = 'zh',
 }: BuyCheckupProps) {
+  const en = lang === 'en';
   // 财报：14 天内有没有这只的财报（走现有 /api/earnings，不新增接口；模块级缓存 1 小时）
   const [earnState, setEarnState] = useState<'loading' | 'none' | 'error' | { date: string; session: string }>('loading');
 
@@ -95,7 +102,7 @@ export default function BuyCheckup({
   const [allHigh, setAllHigh] = useState<number | null>(null);
   useEffect(() => {
     let cancelled = false;
-    getRhythm(symbol, 'ALL')
+    getRhythm(symbol, 'ALL', { lang })
       .then((d) => {
         if (cancelled) return;
         setAllHigh(actualHighLow(d.series)?.high ?? null);
@@ -104,7 +111,7 @@ export default function BuyCheckup({
     return () => {
       cancelled = true;
     };
-  }, [symbol]);
+  }, [symbol, lang]);
 
   const checks: Check[] = [];
 
@@ -112,36 +119,60 @@ export default function BuyCheckup({
   if (score >= hot) {
     checks.push({
       icon: 'bad',
-      title: '律动过热',
-      detail: `律动 ${score} 分，过了 ${hot} 分的过热线——太热了，先别追`,
+      title: en ? 'Rhythm overheated' : '律动过热',
+      detail: en
+        ? `Rhythm ${score}, above the ${hot} overheat line — too hot, don't chase`
+        : `律动 ${score} 分，过了 ${hot} 分的过热线——太热了，先别追`,
     });
   } else if (score >= hot - 15) {
-    checks.push({ icon: 'warn', title: '律动偏热', detail: `律动 ${score} 分，离过热线不远，悠着点` });
+    checks.push({
+      icon: 'warn',
+      title: en ? 'Rhythm running warm' : '律动偏热',
+      detail: en
+        ? `Rhythm ${score}, not far from the overheat line — take it easy`
+        : `律动 ${score} 分，离过热线不远，悠着点`,
+    });
   } else {
-    checks.push({ icon: 'ok', title: '律动不热', detail: `律动 ${score} 分，没到追高的危险区` });
+    checks.push({
+      icon: 'ok',
+      title: en ? 'Rhythm not hot' : '律动不热',
+      detail: en
+        ? `Rhythm ${score} — not in the chasing danger zone`
+        : `律动 ${score} 分，没到追高的危险区`,
+    });
   }
 
   // 2. 财报临近吗
   if (earnState === 'loading') {
-    checks.push({ icon: 'na', title: '财报日历', detail: '正在查…' });
+    checks.push({ icon: 'na', title: en ? 'Earnings calendar' : '财报日历', detail: en ? 'Checking…' : '正在查…' });
   } else if (earnState === 'error') {
-    checks.push({ icon: 'na', title: '财报日历', detail: '财报日历没查到，不瞎判' });
+    checks.push({
+      icon: 'na',
+      title: en ? 'Earnings calendar' : '财报日历',
+      detail: en ? 'Earnings calendar unavailable — no guessing' : '财报日历没查到，不瞎判',
+    });
   } else if (earnState === 'none') {
-    checks.push({ icon: 'ok', title: '近期无财报', detail: '14 天内没这只的财报，少一个爆雷变量' });
+    checks.push({
+      icon: 'ok',
+      title: en ? 'No earnings soon' : '近期无财报',
+      detail: en ? 'No earnings for this one in 14 days — one less surprise variable' : '14 天内没这只的财报，少一个爆雷变量',
+    });
   } else {
     checks.push({
       icon: 'warn',
-      title: '财报临近',
-      detail: `${zhDate(earnState.date)}有财报（${earnState.session}）——财报前后波动大，想清楚再动`,
+      title: en ? 'Earnings coming up' : '财报临近',
+      detail: en
+        ? `Earnings on ${zhDate(earnState.date, 'en')} (${sessionLabel(earnState.session, 'en')}) — volatile around earnings, think before acting`
+        : `${zhDate(earnState.date)}有财报（${sessionLabel(earnState.session)}）——财报前后波动大，想清楚再动`,
     });
   }
 
   // 3. 位置高吗（三档：近3月 / 近1年 / 历史，取离得最近的一档判；拿不到的档直接跳过）
   {
     const tiers: Array<[string, number | null]> = [
-      ['3月高点', highs.m3],
-      ['年内高点', highs.y1],
-      ['历史高点', allHigh],
+      [en ? '3M high' : '3月高点', highs.m3],
+      [en ? '1Y high' : '年内高点', highs.y1],
+      [en ? 'all-time high' : '历史高点', allHigh],
     ];
     const dists: number[] = [];
     const labels: string[] = [];
@@ -149,19 +180,37 @@ export default function BuyCheckup({
       if (h == null || h <= 0 || price <= 0) continue;
       const d = ((h - price) / h) * 100;
       dists.push(d);
-      labels.push(`离${label} ${d.toFixed(0)}%`);
+      labels.push(en ? `${d.toFixed(0)}% below ${label}` : `离${label} ${d.toFixed(0)}%`);
     }
     if (dists.length === 0) {
-      checks.push({ icon: 'na', title: '位置', detail: '高点数据还没到，不瞎判' });
+      checks.push({
+        icon: 'na',
+        title: en ? 'Position' : '位置',
+        detail: en ? 'High data not in yet — no guessing' : '高点数据还没到，不瞎判',
+      });
     } else {
       const d = Math.min(...dists);
       const detail = labels.join(' · ');
       if (d <= 3) {
-        checks.push({ icon: 'bad', title: '位置很高', detail: `${detail}——现在买基本是接最后一棒` });
+        checks.push({
+          icon: 'bad',
+          title: en ? 'Very high position' : '位置很高',
+          detail: en
+            ? `${detail} — buying now is catching the last baton`
+            : `${detail}——现在买基本是接最后一棒`,
+        });
       } else if (d <= 8) {
-        checks.push({ icon: 'warn', title: '位置偏高', detail: `${detail}，性价比一般` });
+        checks.push({
+          icon: 'warn',
+          title: en ? 'Position on the high side' : '位置偏高',
+          detail: en ? `${detail} — mediocre value` : `${detail}，性价比一般`,
+        });
       } else {
-        checks.push({ icon: 'ok', title: '位置还行', detail: `${detail}，不算贵` });
+        checks.push({
+          icon: 'ok',
+          title: en ? 'Position fine' : '位置还行',
+          detail: en ? `${detail} — not expensive` : `${detail}，不算贵`,
+        });
       }
     }
   }
@@ -178,11 +227,25 @@ export default function BuyCheckup({
       const pnl = (price - mine.avgCost) * mine.shares;
       const pnlPct = mine.avgCost > 0 ? ((price - mine.avgCost) / mine.avgCost) * 100 : 0;
       const sign = pnl >= 0 ? '+' : '-';
-      const pnlStr = `浮动盈亏 ${sign}${fmtMoney(symbol, Math.abs(pnl))}（${sign}${Math.abs(pnlPct).toFixed(1)}%）`;
+      const pnlStr = en
+        ? `Floating P/L ${sign}${fmtMoney(symbol, Math.abs(pnl))} (${sign}${Math.abs(pnlPct).toFixed(1)}%)`
+        : `浮动盈亏 ${sign}${fmtMoney(symbol, Math.abs(pnl))}（${sign}${Math.abs(pnlPct).toFixed(1)}%）`;
       if (w >= 0.3) {
-        checks.push({ icon: 'warn', title: '仓位已重', detail: `这只已占 ${pct}% 仓位（按成本），再加就重了；${pnlStr}` });
+        checks.push({
+          icon: 'warn',
+          title: en ? 'Position already heavy' : '仓位已重',
+          detail: en
+            ? `This one is already ${pct}% of your book (by cost) — adding more is heavy; ${pnlStr}`
+            : `这只已占 ${pct}% 仓位（按成本），再加就重了；${pnlStr}`,
+        });
       } else {
-        checks.push({ icon: 'ok', title: '仓位不重', detail: `已持有，占 ${pct}% 仓位（按成本）；${pnlStr}` });
+        checks.push({
+          icon: 'ok',
+          title: en ? 'Position not heavy' : '仓位不重',
+          detail: en
+            ? `Holding, ${pct}% of book (by cost); ${pnlStr}`
+            : `已持有，占 ${pct}% 仓位（按成本）；${pnlStr}`,
+        });
       }
     } else if (ops.length > 0) {
       const buys = ops.filter((o) => o.action === 'buy');
@@ -194,28 +257,36 @@ export default function BuyCheckup({
       const avgB = bq > 0 ? sumCost(buys) / bq : null;
       const avgS = sq > 0 ? sumCost(sells) / sq : null;
       const lines: string[] = [];
-      if (avgB != null) lines.push(`累计买入 ${bq} 股（均价 ${fmtMoney(symbol, avgB)}）`);
-      else if (buys.length > 0) lines.push(`买入过 ${buys.length} 笔（没记数量）`);
-      if (avgS != null) lines.push(`累计卖出 ${sq} 股（均价 ${fmtMoney(symbol, avgS)}）`);
-      else if (sells.length > 0) lines.push(`卖出过 ${sells.length} 笔（没记数量）`);
+      if (avgB != null) lines.push(en ? `Bought ${bq} shares total (avg ${fmtMoney(symbol, avgB)})` : `累计买入 ${bq} 股（均价 ${fmtMoney(symbol, avgB)}）`);
+      else if (buys.length > 0) lines.push(en ? `${buys.length} buys (qty not logged)` : `买入过 ${buys.length} 笔（没记数量）`);
+      if (avgS != null) lines.push(en ? `Sold ${sq} shares total (avg ${fmtMoney(symbol, avgS)})` : `累计卖出 ${sq} 股（均价 ${fmtMoney(symbol, avgS)}）`);
+      else if (sells.length > 0) lines.push(en ? `${sells.length} sells (qty not logged)` : `卖出过 ${sells.length} 笔（没记数量）`);
       if (avgB != null && avgS != null && sq > 0) {
         const realized = (avgS - avgB) * sq;
         const rsign = realized >= 0 ? '+' : '-';
-        lines.push(`已实现估算 ${rsign}${fmtMoney(symbol, Math.abs(realized))}`);
+        lines.push(en ? `Realized est. ${rsign}${fmtMoney(symbol, Math.abs(realized))}` : `已实现估算 ${rsign}${fmtMoney(symbol, Math.abs(realized))}`);
       }
       const recent = ops.slice(0, 3).map((o) => {
-        const act = o.action === 'buy' ? '买入' : '卖出';
-        const q = o.qty != null ? ` ${o.qty}股` : '';
-        const th = o.thesis ? `（${o.thesis}）` : '';
-        return `${zhDate(o.date)} ${act}${q} @${fmtMoney(symbol, o.price)}${th}`;
+        const act = o.action === 'buy' ? (en ? 'Bought' : '买入') : en ? 'Sold' : '卖出';
+        const q = o.qty != null ? (en ? ` ${o.qty} sh` : ` ${o.qty}股`) : '';
+        const th = o.thesis ? (en ? ` (${o.thesis})` : `（${o.thesis}）`) : '';
+        return `${zhDate(o.date, lang)} ${act}${q} @${fmtMoney(symbol, o.price)}${th}`;
       });
-      if (recent.length > 0) lines.push(`最近：${recent.join('；')}`);
-      checks.push({ icon: 'ok', title: '当前空仓', detail: lines.join('；') });
+      if (recent.length > 0) lines.push(en ? `Recent: ${recent.join('; ')}` : `最近：${recent.join('；')}`);
+      checks.push({ icon: 'ok', title: en ? 'Currently no position' : '当前空仓', detail: lines.join(en ? '; ' : '；') });
     } else {
-      checks.push({ icon: 'na', title: '仓位', detail: '没记持仓，不瞎判' });
+      checks.push({
+        icon: 'na',
+        title: en ? 'Position' : '仓位',
+        detail: en ? 'No position logged — no guessing' : '没记持仓，不瞎判',
+      });
     }
   } else {
-    checks.push({ icon: 'na', title: '仓位', detail: '没记持仓，不瞎判' });
+    checks.push({
+      icon: 'na',
+      title: en ? 'Position' : '仓位',
+      detail: en ? 'No position logged — no guessing' : '没记持仓，不瞎判',
+    });
   }
 
   // 5. 短期涨太急吗（近 5 个交易日）
@@ -224,24 +295,43 @@ export default function BuyCheckup({
     const now = series[series.length - 1].close;
     const chg5 = ago > 0 ? ((now - ago) / ago) * 100 : 0;
     if (chg5 >= 8) {
-      checks.push({ icon: 'warn', title: '涨得太急', detail: `近 5 天涨了 ${chg5.toFixed(1)}%，有点急，等它喘口气` });
+      checks.push({
+        icon: 'warn',
+        title: en ? 'Rising too fast' : '涨得太急',
+        detail: en
+          ? `Up ${chg5.toFixed(1)}% in 5 days — a bit rushed, let it catch its breath`
+          : `近 5 天涨了 ${chg5.toFixed(1)}%，有点急，等它喘口气`,
+      });
     } else {
       checks.push({
         icon: 'ok',
-        title: '涨速正常',
-        detail: `近 5 天 ${chg5 >= 0 ? '+' : ''}${chg5.toFixed(1)}%，没出现短期暴涨`,
+        title: en ? 'Pace normal' : '涨速正常',
+        detail: en
+          ? `5-day ${chg5 >= 0 ? '+' : ''}${chg5.toFixed(1)}% — no short-term spike`
+          : `近 5 天 ${chg5 >= 0 ? '+' : ''}${chg5.toFixed(1)}%，没出现短期暴涨`,
       });
     }
   } else {
-    checks.push({ icon: 'na', title: '涨速', detail: '数据不足，不瞎判' });
+    checks.push({
+      icon: 'na',
+      title: en ? 'Pace' : '涨速',
+      detail: en ? 'Not enough data — no guessing' : '数据不足，不瞎判',
+    });
   }
 
   const bads = checks.filter((c) => c.icon === 'bad').length;
   const warns = checks.filter((c) => c.icon === 'warn').length;
   const oks = checks.filter((c) => c.icon === 'ok').length;
   const nas = checks.filter((c) => c.icon === 'na').length;
-  const summary =
-    bads > 0
+  const summary = en
+    ? bads > 0
+      ? `${bads} red flag${bads > 1 ? 's' : ''} — think twice`
+      : warns > 0
+        ? `${warns} to watch, ${oks} passed`
+        : oks === 5
+          ? 'All 5 passed — if you really want in, go in batches'
+          : `${oks} passed, ${nas} no data — everything checkable passed. If you really want in, go in batches`
+    : bads > 0
       ? `有 ${bads} 项亮红灯，再想想`
       : warns > 0
         ? `${warns} 项要注意，${oks} 项通过`
@@ -257,13 +347,13 @@ export default function BuyCheckup({
       >
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-sm font-semibold text-slate-100">
-            买入前体检 <span className="text-slate-400 font-normal">{symbol} {name}</span>
+            {en ? 'Pre-buy checkup' : '买入前体检'} <span className="text-slate-400 font-normal">{symbol} {name}</span>
           </h3>
-          <button onClick={onClose} className="text-slate-500 hover:text-slate-300 p-1" aria-label="关闭">
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-300 p-1" aria-label={en ? 'Close' : '关闭'}>
             <X className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-[10px] text-slate-500 mb-3">买之前过一遍，拦住一时冲动</p>
+        <p className="text-[10px] text-slate-500 mb-3">{en ? 'Run through it before buying — stop impulse in its tracks' : '买之前过一遍，拦住一时冲动'}</p>
         <div className="space-y-2">
           {checks.map((c, i) => (
             <div key={i} className="flex items-start gap-2.5 bg-slate-900/60 rounded-xl px-3 py-2.5">
@@ -290,7 +380,7 @@ export default function BuyCheckup({
           onClick={onClose}
           className="mt-3 w-full py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs text-slate-200 font-medium"
         >
-          知道了
+          {en ? 'Got it' : '知道了'}
         </button>
       </div>
     </div>

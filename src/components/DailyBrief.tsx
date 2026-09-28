@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getRhythm } from '@/lib/market';
 import { useWatchlist } from './WatchlistContext';
-import { getUpcomingEvents, type CalEvent } from '@/lib/financeCalendar';
+import { getUpcomingEvents, type CalEvent , sessionLabel} from '@/lib/financeCalendar';
 import type { EarningsEvent } from '@/app/api/earnings/route';
 import {
   etBriefTime,
@@ -68,7 +68,7 @@ export default function DailyBrief() {
               title: '发布财报',
               kind: 'earnings' as const,
               symbol: e.symbol,
-              note: e.session,
+              note: sessionLabel(e.session ?? '', 'zh'),
             }));
         }
       } catch {

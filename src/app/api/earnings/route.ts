@@ -6,7 +6,7 @@ export interface EarningsEvent {
   date: string;
   symbol: string;
   name: string;
-  session: string; // 盘前 / 盘后 / 盘中 / 未定
+  session: string; // pre / after / during / tbd（展示层按语言映射）
 }
 
 const dateCache = new Map<string, { at: number; rows: any[] }>();
@@ -14,10 +14,10 @@ const TTL = 6 * 60 * 60 * 1000;
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
 
 function mapSession(t: string): string {
-  if (t === 'time-pre-market') return '盘前';
-  if (t === 'time-after-hours') return '盘后';
-  if (t === 'time-during-hours') return '盘中';
-  return '时间未定';
+  if (t === 'time-pre-market') return 'pre';
+  if (t === 'time-after-hours') return 'after';
+  if (t === 'time-during-hours') return 'during';
+  return 'tbd';
 }
 
 async function rowsForDate(date: string): Promise<any[]> {

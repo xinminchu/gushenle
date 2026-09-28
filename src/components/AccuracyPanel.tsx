@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import { Check, X, History } from 'lucide-react';
 
 interface Signal {
@@ -48,25 +49,27 @@ function fmtEdge(v: number | null): string {
 }
 
 export default function AccuracyPanel({ symbol }: { symbol: string }) {
+  const { lang } = useLanguage();
+  const en = lang === 'en';
   const [data, setData] = useState<AccuracyData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/accuracy?symbol=${encodeURIComponent(symbol)}`)
+    fetch(`/api/accuracy?symbol=${encodeURIComponent(symbol)}&lang=${lang}`)
       .then((r) => r.json())
       .then((json) => {
         if (!cancelled) setData(json);
       })
-      .catch((err) => console.error('复盘数据获取失败:', err))
+      .catch((err) => console.error('accuracy fetch failed:', err))
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [symbol]);
+  }, [symbol, lang]);
 
   if (loading) {
     return (
@@ -80,10 +83,10 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
     return (
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
         <h2 className="text-base font-semibold mb-2 text-slate-200 flex items-center gap-2">
-          <History className="w-4 h-4 text-slate-400" /> 判断复盘
+          <History className="w-4 h-4 text-slate-400" /> {en ? 'Backtest' : '判断复盘'}
           <span className="text-[10px] font-normal text-slate-500">{symbol}</span>
         </h2>
-        <p className="text-xs text-slate-500">{data?.reason ?? '暂无复盘数据'}</p>
+        <p className="text-xs text-slate-500">{data?.reason ?? (en ? 'No backtest data' : '暂无复盘数据')}</p>
       </div>
     );
   }
@@ -95,25 +98,26 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
       <h2 className="text-base font-semibold mb-3 text-slate-200 flex items-center gap-2">
-        <History className="w-4 h-4 text-slate-400" /> 判断复盘
+        <History className="w-4 h-4 text-slate-400" /> {en ? 'Backtest' : '判断复盘'}
         <span className="text-[10px] font-normal text-slate-500">{symbol}</span>
         <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-          近一年信号 · 次日验证
+          {en ? '1Y signals · next-day verified' : '近一年信号 · 次日验证'}
         </span>
       </h2>
 
       <div className="flex items-center gap-5">
         <div className="text-center shrink-0">
           <div className={`text-4xl font-extrabold ${accColor}`}>{fmtPct(stats.accuracy)}</div>
-          <div className="text-[10px] text-slate-400 mt-1">综合准确率</div>
+          <div className="text-[10px] text-slate-400 mt-1">{en ? 'Overall accuracy' : '综合准确率'}</div>
         </div>
         <div className="flex-1 text-xs space-y-1.5">
           <div className="text-slate-400">
-            {stats.total} 个信号 · {stats.sampleDays} 天样本
+            {en ? `${stats.total} signals · ${stats.sampleDays} days` : `${stats.total} 个信号 · ${stats.sampleDays} 天样本`}
           </div>
           <div className="text-slate-500 text-[11px] leading-relaxed">
-            基线（同期所有交易日天然命中率）：别追类 {fmtPct(stats.baseline.chase)} · 反弹类{' '}
-            {fmtPct(stats.baseline.bounce)}
+            {en
+              ? `Baseline (natural hit rate, all days): don't-chase ${fmtPct(stats.baseline.chase)} · bounce ${fmtPct(stats.baseline.bounce)}`
+              : `基线（同期所有交易日天然命中率）：别追类 ${fmtPct(stats.baseline.chase)} · 反弹类 ${fmtPct(stats.baseline.bounce)}`}
           </div>
         </div>
       </div>
@@ -135,11 +139,11 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
             <div key={key} className="bg-slate-800/50 rounded-lg px-3 py-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-300 font-medium">{st.label}</span>
-                <span className="text-[10px] text-slate-500">{st.total}次</span>
+                <span className="text-[10px] text-slate-500">{en ? `${st.total}×` : `${st.total}次`}</span>
               </div>
               <div className="mt-1 flex items-baseline justify-between">
                 <span className="text-sm font-bold text-slate-100">{fmtPct(st.accuracy)}</span>
-                <span className={`text-[10px] ${edgeColor}`}>超基线 {fmtEdge(st.edge)}%</span>
+                <span className={`text-[10px] ${edgeColor}`}>{en ? `vs baseline ${fmtEdge(st.edge)}%` : `超基线 ${fmtEdge(st.edge)}%`}</span>
               </div>
             </div>
           );
@@ -154,12 +158,12 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
               className="flex items-center justify-between text-[11px] bg-slate-800/30 rounded-lg px-3 py-1.5"
             >
               <span className="text-slate-400">
-                {s.date.slice(5)} · {s.status} {s.score}分
-                {s.tier === 'high' && <span className="text-slate-600"> · 高波</span>}
+                {s.date.slice(5)} · {s.status} {en ? `${s.score} pts` : `${s.score}分`}
+                {s.tier === 'high' && <span className="text-slate-600">{en ? ' · high-vol' : ' · 高波'}</span>}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className={s.nextReturn >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                  次日 {s.nextReturn >= 0 ? '+' : ''}
+                  {en ? 'next day ' : '次日 '}{s.nextReturn >= 0 ? '+' : ''}
                   {s.nextReturn}%
                 </span>
                 {s.hit ? (
@@ -173,7 +177,7 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
         </div>
       )}
 
-      {rule && <p className="mt-3 text-[10px] text-slate-600 leading-relaxed">命中规则：{rule}</p>}
+      {rule && <p className="mt-3 text-[10px] text-slate-600 leading-relaxed">{en ? 'Hit rule: ' : '命中规则：'}{rule}</p>}
     </div>
   );
 }

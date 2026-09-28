@@ -12,6 +12,8 @@
  *    不看趋势分——趋势分与综合分高度相关，"高分+弱趋势"现实中几乎到不了。
  */
 
+import type { Lang } from './i18n';
+
 export interface RhythmPoint {
   /** YYYY-MM-DD */
   date: string;
@@ -28,6 +30,8 @@ export interface RhythmPoint {
 export interface RangeDef {
   id: string;
   label: string;
+  /** 英文展示（en 模式） */
+  labelEn: string;
   /** 该区间需要的交易日点数 */
   points: number;
   /** 显示该选项所需的最少点数（上市不足的不显示） */
@@ -35,13 +39,17 @@ export interface RangeDef {
 }
 
 export const RANGE_DEFS: RangeDef[] = [
-  { id: '1W', label: '1周', points: 5, minPoints: 5 },
-  { id: '3W', label: '3周', points: 15, minPoints: 15 },
-  { id: '1M', label: '1月', points: 22, minPoints: 22 },
-  { id: '3M', label: '3月', points: 66, minPoints: 66 },
-  { id: '1Y', label: '1年', points: 252, minPoints: 200 },
-  { id: 'ALL', label: '全部', points: 99999, minPoints: 1 },
+  { id: '1W', label: '1周', labelEn: '1W', points: 5, minPoints: 5 },
+  { id: '3W', label: '3周', labelEn: '3W', points: 15, minPoints: 15 },
+  { id: '1M', label: '1月', labelEn: '1M', points: 22, minPoints: 22 },
+  { id: '3M', label: '3月', labelEn: '3M', points: 66, minPoints: 66 },
+  { id: '1Y', label: '1年', labelEn: '1Y', points: 252, minPoints: 200 },
+  { id: 'ALL', label: '全部', labelEn: 'All', points: 99999, minPoints: 1 },
 ];
+
+/** 按语言取区间展示词 */
+export const rangeLabel = (d: RangeDef, lang: Lang = 'zh'): string =>
+  lang === 'en' ? d.labelEn : d.label;
 
 export const RANGE_MAP: Record<string, RangeDef> = Object.fromEntries(
   RANGE_DEFS.map((d) => [d.id, d]),
@@ -160,6 +168,16 @@ export interface RhythmThresholds {
   vol: number;
 }
 
+/** 按语言取波动档位展示词（thresholdsFor 只存中文，en 模式走这里） */
+export const tierLabelFor = (tier: VolTier, lang: Lang = 'zh'): string =>
+  lang === 'en'
+    ? tier === 'high'
+      ? 'High-vol mode'
+      : 'Steady mode'
+    : tier === 'high'
+      ? '高波模式'
+      : '稳健模式';
+
 /**
  * trailing 波动率：近 VOL_WINDOW 个交易日的日收益率样本标准差。
  * 只使用 closes[0..endIdx] 的数据（无未来函数），可直接用于历史复盘。
@@ -180,13 +198,13 @@ export function volatilityAt(closes: number[], endIdx: number): number {
 }
 
 /** 按波动率定阈值档位（慢变量：trailing 66 天窗口保证档位不频繁跳变） */
-export function thresholdsFor(vol: number): RhythmThresholds {
+export function thresholdsFor(vol: number, lang: Lang = 'zh'): RhythmThresholds {
   if (vol > VOL_HIGH_CUTOFF) {
     return {
       hot: HOT_HIGHVOL,
       cold: COLD_HIGHVOL,
       tier: 'high',
-      tierLabel: '高波模式',
+      tierLabel: tierLabelFor('high', lang),
       vol: r4(vol),
     };
   }
@@ -194,7 +212,7 @@ export function thresholdsFor(vol: number): RhythmThresholds {
     hot: HOT_STABLE,
     cold: COLD_STABLE,
     tier: 'stable',
-    tierLabel: '稳健模式',
+    tierLabel: tierLabelFor('stable', lang),
     vol: r4(vol),
   };
 }
@@ -223,6 +241,21 @@ export const STATUS_LABELS: Record<StatusKey, string> = {
   oversoldBottom: '跌过头了',
 };
 
+/** 状态 key -> 英文展示（en 模式；plain English，商量式语气） */
+export const STATUS_LABELS_EN: Record<StatusKey, string> = {
+  overheated: 'Running too hot',
+  hotStrong: 'Strong near the top',
+  risingAccel: 'Gaining momentum',
+  sideways: 'Going sideways',
+  bottomUp: 'Selling pressure easing',
+  weakLow: 'Still sliding',
+  oversoldBottom: 'Oversold',
+};
+
+/** 按语言取状态展示词 */
+export const statusLabel = (key: StatusKey, lang: Lang = 'zh'): string =>
+  lang === 'en' ? STATUS_LABELS_EN[key] : STATUS_LABELS[key];
+
 export interface Judgment {
   score: number;
   /** 状态 key（逻辑用；数据不足时为空） */
@@ -247,54 +280,59 @@ export interface Judgment {
   note?: string;
 }
 
+/** 每个状态的通用建议：中英对照，改词只改这里（商量式语气） */
+const ADVICE: Record<StatusKey, { zh: string; en: string }> = {
+  overheated: {
+    zh: '短期涨太快了，先冷静一下？可以考虑分批止盈。',
+    en: 'Up too fast lately — maybe pause? Consider taking some profit in batches.',
+  },
+  hotStrong: {
+    zh: '趋势挺健康的，拿着就好；先别急着加仓。',
+    en: 'The trend looks healthy — holding is fine; no rush to add.',
+  },
+  risingAccel: {
+    zh: '涨得有劲，按你的节奏拿着就行。',
+    en: 'Solid momentum — just hold at your own pace.',
+  },
+  sideways: {
+    zh: '涨跌两难，区间里按节奏来就好。',
+    en: 'Stuck in a range — stick to your rhythm inside it.',
+  },
+  bottomUp: {
+    zh: '跌势缓下来了，可以回顾下当初买入的理由。',
+    en: 'The slide is slowing — revisit why you bought in the first place.',
+  },
+  weakLow: {
+    zh: '还在下跌趋势里，先别急着抄底。',
+    en: 'Still in a downtrend — no rush to catch the falling knife.',
+  },
+  oversoldBottom: {
+    zh: '市场情绪有点冷过头了，可以分批留意。',
+    en: 'Sentiment looks overly cold — worth watching in batches.',
+  },
+};
+
 export function judgeFromScore(
   score: number,
   trend: number,
   vel: number,
   th: RhythmThresholds,
+  lang: Lang = 'zh',
 ): { statusKey: StatusKey; advice: string; overheated: boolean } {
+  const pick = (statusKey: StatusKey, overheated: boolean) => ({
+    statusKey,
+    advice: ADVICE[statusKey][lang],
+    overheated,
+  });
   if (score >= th.hot) {
-    if (vel >= VEL_PARABOLIC)
-      return {
-        statusKey: 'overheated',
-        advice: '短期涨太快了，先冷静一下？可以考虑分批止盈。',
-        overheated: true,
-      };
-    return {
-      statusKey: 'hotStrong',
-      advice: '趋势挺健康的，拿着就好；先别急着加仓。',
-      overheated: false,
-    };
+    if (vel >= VEL_PARABOLIC) return pick('overheated', true);
+    return pick('hotStrong', false);
   }
-  if (score >= 60)
-    return {
-      statusKey: 'risingAccel',
-      advice: '涨得有劲，按你的节奏拿着就行。',
-      overheated: false,
-    };
-  if (score >= 40)
-    return {
-      statusKey: 'sideways',
-      advice: '涨跌两难，区间里按节奏来就好。',
-      overheated: false,
-    };
-  if (score >= th.cold)
-    return {
-      statusKey: 'bottomUp',
-      advice: '跌势缓下来了，可以回顾下当初买入的理由。',
-      overheated: false,
-    };
-  if (trend <= 45)
-    return {
-      statusKey: 'weakLow',
-      advice: '还在下跌趋势里，先别急着抄底。',
-      overheated: false,
-    };
-  return {
-    statusKey: 'oversoldBottom',
-    advice: '市场情绪有点冷过头了，可以分批留意。',
-    overheated: false,
-  };
+  if (score >= 60) return pick('risingAccel', false);
+  if (score >= 40) return pick('sideways', false);
+  if (score >= th.cold) return pick('bottomUp', false);
+  if (trend <= 45) return pick('weakLow', false);
+  return pick('oversoldBottom', false);
 }
 
 /**
@@ -306,18 +344,28 @@ export function adviceWithPosition(
   statusKey: StatusKey | undefined,
   advice: string,
   pnlPct: number | null,
+  lang: Lang = 'zh',
 ): string {
   if (pnlPct == null || statusKey == null || pnlPct >= 0) return advice;
   const pct = Math.abs(pnlPct).toFixed(1).replace(/\.0$/, '');
+  const en = lang === 'en';
   if (statusKey === 'overheated') {
     if (pnlPct >= -10)
-      return `涨是涨了，可你还亏 ${pct}%，这波是回本的好机会——别追高，也别急着全走。`;
-    return `还套着 ${pct}%，反弹是难得的减亏窗口——分批走一点，别等涨回去又舍不得。`;
+      return en
+        ? `It's up, but you're still down ${pct}% — this bounce is a good chance to work back toward breakeven. Don't chase, and don't rush to sell it all.`
+        : `涨是涨了，可你还亏 ${pct}%，这波是回本的好机会——别追高，也别急着全走。`;
+    return en
+      ? `Still down ${pct}% — bounces like this are rare windows to trim losses. Sell a little in batches; don't wait until you can't bear to let go.`
+      : `还套着 ${pct}%，反弹是难得的减亏窗口——分批走一点，别等涨回去又舍不得。`;
   }
   if (statusKey === 'weakLow')
-    return `还在往下跌，你套着 ${pct}%，割在半山腰最亏，再忍一忍。`;
+    return en
+      ? `Still sliding, and you're down ${pct}% — selling halfway down hurts the most. Hang on a bit longer.`
+      : `还在往下跌，你套着 ${pct}%，割在半山腰最亏，再忍一忍。`;
   if (statusKey === 'oversoldBottom')
-    return `跌过头了，你套着 ${pct}%，割在地板上最亏。`;
+    return en
+      ? `Oversold, and you're down ${pct}% — selling at the floor hurts the most.`
+      : `跌过头了，你套着 ${pct}%，割在地板上最亏。`;
   return advice;
 }
 
@@ -330,15 +378,16 @@ const fmtSignedPct = (v: number): string =>
  * 是天天涨还是一半一半（近20天涨跌天数）、现在处在什么位置。
  * 纯函数，确定性。
  */
-export function describeStatus(closes: number[], pos: number): string {
+export function describeStatus(closes: number[], pos: number, lang: Lang = 'zh'): string {
   const n = closes.length;
   if (n < 2) return '';
+  const en = lang === 'en';
   const winPct = (w: number[]): number =>
     w[0] > 0 ? ((w[w.length - 1] - w[0]) / w[0]) * 100 : 0;
   const longWin = closes.slice(-66);
-  const longLabel = n >= 66 ? '近3月' : `近${longWin.length}天`;
+  const longLabel = n >= 66 ? (en ? 'Last 3M' : '近3月') : en ? `Last ${longWin.length}d` : `近${longWin.length}天`;
   const parts: string[] = [`${longLabel} ${fmtSignedPct(winPct(longWin))}`];
-  if (n >= 22) parts.push(`近1月 ${fmtSignedPct(winPct(closes.slice(-22)))}`);
+  if (n >= 22) parts.push(`${en ? 'Last 1M' : '近1月'} ${fmtSignedPct(winPct(closes.slice(-22)))}`);
   const tail = closes.slice(-21); // 20 个涨跌
   let up = 0;
   let down = 0;
@@ -346,37 +395,42 @@ export function describeStatus(closes: number[], pos: number): string {
     if (tail[i] > tail[i - 1]) up++;
     else if (tail[i] < tail[i - 1]) down++;
   }
-  parts.push(`近${tail.length - 1}天${up}涨${down}跌`);
-  parts.push(pos >= 90 ? '处高位' : pos <= 10 ? '处低位' : '处中部');
+  parts.push(en ? `${up} up / ${down} down in last ${tail.length - 1}d` : `近${tail.length - 1}天${up}涨${down}跌`);
+  parts.push(
+    pos >= 90 ? (en ? 'Near highs' : '处高位') : pos <= 10 ? (en ? 'Near lows' : '处低位') : en ? 'Mid-range' : '处中部',
+  );
   return parts.join(' · ');
 }
 
 /** 基于全量日线做主判断（锚定近 3 月；阈值按最新 trailing 波动率自适应） */
-export function buildJudgment(closes: number[]): Judgment {
+export function buildJudgment(closes: number[], lang: Lang = 'zh'): Judgment {
   const s = closes.length > 0 ? scoreAt(closes, closes.length - 1) : null;
   const vol = closes.length > 0 ? volatilityAt(closes, closes.length - 1) : 0;
-  const thresholds = thresholdsFor(vol);
+  const thresholds = thresholdsFor(vol, lang);
+  const en = lang === 'en';
   if (!s) {
     return {
       score: 50,
-      status: '数据不足',
+      status: en ? 'Not enough data' : '数据不足',
       statusDetail: '',
-      advice: '上市时间较短，暂无足够数据做出判断。',
+      advice: en
+        ? 'Listed too recently — not enough data for a read.'
+        : '上市时间较短，暂无足够数据做出判断。',
       pos: 50,
       trend: 50,
       vel: 50,
       overheated: false,
       anchorRange: ANCHOR_RANGE_ID,
       thresholds,
-      note: '数据不足',
+      note: en ? 'Not enough data' : '数据不足',
     };
   }
-  const { statusKey, advice, overheated } = judgeFromScore(s.score, s.trend, s.vel, thresholds);
+  const { statusKey, advice, overheated } = judgeFromScore(s.score, s.trend, s.vel, thresholds, lang);
   return {
     ...s,
     statusKey,
-    status: STATUS_LABELS[statusKey],
-    statusDetail: describeStatus(closes, s.pos),
+    status: statusLabel(statusKey, lang),
+    statusDetail: describeStatus(closes, s.pos, lang),
     advice,
     overheated,
     anchorRange: ANCHOR_RANGE_ID,

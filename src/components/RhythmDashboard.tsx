@@ -8,7 +8,7 @@ import AccuracyPanel from './AccuracyPanel';
 import ChipPanel from './ChipPanel';
 import FlowPanel from './FlowPanel';
 import type { RhythmResponse } from '@/lib/rhythm';
-import { RANGE_DEFS, RANGE_MAP, ANCHOR_RANGE_ID, scoreGradient } from '@/lib/rhythm';
+import { RANGE_DEFS, RANGE_MAP, ANCHOR_RANGE_ID, scoreGradient, rangeLabel } from '@/lib/rhythm';
 import { adviceWithPosition } from '@/lib/rhythm';
 import { getRhythm, invalidateRhythm } from '@/lib/market';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
@@ -21,6 +21,7 @@ import {
   STOCK_LIST,
   findStock,
   suggestStocks,
+  displayStockName,
   type StockInfo,
 } from '@/lib/stockList';
 import { loadUniverse, findInUniverse, type UniverseEntry } from '@/lib/universe';
@@ -45,12 +46,14 @@ import {
   FIB_COMBO_IDS,
   dirComboId,
   fibComboDesc,
+  fibComboName,
   RECOMMENDED_FIB_COMBO,
   RECOMMENDED_FIB_LOOKBACK,
   type FibComboId,
 } from '@/lib/fibonacci';
 
-const ANCHOR_LABEL = RANGE_MAP[ANCHOR_RANGE_ID]?.label ?? '3月';
+// 主判断锚定区间标签（组件内按语言算，见 anchorLabel）
+const anchorRangeDef = RANGE_MAP[ANCHOR_RANGE_ID];
 
 /** 悬停气泡：鼠标挪上去，一句话说明这个按钮是干嘛的（桌面端 hover 生效） */
 function Tip({ text, children }: { text: string; children: React.ReactNode }) {
@@ -76,7 +79,8 @@ interface ZenHoldings {
   heldSummary?: string;
 }
 
-function buildZenHoldings(symbol: string, price: number | null): ZenHoldings | null {
+function buildZenHoldings(symbol: string, price: number | null, lang: 'zh' | 'en' = 'zh'): ZenHoldings | null {
+  const en = lang === 'en';
   if (typeof window === 'undefined') return null;
   const positions = loadPositions();
   const pos = positions.find((p) => p.symbol.toUpperCase() === symbol.toUpperCase());
@@ -86,20 +90,30 @@ function buildZenHoldings(symbol: string, price: number | null): ZenHoldings | n
         kind: 'holding',
         shares: pos.shares,
         avgCost: pos.avgCost,
-        advice: `你手里有 ${pos.shares} 股，成本 ${fmtMoney(symbol, pos.avgCost)}——涨这么猛，先别急着动手，看看要不要分批止盈？`,
+        advice: en
+          ? `You hold ${pos.shares} shares at ${fmtMoney(symbol, pos.avgCost)} — it's running hot, no rush to act. Consider taking some profit in batches?`
+          : `你手里有 ${pos.shares} 股，成本 ${fmtMoney(symbol, pos.avgCost)}——涨这么猛，先别急着动手，看看要不要分批止盈？`,
       };
     }
     const pnl = (price - pos.avgCost) * pos.shares;
     const pnlPct = pos.avgCost > 0 ? ((price - pos.avgCost) / pos.avgCost) * 100 : 0;
     let advice: string;
     if (pnlPct >= 20) {
-      advice = `已经赚了 ${pnlPct.toFixed(0)}%，涨这么猛，追高的人正在接盘——要不要先卖一部分，把利润装进口袋？`;
+      advice = en
+        ? `Up ${pnlPct.toFixed(0)}% already — chasers are buying the top right now. Sell a slice and pocket some profit?`
+        : `已经赚了 ${pnlPct.toFixed(0)}%，涨这么猛，追高的人正在接盘——要不要先卖一部分，把利润装进口袋？`;
     } else if (pnlPct >= 0) {
-      advice = `小赚 ${pnlPct.toFixed(1)}%，现在这个涨法拿着容易心态飘——可以考虑分批止盈，涨也有份、跌也不慌。`;
+      advice = en
+        ? `Up a modest ${pnlPct.toFixed(1)}% — this kind of run makes hands shaky. Consider taking profit in batches: in for the upside, calm on the downside.`
+        : `小赚 ${pnlPct.toFixed(1)}%，现在这个涨法拿着容易心态飘——可以考虑分批止盈，涨也有份、跌也不慌。`;
     } else if (pnlPct >= -10) {
-      advice = `还亏 ${Math.abs(pnlPct).toFixed(1)}%，这波大涨是回本的好机会——要不要趁热减点仓？`;
+      advice = en
+        ? `Still down ${Math.abs(pnlPct).toFixed(1)}% — this rally is a good chance to get closer to breakeven. Trim a bit while it's hot?`
+        : `还亏 ${Math.abs(pnlPct).toFixed(1)}%，这波大涨是回本的好机会——要不要趁热减点仓？`;
     } else {
-      advice = `还套着 ${Math.abs(pnlPct).toFixed(1)}%，反弹是难得的减亏窗口——别等涨回去又舍不得，分批走一点？`;
+      advice = en
+        ? `Still underwater ${Math.abs(pnlPct).toFixed(1)}% — rallies like this are rare windows to cut losses. Don't wait for it to round-trip; sell a slice?`
+        : `还套着 ${Math.abs(pnlPct).toFixed(1)}%，反弹是难得的减亏窗口——别等涨回去又舍不得，分批走一点？`;
     }
     return { kind: 'holding', shares: pos.shares, avgCost: pos.avgCost, price, pnl, pnlPct, advice };
   }
@@ -110,14 +124,18 @@ function buildZenHoldings(symbol: string, price: number | null): ZenHoldings | n
       .join('、');
     return {
       kind: 'other',
-      advice: `你手里还没有 ${symbol}。涨成这样现在追进去，容易替别人站岗——真看好它，等它冷静下来再建仓也不迟。`,
+      advice: en
+        ? `You don't hold ${symbol} yet. Chasing it now means holding the bag for someone else — if you really like it, wait for it to cool down.`
+        : `你手里还没有 ${symbol}。涨成这样现在追进去，容易替别人站岗——真看好它，等它冷静下来再建仓也不迟。`,
       heldSummary,
     };
   }
   return {
     kind: 'none',
     advice:
-      '我还不知道你手里有啥——去持仓页把持仓加上吧，有的话快去添加，好让我下次直接告诉你这只该卖该留，而不是说空话。',
+      en
+        ? "I don't know your positions yet — add them in Positions, and next time I'll tell you straight whether to hold or sell, no empty talk."
+        : '我还不知道你手里有啥——去持仓页把持仓加上吧，有的话快去添加，好让我下次直接告诉你这只该卖该留，而不是说空话。',
   };
 }
 
@@ -138,6 +156,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   // 涨跌配色：默认绿涨红跌（美股习惯），页面上可一键切换，全站统一
   const { scheme, toggle: toggleScheme } = useColorScheme();
   const { lang } = useLanguage();
+  const en = lang === 'en';
+  /** 展示名：英文模式用英文名，中文模式用自选里存的名字 */
+  const displayName = (sym: string) => displayStockName(sym, lang, nameOf(sym));
+  const anchorLabel = anchorRangeDef ? rangeLabel(anchorRangeDef, lang) : '3M';
   // 高波/稳健说明的展开状态
   const [showTierInfo, setShowTierInfo] = useState(false);
   // 图表类型：3M 及以内默认 K线，长区间默认收盘线；用户手动切换后记住选择（切区间时重置）
@@ -168,7 +190,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const [showZenModal, setShowZenModal] = useState(false);
   // 沉思乐弹窗打开时：按当前标的查持仓，组织"看持仓说话"的内容
   const zenHoldings = useMemo(
-    () => (showZenModal ? buildZenHoldings(symbol, data?.price ?? null) : null),
+    () => (showZenModal ? buildZenHoldings(symbol, data?.price ?? null, lang) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [showZenModal, symbol, data],
   );
@@ -249,7 +271,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     }
     setLoading(true);
     setLoadError(false);
-    getRhythm(symbol, range)
+    getRhythm(symbol, range, { lang })
       .then((json) => {
         if (!cancelled) setData(json);
       })
@@ -263,19 +285,19 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     return () => {
       cancelled = true;
     };
-  }, [symbol, range, autoTick, retryKey]);
+  }, [symbol, range, autoTick, retryKey, lang]);
 
   // 盘中每 60 秒静默刷新一次实时价（页面切到后台时不拉；收盘后自动停）
   useEffect(() => {
     if (!data?.priceLive) return;
     const id = setInterval(() => {
       if (document.hidden) return;
-      getRhythm(symbol, range, { force: true })
+      getRhythm(symbol, range, { force: true, lang })
         .then((json) => setData(json))
         .catch((err) => console.error('盘中刷新失败:', err));
     }, 60000);
     return () => clearInterval(id);
-  }, [data?.priceLive, symbol, range]);
+  }, [data?.priceLive, symbol, range, lang]);
 
   // 若当前区间对该标的不可用（如上市不足），切回主判断区间
   useEffect(() => {
@@ -292,9 +314,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     const last = data.series[data.series.length - 1];
     return {
       price: data.prevClose ?? last.close,
-      text: data.priceLive ? '昨收' : '收盘价',
+      text: data.priceLive ? (en ? 'Prev close' : '昨收') : en ? 'Close' : '收盘价',
     };
-  }, [data?.prevClose, data?.priceLive, data?.series.length]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.prevClose, data?.priceLive, data?.series.length, lang]);
   /** 当前标的的持仓（有就按盈亏说话，没有就问一句）：tab 切换会重挂载，数据天然新鲜 */
   const myPosition = useMemo(() => {
     if (typeof window === 'undefined') return null;
@@ -308,7 +331,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
       : null;
   /** 持仓感知的建议：套牢时不说"止盈"、不劝割肉（口径跟沉思乐"看持仓说话"一致） */
   const displayAdvice = judgment
-    ? adviceWithPosition(judgment.statusKey, judgment.advice, myPnlPct)
+    ? adviceWithPosition(judgment.statusKey, judgment.advice, myPnlPct, lang)
     : '';
   // 韩股（.KS）：韩元计价，大数字加千分位、无小数；美股：美元保留两位
   const fmtPrice = (p: number) => fmtMoney(symbol, p);
@@ -318,7 +341,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     : null;
   const strongHigh =
     !!judgment && judgment.score >= judgment.thresholds.hot && !judgment.overheated;
-  const rangeLabel = RANGE_MAP[range]?.label ?? range;
+  const rangeName = RANGE_MAP[range] ? rangeLabel(RANGE_MAP[range], lang) : range;
   // 短区间（≤3M）默认 K线：每天一根蜡烛，开/高/低/收一目了然
   const isShortRange = (RANGE_MAP[range]?.points ?? 66) <= 66;
   /** 黄金分割只在 1 个月以上的走势图上露面：短区间波段找不全，画出来是噪音 */
@@ -365,8 +388,9 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     if (!fibPts.length || !data?.price) return null;
     const sw = findSwing(fibPts, RECOMMENDED_FIB_LOOKBACK);
     if (!sw) return null;
-    return fibAdviceHint(sw, RECOMMENDED_FIB_COMBO, data.price);
-  }, [fibPts, data?.price]);
+    return fibAdviceHint(sw, RECOMMENDED_FIB_COMBO, data.price, lang);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fibPts, data?.price, lang]);
 
   // 精选名单代码集合：全市场搜索时排除（精选优先，带中文名）
   const curatedCodes = useMemo(() => new Set(STOCK_LIST.map((s) => s.code)), []);
@@ -378,8 +402,9 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   /** 当前标的的关键价位线（年高/年低/MA50/黄金分割回撤） */
   const keyLevels = useMemo(() => {
     const yd = wlData[symbol];
-    return yd ? computeKeyLevels(yd) : null;
-  }, [wlData, symbol]);
+    return yd ? computeKeyLevels(yd, lang) : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wlData, symbol, lang]);
   /** 体检第 3 项用的三档高点：近3月（66个交易日）/ 近1年；历史档由体检弹窗自己拉 ALL 数据补 */
   const highs = useMemo(() => {
     const yd = wlData[symbol];
@@ -392,9 +417,9 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   }, [wlData, symbol]);
   /** 诊断卡多空一句话：由律动三因子自动拼 */
   const bullBear = useMemo(
-    () => (judgment ? bullBearLines(judgment.pos, judgment.trend, judgment.vel) : null),
+    () => (judgment ? bullBearLines(judgment.pos, judgment.trend, judgment.vel, lang) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [judgment?.pos, judgment?.trend, judgment?.vel],
+    [judgment?.pos, judgment?.trend, judgment?.vel, lang],
   );
 
   const resetAddTips = () => {
@@ -408,7 +433,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const handleAdd = async (force = false) => {
     const raw = newSymbol.trim().toUpperCase();
     if (!raw) {
-      setAddError('先输入代码，例如 AAPL');
+      setAddError(en ? 'Enter a code first, e.g. AAPL' : '先输入代码，例如 AAPL');
       return;
     }
     // 常见输错自动纠正：TESLA->TSLA / APPLE->AAPL / INTEL->INTC
@@ -421,14 +446,14 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
       if (sug.length > 0) {
         setUniverseHit(null);
         setSuggestions(sug);
-        setAddError(`找到 ${sug.length} 个相关的，点一个填入`);
+        setAddError(en ? `${sug.length} related — tap one to fill` : `找到 ${sug.length} 个相关的，点一个填入`);
         return;
       }
       if (/[\u4e00-\u9fff]/.test(inputRaw)) {
         // 中文但精选名单没有：全市场库只有英文名，搜了也白搜
         setUniverseHit(null);
         setSuggestions([]);
-        setAddError(`没找到「${inputRaw}」，换个名字或拼音试试，也可坚持添加`);
+        setAddError(en ? `No match for \u201c${inputRaw}\u201d — try another name, or add anyway` : `没找到「${inputRaw}」，换个名字或拼音试试，也可坚持添加`);
         return;
       }
       // 精选名单没有 → 去全市场库（约 7000 只）找，第一次搜才加载
@@ -443,7 +468,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
         return;
       }
       setSuggestions([]);
-      setAddError(`全市场也没找到 ${sym}，检查下拼写，或坚持添加`);
+      setAddError(en ? `Not found market-wide either — check spelling, or add anyway` : `全市场也没找到 ${sym}，检查下拼写，或坚持添加`);
       return;
     }
     const r = addItem(sym, newName || known?.zh);
@@ -454,12 +479,12 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
       setSuggestions([]);
       setUniverseHit(null);
       setForceAdd(false);
-      setAddNote(CODE_CORRECTIONS[raw] ? `已自动纠正为 ${sym}` : '');
+      setAddNote(CODE_CORRECTIONS[raw] ? (en ? `Auto-corrected to ${sym}` : `已自动纠正为 ${sym}`) : '');
       setAddError('');
     } else if (r === 'exists') {
-      setAddError('这只已在自选里');
+      setAddError(en ? 'Already in watchlist' : '这只已在自选里');
     } else {
-      setAddError('代码格式不对，例如 AAPL 或 000660.KS');
+      setAddError(en ? 'Invalid code format, e.g. AAPL or 000660.KS' : '代码格式不对，例如 AAPL 或 000660.KS');
     }
   };
 
@@ -475,12 +500,12 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
       setUniverseHit(null);
       setForceAdd(false);
       setAddError('');
-      setAddNote(`已添加 ${universeHit.code}`);
+      setAddNote(en ? `Added ${universeHit.code}` : `已添加 ${universeHit.code}`);
     } else if (r === 'exists') {
-      setAddError('这只已在自选里');
+      setAddError(en ? 'Already in watchlist' : '这只已在自选里');
       setUniverseHit(null);
     } else {
-      setAddError('代码格式不对，例如 AAPL 或 000660.KS');
+      setAddError(en ? 'Invalid code format, e.g. AAPL or 000660.KS' : '代码格式不对，例如 AAPL 或 000660.KS');
     }
   };
 
@@ -499,7 +524,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-xl sm:text-2xl font-bold text-slate-100 whitespace-nowrap">
-            自选列表
+            {en ? 'Watchlist' : '自选列表'}
           </h1>
           <div className="flex items-center gap-1">
             <button
@@ -508,18 +533,18 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                 setRetryKey((k) => k + 1);
               }}
               className="text-xs text-slate-400 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-800"
-              aria-label="刷新当前股票行情"
-              title="刷新当前股票行情"
+              aria-label={en ? "Refresh quote" : "刷新当前股票行情"}
+              title={en ? "Refresh quote" : "刷新当前股票行情"}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              刷新
+              {en ? 'Refresh' : '刷新'}
             </button>
             <button
               onClick={() => setManaging((v) => !v)}
               className="text-xs text-slate-400 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-800"
             >
               <Settings2 className="w-3.5 h-3.5" />
-              {managing ? '收起' : '管理自选'}
+              {managing ? (en ? 'Collapse' : '收起') : en ? 'Manage watchlist' : '管理自选'}
             </button>
           </div>
         </div>
@@ -527,10 +552,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
         {managing && (
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-slate-200">编辑自选</span>
+              <span className="text-sm font-medium text-slate-200">{en ? 'Edit watchlist' : '编辑自选'}</span>
               {isDefault && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                  默认推荐
+                  {en ? 'Default picks' : '默认推荐'}
                 </span>
               )}
             </div>
@@ -543,13 +568,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                 >
                   <div className="min-w-0 truncate">
                     <span className="text-xs font-semibold text-slate-100">{item.symbol}</span>
-                    <span className="ml-1.5 text-[10px] text-slate-400">{item.name}</span>
+                    <span className="ml-1.5 text-[10px] text-slate-400">{displayStockName(item.symbol, lang, item.name)}</span>
                   </div>
                   <button
                     onClick={() => removeItem(item.symbol)}
                     disabled={watchlist.length <= 1}
                     className="text-slate-500 hover:text-rose-400 disabled:opacity-30 p-1 shrink-0"
-                    aria-label={`删除 ${item.symbol}`}
+                    aria-label={en ? `Remove ${item.symbol}` : `删除 ${item.symbol}`}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -570,7 +595,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   setForceAdd(false);
                   setAddNote('');
                   // 名称没被手动改过就跟随代码自动更新
-                  if (!nameEdited) setNewName(STOCK_NAMES[sym] || '');
+                  if (!nameEdited) setNewName(displayStockName(sym, lang, STOCK_NAMES[sym] || ''));
                 }}
                 onChange={(e) => {
                   const rawVal = e.target.value;
@@ -583,9 +608,9 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   setForceAdd(false);
                   setAddNote('');
                   // 名称没被手动改过就跟随代码自动更新
-                  if (!nameEdited) setNewName(STOCK_NAMES[sym.toUpperCase()] || '');
+                  if (!nameEdited) setNewName(displayStockName(sym.toUpperCase(), lang, STOCK_NAMES[sym.toUpperCase()] || ''));
                 }}
-                placeholder="代码 如 COIN"
+                placeholder={en ? "Code, e.g. COIN" : "代码 如 COIN"}
                 className="w-28 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
               />
               <input
@@ -594,25 +619,25 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   setNewName(e.target.value);
                   setNameEdited(true);
                 }}
-                placeholder="名称（选填）"
+                placeholder={en ? "Name (optional)" : "名称（选填）"}
                 className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
               />
               <button
                 onClick={() => handleAdd()}
                 className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-3 py-1.5 text-xs font-medium flex items-center gap-1"
               >
-                <Plus className="w-3.5 h-3.5" /> 添加
+                <Plus className="w-3.5 h-3.5" /> {en ? 'Add' : '添加'}
               </button>
             </div>
             {addError && <div className="text-[11px] text-rose-400">{addError}</div>}
             {addNote && <div className="text-[11px] text-emerald-400">{addNote}</div>}
             {universeSearching && (
-              <div className="text-[11px] text-slate-500">正在全市场查找…</div>
+              <div className="text-[11px] text-slate-500">{en ? 'Searching all markets…' : '正在全市场查找…'}</div>
             )}
             {universeHit && (
               <div className="flex items-center gap-2 bg-slate-800/70 border border-slate-700 rounded-lg px-2.5 py-2">
                 <div className="min-w-0 flex-1">
-                  <span className="text-[11px] text-slate-400">全市场找到 </span>
+                  <span className="text-[11px] text-slate-400">{en ? 'Found market-wide ' : '全市场找到 '}</span>
                   <span className="text-[11px] font-semibold text-slate-100">
                     {universeHit.code}
                   </span>
@@ -622,7 +647,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   onClick={handleAddUniverseHit}
                   className="shrink-0 bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-2.5 py-1.5 text-[11px] font-medium"
                 >
-                  直接添加
+                  {en ? 'Add directly' : '直接添加'}
                 </button>
               </div>
             )}
@@ -633,14 +658,14 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                     key={s.code}
                     onClick={() => {
                       setNewSymbol(s.code);
-                      setNewName(s.zh);
+                      setNewName(displayStockName(s.code, lang, s.zh));
                       setNameEdited(false);
                       setSuggestions([]);
                       setAddError('');
                     }}
                     className="text-[11px] bg-slate-800 border border-slate-600 rounded-full px-2.5 py-1 text-slate-200 hover:border-blue-500"
                   >
-                    {s.code} {s.zh}
+                    {s.code} {displayStockName(s.code, lang, s.zh)}
                   </button>
                 ))}
                 <button
@@ -651,7 +676,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   }}
                   className="text-[11px] text-slate-500 underline underline-offset-2 hover:text-slate-300 px-1 py-1"
                 >
-                  仍要添加
+                  {en ? 'Add anyway' : '仍要添加'}
                 </button>
               </div>
             )}
@@ -660,12 +685,12 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                 onClick={() => setConfirmingReset(true)}
                 className="text-[11px] text-slate-500 hover:text-slate-300 flex items-center gap-1"
               >
-                <RotateCcw className="w-3 h-3" /> 恢复默认推荐
+                <RotateCcw className="w-3 h-3" /> {en ? 'Restore defaults' : '恢复默认推荐'}
               </button>
             )}
             {!isDefault && confirmingReset && (
               <div className="flex items-center gap-2 text-[11px]">
-                <span className="text-amber-400">将清空你的自定义自选，确定吗？</span>
+                <span className="text-amber-400">{en ? 'This will clear your custom watchlist. Sure?' : '将清空你的自定义自选，确定吗？'}</span>
                 <button
                   onClick={() => {
                     resetToDefault();
@@ -673,13 +698,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   }}
                   className="text-red-400 underline underline-offset-2"
                 >
-                  确认恢复
+                  {en ? 'Confirm' : '确认恢复'}
                 </button>
                 <button
                   onClick={() => setConfirmingReset(false)}
                   className="text-slate-400 underline underline-offset-2"
                 >
-                  取消
+                  {en ? 'Cancel' : '取消'}
                 </button>
               </div>
             )}
@@ -712,7 +737,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
         <div className="space-y-4">
           <div className="h-44 bg-slate-900 border border-slate-800 rounded-xl flex flex-col items-center justify-center gap-3">
             <div className="w-8 h-8 rounded-full border-[3px] border-slate-700 border-t-blue-500 animate-spin" />
-            <p className="text-xs text-slate-400">正在读取 {symbol} 行情…</p>
+            <p className="text-xs text-slate-400">{en ? `Loading ${symbol}…` : `正在读取 ${symbol} 行情…`}</p>
           </div>
           <div className="h-72 animate-pulse bg-slate-900 border border-slate-800 rounded-xl" />
         </div>
@@ -722,7 +747,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-semibold text-slate-200">
-                价格走势 <span className="text-[10px] font-normal text-slate-500 ml-1">{symbol}</span>
+                {en ? 'Price trend' : '价格走势'} <span className="text-[10px] font-normal text-slate-500 ml-1">{symbol}</span>
               </h2>
               <div className="flex items-center gap-2">
                 <span
@@ -731,14 +756,14 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   }`}
                 >
                   {data.changePct >= 0 ? '+' : ''}
-                  {data.changePct}% / 近{rangeLabel}
+                  {data.changePct}% / {en ? `past ${rangeName}` : `近${rangeName}`}
                 </span>
                 <button
                   onClick={toggleScheme}
                   className="text-[10px] px-2 py-0.5 rounded-full border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500"
-                  aria-label="切换涨跌配色"
+                  aria-label={en ? "Toggle up/down colors" : "切换涨跌配色"}
                 >
-                  {schemeLabel(scheme)} ⇄
+                  {schemeLabel(scheme, lang)} ⇄
                 </button>
               </div>
             </div>
@@ -762,7 +787,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                       : 'bg-slate-800 text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  {d.label}
+                  {rangeLabel(d, lang)}
                 </button>
               ))}
             </div>
@@ -778,14 +803,14 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                       chartType === t ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    {t === 'candle' ? 'K线' : t === 'line' ? '收盘线' : '四线'}
+                    {t === 'candle' ? (en ? 'Candles' : 'K线') : t === 'line' ? (en ? 'Close line' : '收盘线') : en ? 'OHLC' : '四线'}
                   </button>
                 ))}
               </div>
               {chartType !== 'ohlc' && (
                 <div className="flex gap-1.5 shrink-0 ml-auto">
                   {fibRangeOk && (
-                    <Tip text="在图上画黄金分割参考线（金色虚线），只标大家都在看的位置，不算命">
+                    <Tip text={en ? "Draw Fibonacci reference lines (gold dashed) — marks levels everyone watches, not a prediction" : "在图上画黄金分割参考线（金色虚线），只标大家都在看的位置，不算命"}>
                       <button
                         onClick={toggleFib}
                         className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors whitespace-nowrap ${
@@ -794,11 +819,11 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                             : 'border-slate-700 text-slate-500 hover:text-slate-300'
                         }`}
                       >
-                        黄金分割
+                        {en ? 'Fibonacci' : '黄金分割'}
                       </button>
                     </Tip>
                   )}
-                  <Tip text="显示 / 隐藏当前区间最高价和最低价的虚线">
+                  <Tip text={en ? "Show/hide dashed range high/low lines" : "显示 / 隐藏当前区间最高价和最低价的虚线"}>
                     <button
                       onClick={() => setShowRangeHL((v) => !v)}
                       className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors whitespace-nowrap ${
@@ -807,10 +832,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                           : 'border-slate-700 text-slate-500 hover:text-slate-300'
                       }`}
                     >
-                      区间高低点
+                      {en ? 'Range high/low' : '区间高低点'}
                     </button>
                   </Tip>
-                  <Tip text="年内最高/最低、50日均线、黄金分割回撤：细虚线，只标大家都在看的位置。打开会自动关掉黄金分割，避免堆叠">
+                  <Tip text={en ? "1Y high/low, MA50, Fibonacci retracements: thin dashed lines, marks levels everyone watches. Auto-hides Fibonacci to avoid clutter" : "年内最高/最低、50日均线、黄金分割回撤：细虚线，只标大家都在看的位置。打开会自动关掉黄金分割，避免堆叠"}>
                     <button
                       onClick={toggleKeyLevels}
                       className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors whitespace-nowrap ${
@@ -819,7 +844,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                           : 'border-slate-700 text-slate-500 hover:text-slate-300'
                       }`}
                     >
-                      关键价位
+                      {en ? 'Key levels' : '关键价位'}
                     </button>
                   </Tip>
                 </div>
@@ -830,7 +855,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
             {showFib && fibRangeOk && chartType !== 'ohlc' && (
               <div className="flex gap-1 mb-2">
                 {FIB_COMBO_IDS.filter((id) => id !== 'smart').map((id) => (
-                  <Tip key={id} text={FIB_COMBOS[id].desc}>
+                  <Tip key={id} text={fibComboDesc(id, fibSwing?.uptrend ?? true, lang)}>
                     <button
                       onClick={() => setFibCombo(id)}
                       className={`px-2 py-1 rounded-lg text-[11px] border transition-colors whitespace-nowrap ${
@@ -839,10 +864,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                           : 'border-slate-700 text-slate-500 hover:text-slate-300'
                       }`}
                     >
-                      {FIB_COMBOS[id].name}
+                      {fibComboName(id, lang)}
                       {id === RECOMMENDED_FIB_COMBO && (
                         <span className="ml-1 text-[9px] px-1 rounded bg-yellow-500/20 text-yellow-400">
-                          推荐
+                          {en ? 'Recommended' : '推荐'}
                         </span>
                       )}
                     </button>
@@ -862,20 +887,25 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               prevCloseLabel={prevCloseLabel}
               keyLevels={keyLevels}
               showKeyLevels={showKeyLevels}
+              lang={lang}
             />
             {/* 黄金分割说明：组合的具体文字放图下方 */}
             {showFib && fibRangeOk && (
               <div className="mt-3 bg-slate-800/40 border border-slate-700/50 rounded-xl p-3">
                     <p className="text-[10px] text-slate-500 leading-relaxed mb-2">
-                      {FIB_COMBOS[fibCombo].name}：{fibSwing ? fibComboDesc(fibCombo, fibSwing.uptrend) : FIB_COMBOS[fibCombo].desc}
+                      {fibComboName(fibCombo, lang)}：{fibComboDesc(fibCombo, fibSwing?.uptrend ?? true, lang)}
                     </p>
                 {fibSwing && fibChartLevels ? (
                   <>
                     <div className="text-[10px] text-slate-500 mb-1.5">
-                      波段：
+                      {en ? 'Swing: ' : '波段：'}
                       {fibSwing.uptrend
-                        ? `${fibSwing.lowDate} 低 $${fibSwing.low} → ${fibSwing.highDate} 高 $${fibSwing.high}（上涨波段）`
-                        : `${fibSwing.highDate} 高 $${fibSwing.high} → ${fibSwing.lowDate} 低 $${fibSwing.low}（下跌波段）`}
+                        ? en
+                          ? `${fibSwing.lowDate} low $${fibSwing.low} → ${fibSwing.highDate} high $${fibSwing.high} (up swing)`
+                          : `${fibSwing.lowDate} 低 $${fibSwing.low} → ${fibSwing.highDate} 高 $${fibSwing.high}（上涨波段）`
+                        : en
+                          ? `${fibSwing.highDate} high $${fibSwing.high} → ${fibSwing.lowDate} low $${fibSwing.low} (down swing)`
+                          : `${fibSwing.highDate} 高 $${fibSwing.high} → ${fibSwing.lowDate} 低 $${fibSwing.low}（下跌波段）`}
                     </div>
                     {/* 说人话：现价在哪 + 按持仓给行动句，每句带数字，不说空话 */}
                     {(() => {
@@ -885,6 +915,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                         swing: fibSwing,
                         pnlPct: myPnlPct,
                         fmt: fmtPrice,
+                        lang,
                       });
                       if (!advice) return null;
                       return (
@@ -902,7 +933,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                               onClick={onGoPortfolio}
                               className="mt-1 text-left text-[10px] text-amber-300/70 hover:text-amber-200 leading-relaxed"
                             >
-                              💡 持有这只？去持仓记一笔成本，下次按你的盈亏来说 →
+                              {en ? '💡 Holding this? Log your cost in Positions — next time advice speaks to your P/L →' : '💡 持有这只？去持仓记一笔成本，下次按你的盈亏来说 →'}
                             </button>
                           )}
                         </div>
@@ -937,13 +968,15 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                             >
                               <span className={`font-mono px-1.5 py-0.5 rounded ${pillCls}`}>
                                 {isNear ? '📍 ' : ''}
-                                {fibRatioLabel(lv)} · {fibKindLabel(lv.kind)}
+                                {fibRatioLabel(lv)} · {fibKindLabel(lv.kind, lang)}
                               </span>
                               <span className="text-slate-100 font-mono font-semibold">${lv.price}</span>
                               <span className="text-slate-500 font-mono text-[10px]">
                                 {dist == null
                                   ? ''
-                                  : `${dist >= 0 ? '现价在其上方' : '现价在其下方'} ${Math.abs(dist).toFixed(1)}%`}
+                                  : en
+                                    ? `${dist >= 0 ? 'above price' : 'below price'} ${Math.abs(dist).toFixed(1)}%`
+                                    : `${dist >= 0 ? '现价在其上方' : '现价在其下方'} ${Math.abs(dist).toFixed(1)}%`}
                               </span>
                             </div>
                           );
@@ -953,17 +986,17 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   </>
                 ) : (
                   <div className="text-[11px] text-slate-500">
-                    该区间点数不足，画不出可靠波段（换个长一点的展示区间试试）
+                    {en ? 'Not enough points in this range for a reliable swing (try a longer range)' : '该区间点数不足，画不出可靠波段（换个长一点的展示区间试试）'}
                   </div>
                 )}
                 <p className="text-[10px] text-slate-600 mt-1.5">
-                  参考线，不是算命：只标大家都在看的位置，不构成预测
+                  {en ? 'Reference lines, not fortune-telling: marks levels everyone watches — not a prediction' : '参考线，不是算命：只标大家都在看的位置，不构成预测'}
                 </p>
               </div>
             )}
             {chartType === 'ohlc' && (
               <p className="text-[10px] text-slate-500 leading-relaxed mt-1.5 px-0.5">
-                怎么看：两条线之间的"带子"越宽，当天波动越大；收盘线贴着最高线走是强势，贴着最低线走是弱势；带子越收越窄之后，往往要选方向了。
+                {en ? 'How to read: the wider the "band" between the two lines, the bigger the daily swings. Close hugging the top = strong, the bottom = weak. When the band squeezes, a direction usually follows.' : '怎么看：两条线之间的"带子"越宽，当天波动越大；收盘线贴着最高线走是强势，贴着最低线走是弱势；带子越收越窄之后，往往要选方向了。'}
               </p>
             )}
 
@@ -971,10 +1004,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
             <div className="mt-4">
               <div className="flex justify-between text-xs text-slate-400 mb-1.5">
                 <span>
-                  分位低点 <strong className="text-emerald-400">${data.low}</strong>
+                  {en ? 'Band low' : '分位低点'} <strong className="text-emerald-400">${data.low}</strong>
                 </span>
                 <span>
-                  分位高点 <strong className="text-rose-400">${data.high}</strong>
+                  {en ? 'Band high' : '分位高点'} <strong className="text-rose-400">${data.high}</strong>
                 </span>
               </div>
               <div className="relative h-2 rounded-full bg-gradient-to-r from-emerald-500 via-sky-500 to-rose-500">
@@ -986,10 +1019,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                 )}
               </div>
               <div className="mt-1.5 flex justify-between text-[10px] text-slate-600">
-                <span>近{rangeLabel}分位位置{data.slicePos == null && '（点数不足）'}</span>
+                <span>{en ? `Band position · past ${rangeName}${data.slicePos == null ? ' (not enough points)' : ''}` : `近${rangeName}分位位置${data.slicePos == null ? '（点数不足）' : ''}`}</span>
                 <span>
-                  数据点: {data.series.length} 天 · 数据更新于{' '}
-                  {new Date(data.updatedAt).toLocaleTimeString('zh-CN', {
+                  {en ? `${data.series.length} points · updated ` : `数据点: ${data.series.length} 天 · 数据更新于 `}
+                  {new Date(data.updatedAt).toLocaleTimeString(en ? 'en-US' : 'zh-CN', {
                     hour: '2-digit',
                     minute: '2-digit',
                   })}
@@ -1001,9 +1034,9 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
           {/* ① 谷峰律动：主判断永远锚定近 3 月，不随展示区间变化 */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <h2 className="text-base font-semibold mb-3 text-slate-200 flex items-center">
-              谷峰律动
+              {en ? 'Valley-Peak Rhythm' : '谷峰律动'}
               <span className="ml-2 text-[10px] font-normal px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                主判断 · 近{ANCHOR_LABEL}
+                {en ? `Main call · past ${anchorLabel}` : `主判断 · 近${anchorLabel}`}
               </span>
               {judgment && (
                 <span
@@ -1021,7 +1054,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                 <button
                   onClick={() => setShowTierInfo((v) => !v)}
                   className="ml-1 w-4 h-4 shrink-0 rounded-full border border-slate-600 text-slate-500 text-[9px] leading-none flex items-center justify-center hover:text-slate-300 hover:border-slate-400"
-                  aria-label="波动档位说明"
+                  aria-label={en ? "Volatility tier info" : "波动档位说明"}
                 >
                   i
                 </button>
@@ -1030,7 +1063,11 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
             {showTierInfo && judgment && (
               <div className="mb-3 text-[11px] text-slate-400 leading-relaxed bg-slate-800/60 border border-slate-700/60 rounded-lg px-3 py-2">
                 {judgment.thresholds.tier === 'high'
-                  ? '高波模式：这只股票最近波动大（日均涨跌超 3%），"涨太猛了 / 跌过头了"的门槛收得更紧（85/15 分），免得信号泛滥。'
+                  ? en
+                  ? 'High-vol mode: this stock has been swinging hard (avg daily move > 3%), so the overheated/oversold bars are set tighter (85/15) to avoid signal spam.'
+                  : '高波模式：这只股票最近波动大（日均涨跌超 3%），"涨太猛了 / 跌过头了"的门槛收得更紧（85/15 分），免得信号泛滥。'
+                  : en
+                  ? 'Steady mode: recent swings are mild, so the overheated/oversold bars use the standard 80/20.'
                   : '稳健模式：这只股票最近波动温和，"涨太猛了 / 跌过头了"用常规门槛（80/20 分）。'}
               </div>
             )}
@@ -1045,19 +1082,19 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-slate-100 text-lg">{symbol}</span>
-                  <span className="text-xs text-slate-400">{nameOf(symbol)}</span>
+                  <span className="text-xs text-slate-400">{displayName(symbol)}</span>
                   {overHeat && (
                     <span className="bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap shrink-0">
-                      <Flame className="w-3 h-3" /> 涨太猛
+                      <Flame className="w-3 h-3" /> {en ? 'Too hot' : '涨太猛'}
                     </span>
                   )}
                   {strongHigh && (
                     <span className="bg-sky-500/15 text-sky-400 border border-sky-500/40 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap shrink-0">
-                      <TrendingUp className="w-3 h-3" /> 稳着涨
+                      <TrendingUp className="w-3 h-3" /> {en ? 'Steady' : '稳着涨'}
                     </span>
                   )}
                   {data.source === 'simulated' && (
-                    <span className="text-[10px] text-slate-500">演示数据</span>
+                    <span className="text-[10px] text-slate-500">{en ? 'Demo data' : '演示数据'}</span>
                   )}
                 </div>
                 <div className="text-right shrink-0">
@@ -1088,7 +1125,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   <span className="flex items-center gap-1 shrink-0 text-[9px]" title={data.priceTime ?? undefined}>
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     <span className="text-emerald-400">
-                      实时{quoteTimeShort ? ` ${quoteTimeShort}` : ''}
+                      {en ? 'Live' : '实时'}{quoteTimeShort ? ` ${quoteTimeShort}` : ''}
                     </span>
                     {data.dayChangePct != null && (
                       <span className={data.dayChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
@@ -1097,11 +1134,11 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                       </span>
                     )}
                     {data.prevClose != null && (
-                      <span className="text-slate-500">昨收 {fmtPrice(data.prevClose)}</span>
+                      <span className="text-slate-500">{en ? `Prev close ${fmtPrice(data.prevClose)}` : `昨收 ${fmtPrice(data.prevClose)}`}</span>
                     )}
                   </span>
                 ) : (
-                  <span className="text-[9px] text-slate-500 shrink-0">收盘价</span>
+                  <span className="text-[9px] text-slate-500 shrink-0">{en ? 'Close' : '收盘价'}</span>
                 )}
                 <div className="flex-1 h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
                   <div
@@ -1116,16 +1153,16 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               </div>
 
               <div className="mt-2 text-[10px] text-slate-500">
-                位置 {judgment.pos} · 趋势 {judgment.trend} · 速度 {judgment.vel}
+                {en ? `Position ${judgment.pos} · Trend ${judgment.trend} · Speed ${judgment.vel}` : `位置 ${judgment.pos} · 趋势 ${judgment.trend} · 速度 ${judgment.vel}`}
               </div>
               {bullBear && (
                 <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed">
                   <div>
-                    <span className="text-slate-500">多头：</span>
+                    <span className="text-slate-500">{en ? 'Bullish:' : '多头：'}</span>
                     <span className="text-slate-300">{bullBear.bull}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500">空头：</span>
+                    <span className="text-slate-500">{en ? 'Bearish:' : '空头：'}</span>
                     <span className="text-slate-300">{bullBear.bear}</span>
                   </div>
                 </div>
@@ -1137,7 +1174,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   onClick={onGoPortfolio}
                   className="mt-1.5 text-left text-[10px] text-slate-500 hover:text-slate-300 leading-relaxed"
                 >
-                  💡 持有这只？去持仓记一笔成本，下次建议按你的盈亏来说 →
+                  {en ? '💡 Holding this? Log your cost in Positions — next time advice speaks to your P/L →' : '💡 持有这只？去持仓记一笔成本，下次建议按你的盈亏来说 →'}
                 </button>
               )}
               {fibHint && (
@@ -1146,14 +1183,14 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                 </div>
               )}
               {overHeat && (
-                <div className="mt-2 text-[10px] text-amber-400/70">点击卡片查看冷静清单</div>
+                <div className="mt-2 text-[10px] text-amber-400/70">{en ? 'Tap the card for the cool-down checklist' : '点击卡片查看冷静清单'}</div>
               )}
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={() => setShowCheckup(true)}
                   className="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 font-medium transition-colors"
                 >
-                  🩺 买入前体检
+                  {en ? '🩺 Pre-buy checkup' : '🩺 买入前体检'}
                 </button>
                 <button
                   onClick={() => {
@@ -1165,7 +1202,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   }}
                   className="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 font-medium transition-colors"
                 >
-                  ✍️ 记一笔操作
+                  {en ? '✍️ Log a trade' : '✍️ 记一笔操作'}
                 </button>
               </div>
             </div>
@@ -1174,13 +1211,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
           {/* 🏢 公司介绍：大白话一句话 + 板块/主题标签（诊断卡下方） */}
           {(() => {
             const info = findStock(symbol);
-            return info ? <CompanyIntro info={info} /> : null;
+            return info ? <CompanyIntro info={info} lang={lang} /> : null;
           })()}
 
           {/* 筹码分布 + 资金流向：并排小面板 */}
           <div className="grid grid-cols-2 gap-2">
-            <ChipPanel symbol={symbol} compact />
-            <FlowPanel symbol={symbol} />
+            <ChipPanel symbol={symbol} compact lang={lang} />
+            <FlowPanel symbol={symbol} lang={lang} />
           </div>
 
           {/* ③ 判断复盘：历史信号 vs 次日真实结果 */}
@@ -1188,13 +1225,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
         </>
       ) : (
         <div className="h-64 flex flex-col items-center justify-center gap-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-400">
-          <p className="text-sm">{loadError ? '行情加载失败（网络超时或服务器没响应）' : '数据加载失败，请稍后重试'}</p>
+          <p className="text-sm">{loadError ? (en ? 'Quote failed (network timeout or no server response)' : '行情加载失败（网络超时或服务器没响应）') : en ? 'Data failed to load — try again later' : '数据加载失败，请稍后重试'}</p>
           {loadError && (
             <button
               onClick={() => setRetryKey((k) => k + 1)}
               className="px-4 py-1.5 rounded-full bg-blue-600 text-white text-xs font-medium active:bg-blue-700"
             >
-              重新加载
+              {en ? 'Reload' : '重新加载'}
             </button>
           )}
         </div>
@@ -1208,31 +1245,32 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
             <div className="w-12 h-12 bg-amber-500/20 border border-amber-500/40 rounded-full flex items-center justify-center mx-auto text-amber-400">
               <ShieldAlert className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-slate-100">涨太猛了，先缓一缓？</h3>
+            <h3 className="text-lg font-bold text-slate-100">{en ? 'Too hot — take a breather?' : '涨太猛了，先缓一缓？'}</h3>
             <p className="text-sm text-slate-300">
               <span className="font-semibold text-amber-400">{symbol}</span>{' '}
-              这几天涨得有点猛（律动 {judgment.score}{' '}
-              分），要不要先深呼吸一下再决定？
+              {en
+                ? `It's been running hot (rhythm ${judgment.score}) — take a deep breath before deciding?`
+                : <>这几天涨得有点猛（律动 {judgment.score} 分），要不要先深呼吸一下再决定？</>}
             </p>
             {zenHoldings && (
               <div className="bg-slate-900/60 p-3 rounded-lg text-xs text-slate-300 text-left space-y-1.5 leading-relaxed">
                 {zenHoldings.kind === 'holding' && zenHoldings.shares != null && (
                   <>
                     <p>
-                      你手里有{' '}
+                      {en ? 'You hold ' : '你手里有'}{' '}
                       <span className="font-semibold text-slate-100">
-                        {zenHoldings.shares} 股
+                        {en ? `${zenHoldings.shares} shares` : `${zenHoldings.shares} 股`}
                       </span>
                       {zenHoldings.avgCost != null && (
-                        <> · 成本 {fmtMoney(symbol, zenHoldings.avgCost)}</>
+                        <> · {en ? 'cost' : '成本'} {fmtMoney(symbol, zenHoldings.avgCost)}</>
                       )}
                       {zenHoldings.price != null && (
-                        <> · 现价 {fmtMoney(symbol, zenHoldings.price)}</>
+                        <> · {en ? 'price' : '现价'} {fmtMoney(symbol, zenHoldings.price)}</>
                       )}
                     </p>
                     {zenHoldings.pnl != null && zenHoldings.pnlPct != null && (
                       <p>
-                        浮动{zenHoldings.pnl >= 0 ? '盈利' : '亏损'}{' '}
+                        {en ? 'Floating ' : '浮动'}{zenHoldings.pnl >= 0 ? (en ? 'profit' : '盈利') : en ? 'loss' : '亏损'}{' '}
                         <span
                           className={`font-semibold ${
                             zenHoldings.pnl >= 0 ? upText(scheme) : downText(scheme)
@@ -1252,7 +1290,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   <>
                     <p className="text-amber-300/90">{zenHoldings.advice}</p>
                     {zenHoldings.heldSummary && (
-                      <p className="text-slate-500">你现在持有：{zenHoldings.heldSummary}</p>
+                      <p className="text-slate-500">{en ? `Currently holding: ${zenHoldings.heldSummary}` : `你现在持有：${zenHoldings.heldSummary}`}</p>
                     )}
                   </>
                 )}
@@ -1262,10 +1300,10 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               </div>
             )}
             <div className="bg-slate-900/60 p-3 rounded-lg text-xs text-slate-400 text-left space-y-1">
-              <p className="font-medium text-slate-300">动手前，不妨问问自己：</p>
-              <p>• 是不是怕错过，才想追进去？</p>
-              <p>• 还记得当初为啥买它吗？</p>
-              <p>• 如果明天跌 5%，今晚还睡得着吗？</p>
+              <p className="font-medium text-slate-300">{en ? 'Before acting, ask yourself:' : '动手前，不妨问问自己：'}</p>
+              <p>{en ? '• Am I chasing just because I\u2019m afraid of missing out?' : '• 是不是怕错过，才想追进去？'}</p>
+              <p>{en ? '• Do I still remember why I bought it?' : '• 还记得当初为啥买它吗？'}</p>
+              <p>{en ? '• If it drops 5% tomorrow, will I still sleep tonight?' : '• 如果明天跌 5%，今晚还睡得着吗？'}</p>
             </div>
             <div className="flex gap-2 pt-2">
               {zenHoldings?.kind === 'none' && onGoPortfolio && (
@@ -1276,14 +1314,14 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                   }}
                   className="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2.5 rounded-xl text-xs font-medium"
                 >
-                  去持仓页添加
+                  {en ? 'Add in Positions' : '去持仓页添加'}
                 </button>
               )}
               <button
                 onClick={() => setShowZenModal(false)}
                 className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2.5 rounded-xl text-xs font-medium"
               >
-                我想好了，先冷静一下
+                {en ? "I've decided — cool down first" : '我想好了，先冷静一下'}
               </button>
             </div>
           </div>
@@ -1295,14 +1333,14 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl">
             <h3 className="text-sm font-bold text-slate-100">
-              记一笔 · {symbol} {nameOf(symbol) ? ` ${nameOf(symbol)}` : ''}
+              {en ? 'Log a trade' : '记一笔'} · {symbol} {displayName(symbol) !== symbol ? ` ${displayName(symbol)}` : ''}
             </h3>
             <div className="text-[11px] text-slate-500 bg-slate-900/60 rounded-lg px-3 py-2">
-              当时建议：{judgment.status}（{judgment.score}分）· {displayAdvice}
+              {en ? `Advice then: ${judgment.status} (${judgment.score} pts) · ${displayAdvice}` : `当时建议：${judgment.status}（${judgment.score}分）· ${displayAdvice}`}
             </div>
             {opSaved ? (
               <div className="text-center py-4 text-sm text-emerald-400 font-medium">
-                ✓ 已记入操作记忆，去记忆页看复盘
+                {en ? '✓ Logged — see the review in Memory' : '✓ 已记入操作记忆，去记忆页看复盘'}
               </div>
             ) : (
               <>
@@ -1319,13 +1357,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                           : 'bg-slate-700 text-slate-300'
                       }`}
                     >
-                      {a === 'buy' ? '买入' : '卖出'}
+                      {a === 'buy' ? (en ? 'Buy' : '买入') : en ? 'Sell' : '卖出'}
                     </button>
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <div className="text-[11px] text-slate-500 mb-1">价格 *</div>
+                    <div className="text-[11px] text-slate-500 mb-1">{en ? 'Price *' : '价格 *'}</div>
                     <input
                       type="number"
                       inputMode="decimal"
@@ -1335,13 +1373,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                     />
                   </div>
                   <div>
-                    <div className="text-[11px] text-slate-500 mb-1">数量（可选）</div>
+                    <div className="text-[11px] text-slate-500 mb-1">{en ? 'Shares (optional)' : '数量（可选)'}</div>
                     <input
                       type="number"
                       inputMode="numeric"
                       value={opQty}
                       onChange={(e) => setOpQty(e.target.value)}
-                      placeholder="股数"
+                      placeholder={en ? "Shares" : "股数"}
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -1351,13 +1389,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                     onClick={() => setShowOpModal(false)}
                     className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2.5 rounded-xl text-xs font-medium"
                   >
-                    取消
+                    {en ? 'Cancel' : '取消'}
                   </button>
                   <button
                     onClick={() => {
                       const price = parseFloat(opPrice.replace(/,/g, ''));
                       if (!(price > 0)) {
-                        alert('请填写成交价格');
+                        alert(en ? 'Enter the trade price' : '请填写成交价格');
                         return;
                       }
                       const qty = opQty ? parseInt(opQty, 10) : undefined;
@@ -1377,7 +1415,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                     }}
                     className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-medium"
                   >
-                    保存
+                    {en ? 'Save' : '保存'}
                   </button>
                 </div>
               </>
@@ -1389,7 +1427,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
       {showCheckup && data && judgment && (
         <BuyCheckup
           symbol={symbol}
-          name={nameOf(symbol)}
+          name={displayName(symbol)}
           score={judgment.score}
           hot={judgment.thresholds.hot}
           statusKey={judgment.statusKey}
@@ -1397,6 +1435,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
           price={data.price}
           series={data.series}
           onClose={() => setShowCheckup(false)}
+          lang={lang}
         />
       )}
     </div>

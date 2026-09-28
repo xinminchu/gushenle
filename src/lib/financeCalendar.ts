@@ -144,6 +144,15 @@ export function formatDateCN(dateStr: string): string {
 }
 
 /** 今天（用户时区）的 YYYY-MM-DD */
+/** 财报时段标签：API 返回 canonical key（pre/after/during/tbd），展示层按语言映射 */
+export function sessionLabel(key: string, lang: 'zh' | 'en' = 'zh'): string {
+  const en = lang === 'en';
+  if (key === 'pre') return en ? 'Pre-market' : '盘前';
+  if (key === 'after') return en ? 'After hours' : '盘后';
+  if (key === 'during') return en ? 'During hours' : '盘中';
+  return en ? 'TBD' : '时间未定';
+}
+
 export function todayStr(): string {
   const now = new Date();
   const y = now.getFullYear();
