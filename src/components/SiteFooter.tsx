@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import type { InfoSection } from './modals/SiteInfoModal';
 
 type Stats = { visitors: number | null; today: number | null; users: number | null };
 
 /** 页脚统计行：首次打开打点并读数，之后只读数；没数据时不渲染 */
 function SiteStatsLine() {
+  const { lang } = useLanguage();
+  const en = lang === 'en';
   const [stats, setStats] = useState<Stats | null>(null);
   useEffect(() => {
     let alive = true;
@@ -30,19 +33,30 @@ function SiteStatsLine() {
   if (!stats || stats.visitors == null) return null;
   return (
     <p className="text-center text-[10px] text-slate-600 mt-1">
-      已有 {stats.visitors} 位访客{stats.today != null ? ` · 今日 ${stats.today} 位` : ''}
-      {stats.users != null ? ` · ${stats.users} 位用户注册` : ''}
+      {en ? (
+        <>
+          {stats.visitors} visitors{stats.today != null ? ` · ${stats.today} today` : ''}
+          {stats.users != null ? ` · ${stats.users} registered` : ''}
+        </>
+      ) : (
+        <>
+          已有 {stats.visitors} 位访客{stats.today != null ? ` · 今日 ${stats.today} 位` : ''}
+          {stats.users != null ? ` · ${stats.users} 位用户注册` : ''}
+        </>
+      )}
     </p>
   );
 }
 
 /** 站点页脚：简介 / 用法 / 版权法律 / 时间轴入口 + 版权行 */
 export default function SiteFooter({ onOpen }: { onOpen: (s: InfoSection) => void }) {
+  const { lang } = useLanguage();
+  const en = lang === 'en';
   const links: [InfoSection, string][] = [
-    ['about', '简介'],
-    ['guide', '用法'],
-    ['legal', '版权与法律'],
-    ['timeline', '时间轴'],
+    ['about', en ? 'About' : '简介'],
+    ['guide', en ? 'Guide' : '用法'],
+    ['legal', en ? 'Legal' : '版权与法律'],
+    ['timeline', en ? 'Timeline' : '时间轴'],
   ];
   return (
     <footer className="max-w-md mx-auto px-4 pt-6 pb-2">
@@ -58,7 +72,9 @@ export default function SiteFooter({ onOpen }: { onOpen: (s: InfoSection) => voi
         ))}
       </div>
       <p className="text-center text-[10px] text-slate-600 mt-2 leading-relaxed">
-        © 2026 股神乐 gushenle.com · 投资有风险，内容仅供参考
+        {en
+          ? '© 2026 Gushenle gushenle.com · Investing involves risk; content is for reference only'
+          : '© 2026 股神乐 gushenle.com · 投资有风险，内容仅供参考'}
       </p>
       <SiteStatsLine />
     </footer>
