@@ -30,10 +30,10 @@ interface ScanPayload {
 
 /**
  * 首页「今日信号」：每天收盘后批处理扫精选池，摆三行
- * 🔥 涨得欢：冲高过热，按分从高到低前 5 —— 慎追，当心套牢（栏杆，淡红底）
+ * 🔥 涨得欢：冲高过热，按分从高到低前 5 —— 慎追，当心套牢（红框栏杆）
  * 👀 看一眼：离50由近到远、50上下成对比较，留近20天净流入为正者；
- *   都为正取20天净流入大者 —— 中间行名字暂定（淡绿底，观察中）
- * 🥶 跌得凶：分最低的 5 只（跌过头判定天然排最前）—— 慎割肉，慎抄底（栏杆，淡红底）
+ *   都为正取20天净流入大者 —— 中间行名字暂定（绿框观察区）
+ * 🥶 跌得凶：分最低的 5 只（跌过头判定天然排最前）—— 慎割肉，慎抄底（红框栏杆）
  * 不展示律动分；连涨/连跌≥3 天在 tile 上打标（平盘打断）；点一只直接跳到它的价格走势。
  * 只展示数据 + 大白话，不做买入推荐。
  */
@@ -76,11 +76,11 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
       : `数据截至 ${Number(m[2])}月${Number(m[3])}日（${weekCn}收盘）`;
   }
 
-  // tone: 上下两行是栏杆（淡红底），中间行观察区（淡绿底）；某行空时显示"今日暂无"，栏杆一直在
+  // tone: 三行去背景，只留边框 —— 上下红框（栏杆），中间绿框（观察区）；某行空时显示"今日暂无"
   const row = (items: ScanItem[], label: string, sub: string | undefined, tone: 'red' | 'green') => (
     <div
       className={`mb-2 last:mb-0 rounded-lg border px-2 py-2 ${
-        tone === 'red' ? 'bg-red-950/50 border-red-900/50' : 'bg-green-950/40 border-green-900/50'
+        tone === 'red' ? 'border-red-500/70' : 'border-green-500/70'
       }`}
     >
       <div className="mb-1.5">

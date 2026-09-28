@@ -132,9 +132,7 @@ html.light .to-slate-900 { --tw-gradient-to: #f1f5f9; }
 html.light .shadow-2xl { --tw-shadow: 0 25px 50px -12px rgb(15 23 42 / 0.18); }
 
 /* ---------- 刻意保留深色的卡（浅色下仍深底 + 浅字，保证可读） ----------
-   K 线图例 chart-legend、今日信号小格 signal-tile：用户要求单独给黑色背景 */
-html.light .chart-legend { background-color: rgb(15 23 42 / 0.88); }
-html.light .chart-legend .text-slate-500 { color: #94a3b8; }
+   今日信号小格 signal-tile：用户要求单独给黑色背景 */
 html.light .signal-tile { background-color: rgb(2 6 23 / 0.72); border-color: rgb(51 65 85 / 0.5); }
 html.light .signal-tile .text-slate-100 { color: #f1f5f9; }
 html.light .signal-tile .text-slate-500 { color: #94a3b8; }
@@ -142,3 +140,7 @@ html.light .signal-tile .text-emerald-300 { color: #6ee7b7; }
 html.light .signal-tile .text-rose-300 { color: #fda4af; }
 html.light .signal-tile .text-amber-300 { color: #fcd34d; }
 html.light .signal-tile .text-sky-300 { color: #7dd3fc; }
+
+/* K 线图例 chart-legend：浅色下用浅透底 + 深字，不压住图表 */
+html.light .chart-legend { background-color: rgb(255 255 255 / 0.72); }
+html.light .chart-legend .text-slate-500 { color: #475569; }
