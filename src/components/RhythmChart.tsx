@@ -8,8 +8,9 @@ import {
   LineSeries,
   LineStyle,
   createChart,
+  createSeriesMarkers,
 } from 'lightweight-charts';
-import type { CreatePriceLineOptions } from 'lightweight-charts';
+import type { CreatePriceLineOptions, ISeriesApi, SeriesMarker, SeriesType, Time } from 'lightweight-charts';
 import type { RhythmPoint } from '@/lib/rhythm';
 import type { ColorScheme } from '@/lib/colorScheme';
 import { upHex, downHex } from '@/lib/colorScheme';
@@ -38,6 +39,8 @@ interface RhythmChartProps {
   keyLevels?: KeyLevel[] | null;
   /** 是否显示关键价位线 */
   showKeyLevels?: boolean;
+  /** 事件标记：财报 / 宏观事件（议息/CPI/非农）在图上的小圆点，GoMoon 式事件 overlay 的轻量版 */
+  eventMarkers?: { time: string; kind: 'earnings' | 'macro' }[] | null;
   lang?: 'zh' | 'en';
 }
 
@@ -69,6 +72,7 @@ export default function RhythmChart({
   prevCloseLabel,
   keyLevels,
   showKeyLevels = false,
+  eventMarkers,
   lang = 'zh',
 }: RhythmChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -77,6 +81,7 @@ export default function RhythmChart({
   const en = lang === 'en';
   // 区间高低点数值：画在左上角 HTML 图例里，避免压住右侧价格轴
   const [hl, setHl] = useState<{ hi: number; lo: number } | null>(null);
+  const hasMarkers = !!eventMarkers && eventMarkers.length > 0;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -162,6 +167,24 @@ export default function RhythmChart({
       }
     };
 
+    /** 事件标记：小圆点落在对应 bar 上方（v5 走 series-markers 插件）。
+     * 时间必须精确命中一根 bar，否则标记画不出来，所以先过滤。 */
+    const applyEventMarkers = <T extends SeriesType>(s: ISeriesApi<T, Time>) => {
+      if (!eventMarkers || eventMarkers.length === 0) return;
+      const inRange = new Set(series.map((p) => p.date));
+      const ms: SeriesMarker<Time>[] = [];
+      for (const m of eventMarkers) {
+        if (!inRange.has(m.time)) continue;
+        ms.push({
+          time: m.time,
+          position: 'aboveBar',
+          shape: 'circle',
+          color: m.kind === 'earnings' ? 'rgba(167, 139, 250, 0.9)' : 'rgba(251, 191, 36, 0.9)',
+        });
+      }
+      if (ms.length > 0) createSeriesMarkers(s, ms);
+    };
+
     if (chartType === 'candle') {
       const candles = chart.addSeries(CandlestickSeries, {
         upColor: UP,
@@ -208,6 +231,7 @@ export default function RhythmChart({
       drawFibLines(candles);
       drawPrevCloseLine(candles);
       drawKeyLevels(candles);
+      applyEventMarkers(candles);
     } else if (chartType === 'ohlc') {
       // 四线：开/高/低/收。极值线本身已展示区间上下沿，不再画虚线。
       const mk = (key: 'open' | 'high' | 'low' | 'close', color: string, width: 1 | 2) => {
@@ -226,6 +250,7 @@ export default function RhythmChart({
       mk('open', OHLC_COLORS.open, 1);
       const closeSeries = mk('close', OHLC_COLORS.close, 2);
       drawPrevCloseLine(closeSeries);
+      applyEventMarkers(closeSeries);
       setHl(null);
     } else {
       // 收盘线颜色跟随区间净涨跌 + 当前配色方案
@@ -267,6 +292,7 @@ export default function RhythmChart({
       drawFibLines(area);
       drawPrevCloseLine(area);
       drawKeyLevels(area);
+      applyEventMarkers(area);
     }
     // 黄金分割线画出可视范围时，把价格轴缩放到能看见它们。
     // lightweight-charts 的 priceLine 不参与自动缩放，所以用一条全透明的线
@@ -305,7 +331,7 @@ export default function RhythmChart({
       ro.disconnect();
       chart.remove();
     };
-  }, [series, height, chartType, showRangeHL, fibLevels, fibScaleLevels, scheme, UP, DOWN, prevCloseLabel, keyLevels, showKeyLevels, lang]);
+  }, [series, height, chartType, showRangeHL, fibLevels, fibScaleLevels, scheme, UP, DOWN, prevCloseLabel, keyLevels, showKeyLevels, eventMarkers, lang]);
 
   if (series.length === 0) {
     return (
@@ -325,6 +351,7 @@ export default function RhythmChart({
       {(hl ||
         (fibLevels && fibLevels.length > 0) ||
         prevCloseLabel ||
+        hasMarkers ||
         (showKeyLevels && keyLevels && keyLevels.length > 0)) &&
         chartType !== 'ohlc' && (
         <div className="absolute top-1 left-1 right-16 flex flex-wrap items-center gap-x-2 gap-y-0.5 chart-legend text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
@@ -356,6 +383,14 @@ export default function RhythmChart({
             <span>
               <span className="inline-block w-2.5 h-0 border-t border-dashed border-slate-400/70 mr-1 align-middle" />
               {en ? 'Key levels' : '关键价位'}
+            </span>
+          )}
+          {hasMarkers && (
+            <span>
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-violet-400/80 mr-1" />
+              {en ? 'Earnings' : '财报'}
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400/80 mr-1 ml-2" />
+              {en ? 'Macro' : '宏观事件'}
             </span>
           )}
         </div>

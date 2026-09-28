@@ -33,6 +33,8 @@ import { useLanguage } from '@/context/LanguageContext';
 import MarketSignalBoard from './MarketSignalBoard';
 import BuyCheckup from './BuyCheckup';
 import { useWatchlistData } from '@/hooks/useWatchlistData';
+import { getStaticEvents } from '@/lib/financeCalendar';
+import type { SymbolReactions } from '@/app/api/earnings/route';
 import { bullBearLines, computeKeyLevels, actualHighLow } from '@/lib/brief';
 import {
   findSwing,
@@ -167,6 +169,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const [showRangeHL, setShowRangeHL] = useState(true);
   /** 关键价位线（年高/年低/MA50，大位置）：默认开，可关 */
   const [showKeyLevels, setShowKeyLevels] = useState(true);
+  /** 财报后反应实测：当前标的的下次财报日 + 过去财报日（K线图事件标记用） */
+  const [earnReact, setEarnReact] = useState<SymbolReactions | null>(null);
   /** 买入前体检弹窗 */
   const [showCheckup, setShowCheckup] = useState(false);
   /** 黄金分割参考线：开关 + 组合方案 + 波段窗口（调参用） */
@@ -298,6 +302,44 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     }, 60000);
     return () => clearInterval(id);
   }, [data?.priceLive, symbol, range, lang]);
+
+  // 事件标记：当前标的的财报日（过去 4 次 + 下一次）+ 宏观事件，画在 K 线图上。
+  // 拿不到就空着，不影响主流程。
+  useEffect(() => {
+    let alive = true;
+    setEarnReact(null);
+    fetch(`/api/earnings?mode=reactions&symbols=${encodeURIComponent(symbol)}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (alive) setEarnReact(j.reactions?.[symbol.toUpperCase()] ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [symbol]);
+
+  /** K 线图事件标记：落在当前区间内的财报日（紫点）与宏观事件（黄点） */
+  const eventMarkers = useMemo(() => {
+    const s = data?.series;
+    if (!s || s.length === 0) return null;
+    const inRange = new Set(s.map((p) => p.date));
+    const out: { time: string; kind: 'earnings' | 'macro' }[] = [];
+    if (earnReact) {
+      for (const p of earnReact.past) {
+        if (inRange.has(p.date)) out.push({ time: p.date, kind: 'earnings' });
+      }
+      if (earnReact.upcoming && inRange.has(earnReact.upcoming)) {
+        out.push({ time: earnReact.upcoming, kind: 'earnings' });
+      }
+    }
+    for (const e of getStaticEvents()) {
+      if ((e.kind === 'fomc' || e.kind === 'cpi' || e.kind === 'nonfarm') && inRange.has(e.date)) {
+        out.push({ time: e.date, kind: 'macro' });
+      }
+    }
+    return out.length > 0 ? out : null;
+  }, [data, earnReact]);
 
   // 若当前区间对该标的不可用（如上市不足），切回主判断区间
   useEffect(() => {
@@ -879,6 +921,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               prevCloseLabel={prevCloseLabel}
               keyLevels={keyLevels}
               showKeyLevels={showKeyLevels}
+              eventMarkers={eventMarkers}
               lang={lang}
             />
             {/* 黄金分割说明：组合的具体文字放图下方 */}

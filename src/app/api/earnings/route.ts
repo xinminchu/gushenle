@@ -1,6 +1,12 @@
 // GET /api/earnings?start=YYYY-MM-DD&days=7&symbols=AAPL,MSFT
 // 未来 N 天内自选股的财报日（Nasdaq 官方日历），按天缓存 6 小时
+//
+// GET /api/earnings?mode=reactions&symbols=AAPL,MSFT
+// GoMoon 式"事件后反应实测"的日线版：对每只股票，先往前扫出下一次财报日，
+// 再按约 91 天 cadence 反查过去 4 次财报日，用已有日线算"财报后次日涨跌"。
+// 全部走已有 Nasdaq 日历 + 日线接口，不新增数据源；模拟数据不参与计算。
 import { NextRequest, NextResponse } from 'next/server';
+import { getFullSeries } from '@/lib/marketData';
 
 export interface EarningsEvent {
   date: string;
@@ -36,6 +42,7 @@ async function rowsForDate(date: string): Promise<any[]> {
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams;
+  if (q.get('mode') === 'reactions') return getReactions(q);
   const start = q.get('start') || new Date().toISOString().slice(0, 10);
   const days = Math.min(Math.max(parseInt(q.get('days') || '7', 10), 1), 14);
   const symbols = new Set(
@@ -75,4 +82,138 @@ export async function GET(req: NextRequest) {
     console.error('[api/earnings]', e);
     return NextResponse.json({ events: [], error: '财报日历暂时拿不到' });
   }
+}
+
+/* ================= mode=reactions：财报后反应实测 ================= */
+
+export interface EarningReaction {
+  date: string; // 过去某次财报日 YYYY-MM-DD
+  nextDayPct: number; // 财报后次日涨跌 %（财报日收盘 → 下一交易日收盘）
+}
+
+export interface SymbolReactions {
+  upcoming: string | null; // 下一次财报日
+  past: EarningReaction[]; // 新 → 旧，最多 4 条
+  up: number;
+  down: number;
+  avg: number | null; // 次日涨跌均值 %
+}
+
+const reactCache = new Map<string, { at: number; data: SymbolReactions }>();
+const REACT_TTL = 6 * 60 * 60 * 1000;
+
+function addDays(base: Date, n: number): Date {
+  const d = new Date(base);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+function fmtD(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+function hasSymbol(rows: any[], sym: string): boolean {
+  return rows.some((r) => String(r.symbol || '').toUpperCase() === sym);
+}
+
+/** 往前扫下一次财报日：14 天一批，最多 100 天，命中即停 */
+async function findUpcoming(sym: string, today: string): Promise<string | null> {
+  const start = new Date(today + 'T12:00:00');
+  for (let off = 0; off < 100; off += 14) {
+    const dates: string[] = [];
+    for (let i = off; i < Math.min(off + 14, 100); i++) dates.push(fmtD(addDays(start, i)));
+    const allRows = await Promise.all(dates.map((ds) => rowsForDate(ds).catch(() => [] as any[])));
+    for (let i = 0; i < dates.length; i++) {
+      if (hasSymbol(allRows[i], sym)) return dates[i];
+    }
+  }
+  return null;
+}
+
+/**
+ * 按约 91 天 cadence 反查过去 4 次财报日。
+ * 每个预期日前后 ±7 天按"离预期越近越优先"扫，命中即收（财报日基本落在同一周）。
+ */
+async function findPast(sym: string, anchor: string, today: string): Promise<string[]> {
+  const out: string[] = [];
+  const base = new Date(anchor + 'T12:00:00');
+  const order: number[] = [0];
+  for (let d = 1; d <= 7; d++) order.push(-d, d);
+  for (let k = 1; k <= 4; k++) {
+    const expected = addDays(base, -91 * k);
+    const dates = order.map((d) => fmtD(addDays(expected, d)));
+    const allRows = await Promise.all(dates.map((ds) => rowsForDate(ds).catch(() => [] as any[])));
+    for (let i = 0; i < dates.length; i++) {
+      if (dates[i] >= today) continue; // 只要过去的
+      if (hasSymbol(allRows[i], sym)) {
+        if (!out.includes(dates[i])) out.push(dates[i]);
+        break;
+      }
+    }
+  }
+  return out.sort().reverse(); // 新 → 旧
+}
+
+async function reactionsFor(sym: string, today: string): Promise<SymbolReactions> {
+  const hit = reactCache.get(sym);
+  if (hit && Date.now() - hit.at < REACT_TTL) return hit.data;
+  const empty: SymbolReactions = { upcoming: null, past: [], up: 0, down: 0, avg: null };
+  // 韩股不在 Nasdaq 日历覆盖范围，直接返回空（不编造）
+  if (sym.endsWith('.KS')) {
+    reactCache.set(sym, { at: Date.now(), data: empty });
+    return empty;
+  }
+  try {
+    const upcoming = await findUpcoming(sym, today);
+    const pastDates = await findPast(sym, upcoming ?? today, today);
+    const { series, source } = await getFullSeries(sym);
+    const past: EarningReaction[] = [];
+    // 模拟数据不参与实测，避免"假往绩"
+    if (source !== 'simulated' && series.length > 1) {
+      const idx = new Map(series.map((p, i) => [p.date, i]));
+      for (const d of pastDates) {
+        // 财报日若落在非交易日，向最近交易日对齐（±3 天内）
+        let i: number | undefined;
+        for (const off of [0, -1, 1, -2, 2, -3, 3]) {
+          const dd = fmtD(addDays(new Date(d + 'T12:00:00'), off));
+          const j = idx.get(dd);
+          if (j != null) {
+            i = j;
+            break;
+          }
+        }
+        if (i == null || i + 1 >= series.length) continue;
+        const c0 = series[i].close;
+        const c1 = series[i + 1].close;
+        if (c0 > 0 && Number.isFinite(c1)) {
+          past.push({ date: d, nextDayPct: Number((((c1 - c0) / c0) * 100).toFixed(2)) });
+        }
+      }
+    }
+    const up = past.filter((p) => p.nextDayPct > 0).length;
+    const down = past.filter((p) => p.nextDayPct < 0).length;
+    const avg = past.length
+      ? Number((past.reduce((s, p) => s + p.nextDayPct, 0) / past.length).toFixed(2))
+      : null;
+    const data: SymbolReactions = { upcoming, past, up, down, avg };
+    reactCache.set(sym, { at: Date.now(), data });
+    return data;
+  } catch (e) {
+    console.error('[api/earnings reactions]', sym, e);
+    return empty;
+  }
+}
+
+async function getReactions(q: URLSearchParams) {
+  const symbols = (q.get('symbols') || '')
+    .split(',')
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean)
+    .slice(0, 8);
+  const today = new Date().toISOString().slice(0, 10);
+  const reactions: Record<string, SymbolReactions> = {};
+  await Promise.all(
+    symbols.map(async (s) => {
+      reactions[s] = await reactionsFor(s, today);
+    }),
+  );
+  return NextResponse.json({ reactions });
 }

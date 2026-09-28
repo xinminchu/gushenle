@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Newspaper, CalendarDays, ChevronDown, RefreshCw, Landmark, ExternalLink } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   getUpcomingEvents,
   getYearEvents,
@@ -14,7 +15,7 @@ import {
 } from '@/lib/financeCalendar';
 import { loadWatchlist } from '@/lib/watchlist';
 import type { NewsItem } from '@/app/api/news/route';
-import type { EarningsEvent } from '@/app/api/earnings/route';
+import type { EarningsEvent, SymbolReactions } from '@/app/api/earnings/route';
 
 function fmtTime(ms: number): string {
   const d = new Date(ms);
@@ -25,6 +26,8 @@ const NEWS_MARKET_KEY = 'gushenle:news-market';
 type NewsMarket = 'us' | 'cn';
 
 export default function FamilyNews() {
+  const { lang } = useLanguage();
+  const en = lang === 'en';
   const [news, setNews] = useState<NewsItem[]>([]);
   const [newsOpen, setNewsOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -39,6 +42,9 @@ export default function FamilyNews() {
   });
   const [weekEvents, setWeekEvents] = useState<CalEvent[]>([]);
   const [yearOpen, setYearOpen] = useState(false);
+  // 财报后反应实测（GoMoon 式"事件后市场走了多远"的日线版）
+  const [reactions, setReactions] = useState<Record<string, SymbolReactions>>({});
+  const [reactOpenKey, setReactOpenKey] = useState<string | null>(null);
 
   const loadNews = async (m: NewsMarket) => {
     setNewsLoading(true);
@@ -90,6 +96,17 @@ export default function FamilyNews() {
         }
       } catch {
         /* 财报拿不到不影响日程 */
+      }
+      // 有财报的股票，一次性拉"财报后反应实测"
+      try {
+        const syms = [...new Set(earningEvts.map((e) => e.symbol).filter(Boolean))] as string[];
+        if (syms.length > 0) {
+          const rr = await fetch(`/api/earnings?mode=reactions&symbols=${encodeURIComponent(syms.join(','))}`);
+          const jj = await rr.json();
+          if (jj.reactions) setReactions(jj.reactions);
+        }
+      } catch {
+        /* 往绩拿不到不影响日程 */
       }
       const merged = [...staticEvts, ...earningEvts].sort((a, b) =>
         a.date.localeCompare(b.date),
@@ -237,17 +254,83 @@ export default function FamilyNews() {
                 <div className="space-y-1.5 min-w-0 flex-1">
                   {evts.map((e, i) => {
                     const meta = kindMeta(e.kind);
+                    const rKey = `${e.date}-${e.symbol ?? ''}`;
+                    const r = e.kind === 'earnings' && e.symbol ? reactions[e.symbol] : undefined;
+                    const showR = r && r.past.length > 0;
+                    const mixed = showR && r.up > 0 && r.down > 0;
+                    const open = reactOpenKey === rKey;
                     return (
-                      <div key={i} className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${meta.chip}`}>
-                          {meta.icon} {meta.label}
-                        </span>
-                        <span className="text-[11px] text-slate-300">
-                          {e.symbol && <span className="font-bold text-slate-100">{e.symbol} </span>}
-                          {e.title}
-                        </span>
-                        {e.note && <span className="text-[10px] text-slate-500">{e.note}</span>}
-                      </div>
+                      <React.Fragment key={i}>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded border ${meta.chip}`}>
+                            {meta.icon} {meta.label}
+                          </span>
+                          <span className="text-[11px] text-slate-300">
+                            {e.symbol && <span className="font-bold text-slate-100">{e.symbol} </span>}
+                            {e.title}
+                          </span>
+                          {e.note && <span className="text-[10px] text-slate-500">{e.note}</span>}
+                        </div>
+                        {showR && (
+                          <div className="pl-0.5 -mt-0.5">
+                            <button
+                              onClick={() => setReactOpenKey(open ? null : rKey)}
+                              className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300 text-left"
+                            >
+                              <span>
+                                📜 {en ? 'Track record' : '往绩'} ·{' '}
+                                {en
+                                  ? `last ${r.past.length} earnings, next-day: `
+                                  : `近${r.past.length}次财报后次日：`}
+                                <span
+                                  className={
+                                    r.avg != null && r.avg > 0
+                                      ? 'text-emerald-400'
+                                      : r.avg != null && r.avg < 0
+                                        ? 'text-rose-400'
+                                        : 'text-slate-400'
+                                  }
+                                >
+                                  {r.up}
+                                  {en ? ' up ' : '涨'}
+                                  {r.down}
+                                  {en ? ' down' : '跌'}
+                                  {r.avg != null &&
+                                    `, ${en ? 'avg ' : '平均'}${r.avg > 0 ? '+' : ''}${r.avg}%`}
+                                </span>
+                                {mixed && (
+                                  <span className="text-slate-500">
+                                    {en ? ' · mixed — go easy before earnings' : ' · 涨跌参半，财报前下手要慎'}
+                                  </span>
+                                )}
+                              </span>
+                              <ChevronDown
+                                className={`w-3 h-3 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+                              />
+                            </button>
+                            {open && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {r.past.map((p) => (
+                                  <span
+                                    key={p.date}
+                                    className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                                      p.nextDayPct > 0
+                                        ? 'bg-emerald-500/10 text-emerald-300/90 border-emerald-500/25'
+                                        : p.nextDayPct < 0
+                                          ? 'bg-rose-500/10 text-rose-300/90 border-rose-500/25'
+                                          : 'bg-slate-500/10 text-slate-400 border-slate-600/40'
+                                    }`}
+                                  >
+                                    {p.date.slice(5).replace('-', '/')}{' '}
+                                    {p.nextDayPct > 0 ? '+' : ''}
+                                    {p.nextDayPct}%
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </div>
