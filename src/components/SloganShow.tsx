@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 
 /**
  * slogan 背景：时刻变换的红绿折线。
@@ -65,6 +66,8 @@ function SloganBackdrop() {
 
 /** 页头 slogan 区：金黄五角星在上方左右游动 + 红绿折线背景 + 四句标语 */
 export default function SloganShow() {
+  const { lang } = useLanguage();
+  const en = lang === 'en';
   return (
     <div className="relative overflow-hidden">
       <SloganBackdrop />
@@ -78,9 +81,19 @@ export default function SloganShow() {
           </span>
         </div>
         <p className="whitespace-nowrap overflow-hidden text-center text-[12px] tracking-wide text-slate-100 pb-2">
-          快乐炒股 <span className="text-slate-500 mx-0.5">·</span> 轻松投资{' '}
-          <span className="text-slate-500 mx-0.5">·</span> 不赌不堵{' '}
-          <span className="text-slate-500 mx-0.5">·</span> 不气不弃
+          {en ? (
+            <>
+              Happy trading <span className="text-slate-500 mx-0.5">·</span> Relaxed investing{' '}
+              <span className="text-slate-500 mx-0.5">·</span> No gambling{' '}
+              <span className="text-slate-500 mx-0.5">·</span> No quitting
+            </>
+          ) : (
+            <>
+              快乐炒股 <span className="text-slate-500 mx-0.5">·</span> 轻松投资{' '}
+              <span className="text-slate-500 mx-0.5">·</span> 不赌不堵{' '}
+              <span className="text-slate-500 mx-0.5">·</span> 不气不弃
+            </>
+          )}
         </p>
       </div>
     </div>
