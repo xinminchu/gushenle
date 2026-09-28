@@ -3,7 +3,8 @@ import { Analytics } from '@vercel/analytics/react';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '股神乐 (Gushenle) - 个人与家庭投资伴侣',
+  // 注意：title 不在这里写死，由 LanguageContext 按语言声明式渲染唯一的 <title>。
+  // 若两处并存，head 会出现多个 <title>，浏览器只取第一个，英文标题永远不生效。
   description: '快乐炒股 轻松投资，不赌不堵 不气不弃',
   manifest: '/manifest.json',
   appleWebApp: {
