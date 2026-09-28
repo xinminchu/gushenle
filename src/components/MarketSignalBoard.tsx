@@ -24,6 +24,8 @@ interface ScanPayload {
   hot?: ScanItem[];
   middle?: ScanItem[];
   cold?: ScanItem[];
+  /** 每行实际用的数据日期（空行回补时与 scanDate 不同） */
+  rowDates?: { hot: string; middle: string; cold: string };
   /** 中间行是否经过"近20天净流入为正"过滤 */
   flowFilter?: boolean;
 }
@@ -63,6 +65,17 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
     return null;
   }
   const md = data.scanDate || '';
+  // "2026-09-25" → "9月25日"（回补行标注用）
+  function shortDate(s: string): string {
+    const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${Number(m[2])}月${Number(m[3])}日` : s;
+  }
+  // 某行用了回补的旧数据：标注"（9月25日数据）"，跟当天数据区分开
+  const asOfNote = (k: 'hot' | 'middle' | 'cold'): string => {
+    const rd = data.rowDates;
+    if (!rd || !rd[k] || rd[k] === md) return '';
+    return en ? `(${shortDate(rd[k])} data)` : `（${shortDate(rd[k])}数据）`;
+  };
   // scanDate 是 YYYY-MM-DD（最新一根日线的日期）：中文显示"数据截至 9月25日（周五收盘）"
   function fmtScanDate(s: string): string {
     const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
@@ -77,7 +90,8 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
   }
 
   // tone: 三行去背景，只留边框 —— 上下红框（栏杆），中间绿框（观察区）；某行空时显示"今日暂无"
-  const row = (items: ScanItem[], label: string, sub: string | undefined, tone: 'red' | 'green') => (
+  // asOfNote：该行用了回补的旧数据时标注日期，如"（9月25日数据）"
+  const row = (items: ScanItem[], label: string, sub: string | undefined, tone: 'red' | 'green', asOfNote?: string) => (
     <div
       className={`mb-2 last:mb-0 rounded-lg border px-2 py-2 ${
         tone === 'red' ? 'border-red-500/70' : 'border-green-500/70'
@@ -86,6 +100,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
       <div className="mb-1.5">
         <span className="text-xs font-semibold text-slate-200">{label}</span>
         {sub && <span className="text-[10px] text-slate-500 ml-1.5">{sub}</span>}
+        {asOfNote && <span className="text-[10px] text-slate-500 ml-1">{asOfNote}</span>}
       </div>
       {items.length > 0 ? (
       <div className="grid grid-cols-5 gap-1.5">
@@ -146,6 +161,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
         `🔥 ${HOT_LABEL}`,
         en ? 'don\u2019t chase, beware of getting trapped' : '慎追，当心套牢',
         'red',
+        asOfNote('hot'),
       )}
       {row(
         data.middle || [],
@@ -158,12 +174,14 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
             ? '离50近 · 近20天买入多'
             : '离50分最近',
         'green',
+        asOfNote('middle'),
       )}
       {row(
         data.cold || [],
         `🥶 ${COLD_LABEL}`,
         en ? 'be careful about selling the bottom or catching the knife' : '慎割肉，慎抄底',
         'red',
+        asOfNote('cold'),
       )}
       <div className="mt-2 text-[10px] leading-relaxed text-slate-500">
         {en
