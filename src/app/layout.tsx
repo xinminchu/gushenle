@@ -24,6 +24,12 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN" className="dark">
+      {/* 主题预置（ES5，老 Safari 可解析）：首屏绘制前按 localStorage 挂 light/dark，避免闪一下 */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){try{var t=localStorage.getItem('gushenle:theme');if(t==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light');}}catch(e){}})();`,
+        }}
+      />
       {/* 启动探针（ES5 写法，老 Safari 也能解析）：React 8 秒内没挂载且抓到报错，
           或 25 秒还没挂载，就弹横幅说明原因，并附第一条错误原文 */}
       <script

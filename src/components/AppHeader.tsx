@@ -5,6 +5,7 @@ import { UserRound, LogOut, Settings, Pencil, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useNickname } from '@/hooks/useNickname';
+import { useTheme } from '@/hooks/useTheme';
 import { isAdminEmail, getAdminRole, ADMIN_ROLE_LABEL } from '@/lib/admin';
 import { setNickname, updateMyPostsNickname } from '@/lib/family';
 import LoginModal from './modals/LoginModal';
@@ -18,6 +19,7 @@ import { OPEN_LOGIN_EVENT } from './games/LoginNudge';
 export default function AppHeader() {
   const { user, loading, configured, signOut } = useAuth();
   const { lang, setLang, t } = useLanguage();
+  const { theme, toggle } = useTheme();
   const [loginOpen, setLoginOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   // 顶栏用户菜单：改昵称 / 退出登录
@@ -174,6 +176,14 @@ export default function AppHeader() {
                 </button>
               ))}
             </div>
+            {/* 主题切换：深色 / 浅色（文字按钮，长辈一眼看懂） */}
+            <button
+              onClick={toggle}
+              title={theme === 'dark' ? '切换到浅色' : '切换到深色'}
+              className="bg-slate-800 border border-slate-700 text-slate-400 hover:text-slate-200 text-[10px] px-2 py-1 rounded-full active:scale-95 transition whitespace-nowrap"
+            >
+              {theme === 'dark' ? '浅色' : '深色'}
+            </button>
             {/* 站长专属：工具箱入口 */}
             {isAdmin && (
               <button

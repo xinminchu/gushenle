@@ -1,0 +1,122 @@
+/* 浅色主题覆盖层：html.light 生效时，把全站写死的深色工具类映射为浅色。
+ * 原理：Tailwind v4 把 utilities 放进 @layer，作者写的无 layer CSS 优先级更高，
+ * 所以 html.light 前缀的覆盖规则总能赢。不用逐个文件改，新增页面沿用同一套
+ * slate/emerald/sky/amber/rose/blue/violet 配色即自动拥有浅色版。
+ * 约定：以后写新 UI 尽量只用下面映射表里的颜色，就是在给浅色主题打工。 */
+
+/* ---------- 页面底色 ---------- */
+html.light {
+  --background: #f1f5f9;
+  --foreground: #0f172a;
+}
+html.light .bg-slate-950 { background-color: #f1f5f9; }
+
+/* ---------- slate 背景 ---------- */
+html.light .bg-slate-900 { background-color: #ffffff; }
+html.light .bg-slate-900\/95 { background-color: rgb(255 255 255 / 0.95); }
+html.light .bg-slate-900\/80 { background-color: rgb(255 255 255 / 0.8); }
+html.light .bg-slate-900\/60 { background-color: rgb(255 255 255 / 0.6); }
+html.light .bg-slate-900\/50 { background-color: rgb(255 255 255 / 0.5); }
+html.light .bg-slate-900\/40 { background-color: rgb(255 255 255 / 0.4); }
+html.light .bg-slate-800 { background-color: #e2e8f0; }
+html.light .bg-slate-800\/80 { background-color: rgb(226 232 240 / 0.8); }
+html.light .bg-slate-800\/60 { background-color: rgb(226 232 240 / 0.6); }
+html.light .bg-slate-800\/50 { background-color: rgb(226 232 240 / 0.5); }
+html.light .bg-slate-800\/40 { background-color: rgb(226 232 240 / 0.4); }
+html.light .bg-slate-700 { background-color: #cbd5e1; }
+html.light .bg-slate-600 { background-color: #94a3b8; }
+html.light .bg-slate-500\/10 { background-color: rgb(100 116 139 / 0.1); }
+html.light .hover\:bg-slate-800:hover { background-color: #e2e8f0; }
+html.light .hover\:bg-slate-800\/60:hover { background-color: rgb(226 232 240 / 0.6); }
+html.light .hover\:bg-slate-800\/70:hover { background-color: rgb(226 232 240 / 0.7); }
+html.light .hover\:bg-slate-700:hover { background-color: #cbd5e1; }
+html.light .hover\:bg-slate-600:hover { background-color: #94a3b8; }
+html.light .hover\:bg-slate-500:hover { background-color: #64748b; }
+html.light .hover\:bg-slate-100:hover { background-color: #e2e8f0; }
+
+/* ---------- slate 文字 ---------- */
+html.light .text-slate-50 { color: #0f172a; }
+html.light .text-slate-100 { color: #0f172a; }
+html.light .text-slate-200 { color: #1e293b; }
+html.light .text-slate-300 { color: #334155; }
+html.light .text-slate-400 { color: #475569; }
+html.light .text-slate-500 { color: #64748b; }
+html.light .text-slate-600 { color: #64748b; }
+html.light .hover\:text-slate-200:hover { color: #1e293b; }
+html.light .hover\:text-slate-300:hover { color: #334155; }
+html.light .placeholder\:text-slate-600::placeholder { color: #94a3b8; }
+
+/* ---------- slate 边框 / 分隔线 ---------- */
+html.light .border-slate-900 { border-color: #e2e8f0; }
+html.light .border-slate-800 { border-color: #e2e8f0; }
+html.light .border-slate-800\/80 { border-color: rgb(226 232 240 / 0.8); }
+html.light .border-slate-800\/60 { border-color: rgb(226 232 240 / 0.6); }
+html.light .border-slate-700 { border-color: #e2e8f0; }
+html.light .border-slate-700\/80 { border-color: rgb(226 232 240 / 0.8); }
+html.light .border-slate-700\/60 { border-color: rgb(226 232 240 / 0.6); }
+html.light .border-slate-700\/50 { border-color: rgb(226 232 240 / 0.5); }
+html.light .border-slate-600 { border-color: #cbd5e1; }
+html.light .border-slate-600\/50 { border-color: rgb(203 213 225 / 0.5); }
+html.light .border-slate-600\/40 { border-color: rgb(203 213 225 / 0.4); }
+html.light .border-slate-500 { border-color: #94a3b8; }
+html.light .divide-slate-800\/80 > :not([hidden]) ~ :not([hidden]) { border-color: rgb(226 232 240 / 0.8); }
+html.light .hover\:border-slate-400:hover { border-color: #94a3b8; }
+html.light .hover\:border-slate-500:hover { border-color: #64748b; }
+
+/* ---------- 彩色文字：浅底上加深，保证可读 ---------- */
+html.light .text-emerald-100\/90 { color: #047857; }
+html.light .text-emerald-200 { color: #047857; }
+html.light .text-emerald-300 { color: #059669; }
+html.light .text-emerald-400 { color: #059669; }
+html.light .text-emerald-400\/60 { color: rgb(5 150 105 / 0.6); }
+html.light .text-emerald-400\/80 { color: rgb(5 150 105 / 0.8); }
+html.light .text-emerald-400\/90 { color: rgb(5 150 105 / 0.9); }
+html.light .hover\:text-emerald-300:hover { color: #059669; }
+html.light .hover\:text-emerald-400:hover { color: #059669; }
+html.light .text-green-300 { color: #16a34a; }
+html.light .text-green-400 { color: #16a34a; }
+html.light .text-sky-200 { color: #0284c7; }
+html.light .text-sky-200\/90 { color: rgb(2 132 199 / 0.9); }
+html.light .text-sky-300 { color: #0284c7; }
+html.light .text-sky-400 { color: #0284c7; }
+html.light .text-sky-400\/80 { color: rgb(2 132 199 / 0.8); }
+html.light .text-sky-400\/90 { color: rgb(2 132 199 / 0.9); }
+html.light .hover\:text-sky-300:hover { color: #0284c7; }
+html.light .text-blue-300 { color: #2563eb; }
+html.light .text-blue-400 { color: #1d4ed8; }
+html.light .text-blue-400\/80 { color: rgb(29 78 216 / 0.8); }
+html.light .text-blue-400\/90 { color: rgb(29 78 216 / 0.9); }
+html.light .hover\:text-blue-300:hover { color: #2563eb; }
+html.light .hover\:text-blue-400:hover { color: #1d4ed8; }
+html.light .text-amber-100\/90 { color: #b45309; }
+html.light .text-amber-200 { color: #b45309; }
+html.light .text-amber-200\/90 { color: rgb(180 83 9 / 0.9); }
+html.light .text-amber-300 { color: #d97706; }
+html.light .text-amber-300\/70 { color: rgb(217 119 6 / 0.7); }
+html.light .text-amber-300\/80 { color: rgb(217 119 6 / 0.8); }
+html.light .text-amber-300\/90 { color: rgb(217 119 6 / 0.9); }
+html.light .text-amber-400 { color: #b45309; }
+html.light .text-amber-400\/70 { color: rgb(180 83 9 / 0.7); }
+html.light .text-amber-400\/80 { color: rgb(180 83 9 / 0.8); }
+html.light .text-amber-400\/90 { color: rgb(180 83 9 / 0.9); }
+html.light .hover\:text-amber-200:hover { color: #b45309; }
+html.light .text-yellow-300 { color: #ca8a04; }
+html.light .text-yellow-400 { color: #ca8a04; }
+html.light .text-rose-200 { color: #be123c; }
+html.light .text-rose-300 { color: #e11d48; }
+html.light .text-rose-400 { color: #e11d48; }
+html.light .hover\:text-rose-400:hover { color: #e11d48; }
+html.light .text-red-300 { color: #dc2626; }
+html.light .text-red-400 { color: #dc2626; }
+html.light .hover\:text-red-400:hover { color: #dc2626; }
+html.light .text-violet-300 { color: #7c3aed; }
+html.light .text-violet-300\/80 { color: rgb(124 58 237 / 0.8); }
+html.light .text-violet-400 { color: #6d28d9; }
+
+/* ---------- 装饰渐变：深变浅 ---------- */
+html.light .from-emerald-950\/80 { --tw-gradient-from: rgb(209 250 229 / 0.8); }
+html.light .via-slate-900 { --tw-gradient-via: #f1f5f9; }
+html.light .to-slate-900 { --tw-gradient-to: #f1f5f9; }
+
+/* ---------- 阴影：浅底上加深一点，卡片才有层次 ---------- */
+html.light .shadow-2xl { --tw-shadow: 0 25px 50px -12px rgb(15 23 42 / 0.18); }
