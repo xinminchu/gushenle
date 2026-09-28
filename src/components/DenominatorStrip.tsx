@@ -38,11 +38,11 @@ export default function DenominatorStrip() {
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2">
       <div className="flex items-baseline gap-2">
-        <span className="text-[11px] text-slate-500 shrink-0">{en ? '📐 Denominator' : '📐 分母'}</span>
+        <span className="text-[11px] text-slate-500 shrink-0">{en ? '📐 Denominator · cost of money' : '📐 分母 · 钱的成本'}</span>
         <span className="text-xs text-slate-300">
-          30Y <span className="font-bold text-slate-100">{data.y30.toFixed(2)}%</span>
+          {en ? '30-yr Treasury' : '30年国债'} <span className="font-bold text-slate-100">{data.y30.toFixed(2)}%</span>
           {data.y10 != null && (
-            <span className="text-slate-400"> · 10Y {data.y10.toFixed(2)}%</span>
+            <span className="text-slate-400"> · {en ? '10-yr' : '10年国债'} {data.y10.toFixed(2)}%</span>
           )}
         </span>
         {data.dateCN && (

@@ -46,19 +46,19 @@ async function fearGreed(): Promise<{ score: number; rating: string; date: strin
   return { score: Math.round(fg.score * 10) / 10, rating: String(fg.rating || 'neutral'), date: ts.slice(0, 10) };
 }
 
-/** 大白话解读：只描述分母贵贱，不下买卖结论 */
+/** 大白话解读：只描述钱贵贱，不下买卖结论 */
 function noteFor(y30: number): string {
-  if (y30 >= 5.5) return '22 年高位，分母很贵——这时候追高要更慎';
-  if (y30 >= 5.0) return '分母偏贵，估值容易被往下压';
-  if (y30 >= 4.5) return '分母中性偏贵，多看少动也挺好';
-  return '分母温和，估值压力不大';
+  if (y30 >= 5.5) return '22 年高位，钱很贵——这时候追高要更慎';
+  if (y30 >= 5.0) return '钱偏贵，股票估值容易被往下压';
+  if (y30 >= 4.5) return '钱中等偏贵，多看少动也挺好';
+  return '钱不贵，估值压力不大';
 }
 
 function noteForEn(y30: number): string {
-  if (y30 >= 5.5) return 'Near 22-year highs — the denominator is pricey. Be extra careful chasing here';
-  if (y30 >= 5.0) return 'Denominator on the pricey side — valuations get pressed down';
-  if (y30 >= 4.5) return 'Denominator neutral-to-pricey — watching more and doing less is fine';
-  return 'Denominator mild — little valuation pressure';
+  if (y30 >= 5.5) return 'Near 22-year highs — money is pricey. Be extra careful chasing here';
+  if (y30 >= 5.0) return 'Money is on the pricey side — valuations get pressed down';
+  if (y30 >= 4.5) return 'Money neither cheap nor pricey — watching more and doing less is fine';
+  return 'Money is cheap — little valuation pressure';
 }
 
 function fmtDateCN(iso: string): string {
