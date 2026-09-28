@@ -4,6 +4,8 @@
 
 import type { RhythmResponse, RhythmPoint } from './rhythm';
 import { STATUS_LABELS } from './rhythm';
+import type { FibSwing } from './fibonacci';
+import { fibLevels } from './fibonacci';
 
 /* ---------------- 一句话播报 ---------------- */
 
@@ -135,7 +137,17 @@ export interface KeyLevel {
  * 黄金分割回撤 0.382 / 0.5 / 0.618。细虚线 + 轴上小标签，不喧宾夺主。
  * 需要至少 50 个点（算 MA50）；不够返回 null。
  */
-export function computeKeyLevels(d: RhythmResponse, lang: 'zh' | 'en' = 'zh'): KeyLevel[] | null {
+/**
+ * 关键价位：年内最高 / 年内最低 / 50 日均线 / 黄金分割回撤。
+ * 回撤线的锚与「黄金分割」模式统一：都用当前区间最近一波的波段（swing），
+ * 避免同一个 0.618 在两种模式下指向不同价位造成迷惑。
+ * swing 缺失时回退到年内高低点（旧口径）。
+ */
+export function computeKeyLevels(
+  d: RhythmResponse,
+  lang: 'zh' | 'en' = 'zh',
+  swing?: FibSwing | null,
+): KeyLevel[] | null {
   const s = d.series;
   if (s.length < 50) return null;
   const hl = actualHighLow(s);
@@ -148,12 +160,23 @@ export function computeKeyLevels(d: RhythmResponse, lang: 'zh' | 'en' = 'zh'): K
     { label: en ? '1Y low' : '年低', price: hl.low, color: 'rgba(56,189,248,0.55)' },
     { label: 'MA50', price: ma50, color: 'rgba(167,139,250,0.55)' },
   ];
-  for (const r of [0.382, 0.5, 0.618]) {
-    out.push({
-      label: String(r),
-      price: hl.low + (hl.high - hl.low) * r,
-      color: 'rgba(212,160,23,0.5)',
-    });
+  if (swing) {
+    // 与黄金分割模式同锚：经典三线 0.382/0.5/0.618
+    for (const lv of fibLevels(swing, 'classic')) {
+      out.push({
+        label: String(lv.ratio),
+        price: Math.round(lv.price * 100) / 100,
+        color: 'rgba(212,160,23,0.5)',
+      });
+    }
+  } else {
+    for (const r of [0.382, 0.5, 0.618]) {
+      out.push({
+        label: String(r),
+        price: hl.low + (hl.high - hl.low) * r,
+        color: 'rgba(212,160,23,0.5)',
+      });
+    }
   }
   return out;
 }
