@@ -11,6 +11,7 @@ import LoginModal from '../modals/LoginModal';
 import FamilyNews from '../FamilyNews';
 import DailyBrief from '../DailyBrief';
 import DenominatorStrip from '../DenominatorStrip';
+import MarketSentimentStrip from '../MarketSentimentStrip';
 import {
   fetchPosts,
   createPost,
@@ -215,6 +216,9 @@ export default function CommunityTab() {
 
       {/* 分母：30Y / 10Y 美债收益率（无 key 时自动隐藏） */}
       <DenominatorStrip />
+
+      {/* 市场情绪：VIX + 贪婪指数（取不到自动隐藏） */}
+      <MarketSentimentStrip />
 
       {/* 今日大事 + 财经日历：免登录可看 */}
       <FamilyNews />

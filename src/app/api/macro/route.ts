@@ -1,5 +1,6 @@
 // GET /api/macro —— 「分母」指标：30Y / 10Y 美债收益率（FRED DGS30/DGS10，免费 key）
-// 服务端缓存 6 小时（日度数据，不必频繁刷）。没有 FRED_API_KEY 时返回 ok:false，前端静默隐藏。
+// + 「市场情绪」：VIX（FRED VIXCLS，需 key）与 CNN 贪婪指数（免 key，浏览器头）。
+// 服务端缓存 6 小时（日度数据，不必频繁刷）。取不到就字段为 null，前端静默隐藏。
 import { NextResponse } from 'next/server';
 
 interface FredObs {
@@ -10,12 +11,12 @@ interface FredObs {
 let cache: { at: number; payload: unknown } | null = null;
 const TTL = 6 * 60 * 60 * 1000;
 
-async function latestYield(seriesId: string, key: string): Promise<{ date: string; value: number } | null> {
+async function fredLatest(seriesId: string, key: string): Promise<{ date: string; value: number } | null> {
   const url =
     `https://api.stlouisfed.org/fred/series/observations` +
     `?series_id=${seriesId}&api_key=${encodeURIComponent(key)}` +
     `&file_type=json&sort_order=desc&limit=10`;
-  const r = await fetch(url, { next: { revalidate: 21600 } });
+  const r = await fetch(url, { next: { revalidate: 21600 }, signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error(`fred ${seriesId} ${r.status}`);
   const j = await r.json();
   const obs: FredObs[] = j?.observations || [];
@@ -24,6 +25,25 @@ async function latestYield(seriesId: string, key: string): Promise<{ date: strin
     if (o.value !== '.' && Number.isFinite(v)) return { date: o.date, value: v };
   }
   return null;
+}
+
+/** CNN 贪婪指数：内部接口，需带浏览器头否则 418 */
+async function fearGreed(): Promise<{ score: number; rating: string; date: string } | null> {
+  const r = await fetch('https://production.dataviz.cnn.io/index/fearandgreed/graphdata', {
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+      Accept: 'application/json',
+      Referer: 'https://www.cnn.com/markets/fear-and-greed',
+    },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!r.ok) return null;
+  const j = await r.json();
+  const fg = j?.fear_and_greed;
+  if (!fg || !Number.isFinite(fg.score)) return null;
+  const ts: string = fg.timestamp || '';
+  return { score: Math.round(fg.score * 10) / 10, rating: String(fg.rating || 'neutral'), date: ts.slice(0, 10) };
 }
 
 /** 大白话解读：只描述分母贵贱，不下买卖结论 */
@@ -55,35 +75,64 @@ function fmtDateEn(iso: string): string {
 }
 
 export async function GET() {
-  const key = process.env.FRED_API_KEY;
-  if (!key) {
-    return NextResponse.json({ ok: false, reason: 'no_key' });
-  }
   if (cache && Date.now() - cache.at < TTL) {
     return NextResponse.json(cache.payload);
   }
-  try {
-    const [y30, y10] = await Promise.all([
-      latestYield('DGS30', key),
-      latestYield('DGS10', key),
-    ]);
-    if (!y30) throw new Error('no dgs30 data');
-    const payload = {
-      ok: true,
-      y30: Math.round(y30.value * 100) / 100,
-      y10: y10 ? Math.round(y10.value * 100) / 100 : null,
-      date: y30.date,
-      dateCN: fmtDateCN(y30.date),
-      dateEn: fmtDateEn(y30.date),
-      note: noteFor(y30.value),
-      noteEn: noteForEn(y30.value),
-    };
-    cache = { at: Date.now(), payload };
-    return NextResponse.json(payload);
-  } catch (e) {
-    return NextResponse.json(
-      { ok: false, reason: e instanceof Error ? e.message : 'fetch_failed' },
-      { status: 502 },
-    );
+  const key = process.env.FRED_API_KEY;
+
+  // 分母（需 FRED key）
+  const denom: Record<string, unknown> = { ok: false };
+  if (key) {
+    try {
+      const [y30, y10] = await Promise.all([
+        fredLatest('DGS30', key),
+        fredLatest('DGS10', key),
+      ]);
+      if (y30) {
+        Object.assign(denom, {
+          ok: true,
+          y30: Math.round(y30.value * 100) / 100,
+          y10: y10 ? Math.round(y10.value * 100) / 100 : null,
+          date: y30.date,
+          dateCN: fmtDateCN(y30.date),
+          dateEn: fmtDateEn(y30.date),
+          note: noteFor(y30.value),
+          noteEn: noteForEn(y30.value),
+        });
+      }
+    } catch {
+      // 分母取不到就空着，情绪条照常
+    }
+  } else {
+    denom.reason = 'no_key';
   }
+
+  // 市场情绪：VIX（需 key）+ CNN 贪婪指数（免 key）
+  let vix: { date: string; value: number } | null = null;
+  if (key) {
+    try {
+      vix = await fredLatest('VIXCLS', key);
+    } catch {
+      vix = null;
+    }
+  }
+  const fg = await fearGreed().catch(() => null);
+  const sentiment =
+    vix || fg
+      ? {
+          vix: vix ? Math.round(vix.value * 100) / 100 : null,
+          vixDate: vix ? vix.date : null,
+          vixDateCN: vix ? fmtDateCN(vix.date) : null,
+          vixDateEn: vix ? fmtDateEn(vix.date) : null,
+          fearGreed: fg ? fg.score : null,
+          fearGreedRating: fg ? fg.rating : null,
+          fearGreedDate: fg ? fg.date : null,
+          fearGreedDateCN: fg ? fmtDateCN(fg.date) : null,
+          fearGreedDateEn: fg ? fmtDateEn(fg.date) : null,
+        }
+      : null;
+
+  const payload = { ...denom, sentiment };
+  cache = { at: Date.now(), payload };
+  return NextResponse.json(payload);
 }
