@@ -10,6 +10,7 @@ import { useNickname } from '@/hooks/useNickname';
 import LoginModal from '../modals/LoginModal';
 import FamilyNews from '../FamilyNews';
 import DailyBrief from '../DailyBrief';
+import DenominatorStrip from '../DenominatorStrip';
 import {
   fetchPosts,
   createPost,
@@ -211,6 +212,9 @@ export default function CommunityTab() {
 
       {/* 每日两报：盘前瞻 + 盘后总结 */}
       <DailyBrief />
+
+      {/* 分母：30Y / 10Y 美债收益率（无 key 时自动隐藏） */}
+      <DenominatorStrip />
 
       {/* 今日大事 + 财经日历：免登录可看 */}
       <FamilyNews />
