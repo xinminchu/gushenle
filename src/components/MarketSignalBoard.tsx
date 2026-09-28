@@ -95,7 +95,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
             <button
               key={s.symbol}
               onClick={() => onPick(s.symbol)}
-              className="rounded-lg border border-slate-800 bg-slate-950/60 px-1 py-1.5 text-center active:bg-slate-800"
+              className="signal-tile rounded-lg border border-slate-800 bg-slate-950/60 px-1 py-1.5 text-center active:bg-slate-800"
             >
               <div className="text-[11px] font-bold text-slate-100 leading-tight">{s.symbol}</div>
               <div className="text-[9px] text-slate-500 leading-tight truncate">{s.name}</div>

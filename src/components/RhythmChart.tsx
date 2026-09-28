@@ -324,7 +324,7 @@ export default function RhythmChart({
         prevCloseLabel ||
         (showKeyLevels && keyLevels && keyLevels.length > 0)) &&
         chartType !== 'ohlc' && (
-        <div className="absolute top-1 left-1 right-16 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
+        <div className="absolute top-1 left-1 right-16 flex flex-wrap items-center gap-x-2 gap-y-0.5 chart-legend text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
           {prevCloseLabel && (
             <span>
               <span className="inline-block w-2.5 h-0 border-t border-dashed border-rose-500/70 mr-1 align-middle" />
@@ -359,7 +359,7 @@ export default function RhythmChart({
       )}
       {/* 四线图例 */}
       {chartType === 'ohlc' && (
-        <div className="absolute top-1 left-1 right-16 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
+        <div className="absolute top-1 left-1 right-16 flex flex-wrap items-center gap-x-2 gap-y-0.5 chart-legend text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
           {(
             [
               ['最高', OHLC_COLORS.high],

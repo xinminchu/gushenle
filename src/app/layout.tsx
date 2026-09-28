@@ -18,16 +18,16 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false, // 禁用页面缩放，提供类原生 App 体验
-  themeColor: '#0f172a',
+  themeColor: '#f8fafc',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-CN" className="dark">
+    <html lang="zh-CN" className="light">
       {/* 主题预置（ES5，老 Safari 可解析）：首屏绘制前按 localStorage 挂 light/dark，避免闪一下 */}
       <script
         dangerouslySetInnerHTML={{
-          __html: `(function(){try{var t=localStorage.getItem('gushenle:theme');if(t==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light');}}catch(e){}})();`,
+          __html: `(function(){try{var t=localStorage.getItem('gushenle:theme');if(t==='dark'){document.documentElement.classList.remove('light');document.documentElement.classList.add('dark');}}catch(e){}})();`,
         }}
       />
       {/* 启动探针（ES5 写法，老 Safari 也能解析）：React 8 秒内没挂载且抓到报错，

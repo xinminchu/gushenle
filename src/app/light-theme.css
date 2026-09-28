@@ -10,6 +10,16 @@ html.light {
   --foreground: #0f172a;
 }
 html.light .bg-slate-950 { background-color: #f1f5f9; }
+html.light .bg-slate-900\/70 { background-color: rgb(255 255 255 / 0.7); }
+html.light .bg-slate-900\/90 { background-color: rgb(255 255 255 / 0.9); }
+html.light .bg-slate-800\/30 { background-color: rgb(241 245 249 / 0.3); }
+html.light .bg-slate-800\/70 { background-color: rgb(241 245 249 / 0.7); }
+html.light .bg-slate-800\/90 { background-color: rgb(241 245 249 / 0.9); }
+html.light .bg-slate-700\/50 { background-color: rgb(241 245 249 / 0.5); }
+html.light .bg-slate-700\/60 { background-color: rgb(241 245 249 / 0.6); }
+html.light .bg-slate-700\/70 { background-color: rgb(241 245 249 / 0.7); }
+html.light .bg-amber-950\/80 { background-color: rgb(255 251 235 / 0.8); }
+html.light .bg-rose-950\/80 { background-color: rgb(255 241 242 / 0.8); }
 
 /* ---------- slate 背景 ---------- */
 html.light .bg-slate-900 { background-color: #ffffff; }
@@ -120,3 +130,15 @@ html.light .to-slate-900 { --tw-gradient-to: #f1f5f9; }
 
 /* ---------- 阴影：浅底上加深一点，卡片才有层次 ---------- */
 html.light .shadow-2xl { --tw-shadow: 0 25px 50px -12px rgb(15 23 42 / 0.18); }
+
+/* ---------- 刻意保留深色的卡（浅色下仍深底 + 浅字，保证可读） ----------
+   K 线图例 chart-legend、今日信号小格 signal-tile：用户要求单独给黑色背景 */
+html.light .chart-legend { background-color: rgb(15 23 42 / 0.88); }
+html.light .chart-legend .text-slate-500 { color: #94a3b8; }
+html.light .signal-tile { background-color: rgb(2 6 23 / 0.72); border-color: rgb(51 65 85 / 0.5); }
+html.light .signal-tile .text-slate-100 { color: #f1f5f9; }
+html.light .signal-tile .text-slate-500 { color: #94a3b8; }
+html.light .signal-tile .text-emerald-300 { color: #6ee7b7; }
+html.light .signal-tile .text-rose-300 { color: #fda4af; }
+html.light .signal-tile .text-amber-300 { color: #fcd34d; }
+html.light .signal-tile .text-sky-300 { color: #7dd3fc; }

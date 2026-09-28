@@ -1,4 +1,4 @@
-// 主题切换：深色 / 浅色，localStorage 持久化（gushenle:theme），默认深色
+// 主题切换：深色 / 浅色，localStorage 持久化（gushenle:theme），默认浅色
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -16,7 +16,7 @@ function applyTheme(t: Theme) {
 }
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [theme, setTheme] = useState<Theme>('light');
 
   useEffect(() => {
     try {
