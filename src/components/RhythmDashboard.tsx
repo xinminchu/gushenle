@@ -165,13 +165,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   // 图表类型：3M 及以内默认 K线，长区间默认收盘线；用户手动切换后记住选择（切区间时重置）
   const [chartTypeOverride, setChartTypeOverride] = useState<ChartType | null>(null);
   const [showRangeHL, setShowRangeHL] = useState(true);
-  /** 关键价位线（年高/年低/MA50/黄金分割回撤）：默认开，可关 */
+  /** 关键价位线（年高/年低/MA50，大位置）：默认开，可关 */
   const [showKeyLevels, setShowKeyLevels] = useState(true);
   /** 买入前体检弹窗 */
   const [showCheckup, setShowCheckup] = useState(false);
   /** 黄金分割参考线：开关 + 组合方案 + 波段窗口（调参用） */
   const [showFib, setShowFib] = useState(false);
-  /** 开关键价位：打开时自动关掉黄金分割（关键价位本来就含回撤线，避免堆叠）；关闭不影响对方 */
+  /** 开关键价位：打开时自动关掉黄金分割（避免线上线太多）；关闭不影响对方 */
   const toggleKeyLevels = () => {
     if (!showKeyLevels) setShowFib(false);
     setShowKeyLevels(!showKeyLevels);
@@ -399,16 +399,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   /** 自选股全量 1Y 数据：关键价位线用，每只只拉一次（播报已搬到持仓页，用自己的 hook） */
   const wlSymbols = useMemo(() => watchlist.map((i) => i.symbol), [watchlist]);
   const wlData = useWatchlistData(wlSymbols);
-  /** 当前标的的关键价位线（年高/年低/MA50/黄金分割回撤，回撤与黄金分割模式同锚） */
+  /** 当前标的的关键价位线（年高/年低/MA50） */
   const keyLevels = useMemo(() => {
     const yd = wlData[symbol];
     if (!yd) return null;
-    // 没开过黄金分割时 fibSwing 为 null，这里自己算一次，保证两处永远同锚
-    const sw =
-      fibSwing ?? (fibPts.length ? findSwing(fibPts, RECOMMENDED_FIB_LOOKBACK) : null);
-    return computeKeyLevels(yd, lang, sw);
+    return computeKeyLevels(yd, lang);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wlData, symbol, lang, fibSwing, fibPts]);
+  }, [wlData, symbol, lang]);
   /** 体检第 3 项用的三档高点：近3月（66个交易日）/ 近1年；历史档由体检弹窗自己拉 ALL 数据补 */
   const highs = useMemo(() => {
     const yd = wlData[symbol];

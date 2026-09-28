@@ -4,8 +4,6 @@
 
 import type { RhythmResponse, RhythmPoint } from './rhythm';
 import { STATUS_LABELS } from './rhythm';
-import type { FibSwing } from './fibonacci';
-import { fibLevels } from './fibonacci';
 
 /* ---------------- 一句话播报 ---------------- */
 
@@ -138,15 +136,13 @@ export interface KeyLevel {
  * 需要至少 50 个点（算 MA50）；不够返回 null。
  */
 /**
- * 关键价位：年内最高 / 年内最低 / 50 日均线 / 黄金分割回撤。
- * 回撤线的锚与「黄金分割」模式统一：都用当前区间最近一波的波段（swing），
- * 避免同一个 0.618 在两种模式下指向不同价位造成迷惑。
- * swing 缺失时回退到年内高低点（旧口径）。
+ * 关键价位：年内最高 / 年内最低 / 50 日均线。
+ * 分工：回撤线归「黄金分割」模式管（两处曾用不同锚导致 0.618 打架，
+ * 2026-09-28 起关键价位不再画回撤线，只留大位置，避免重复）。
  */
 export function computeKeyLevels(
   d: RhythmResponse,
   lang: 'zh' | 'en' = 'zh',
-  swing?: FibSwing | null,
 ): KeyLevel[] | null {
   const s = d.series;
   if (s.length < 50) return null;
@@ -155,28 +151,9 @@ export function computeKeyLevels(
   const closes = s.map((p) => p.close);
   const ma50 = closes.slice(-50).reduce((a, b) => a + b, 0) / 50;
   const en = lang === 'en';
-  const out: KeyLevel[] = [
+  return [
     { label: en ? '1Y high' : '年高', price: hl.high, color: 'rgba(244,114,182,0.55)' },
     { label: en ? '1Y low' : '年低', price: hl.low, color: 'rgba(56,189,248,0.55)' },
     { label: 'MA50', price: ma50, color: 'rgba(167,139,250,0.55)' },
   ];
-  if (swing) {
-    // 与黄金分割模式同锚：经典三线 0.382/0.5/0.618
-    for (const lv of fibLevels(swing, 'classic')) {
-      out.push({
-        label: String(lv.ratio),
-        price: Math.round(lv.price * 100) / 100,
-        color: 'rgba(212,160,23,0.5)',
-      });
-    }
-  } else {
-    for (const r of [0.382, 0.5, 0.618]) {
-      out.push({
-        label: String(r),
-        price: hl.low + (hl.high - hl.low) * r,
-        color: 'rgba(212,160,23,0.5)',
-      });
-    }
-  }
-  return out;
 }
