@@ -1027,7 +1027,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
           {/* ① 谷峰律动：主判断永远锚定近 3 月，不随展示区间变化 */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <h2 className="text-base font-semibold mb-3 text-slate-200 flex items-center">
-              {en ? 'Valley-Peak Rhythm' : '谷峰律动'}
+              {en ? 'Trough-Peak Rhythm' : '谷峰律动'}
               <span className="ml-2 text-[10px] font-normal px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
                 {en ? `Main call · past ${anchorLabel}` : `主判断 · 近${anchorLabel}`}
               </span>

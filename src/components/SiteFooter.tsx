@@ -35,7 +35,7 @@ function SiteStatsLine() {
     <p className="text-center text-[10px] text-slate-600 mt-1">
       {en ? (
         <>
-          {stats.visitors} visitors{stats.today != null ? ` · ${stats.today} today` : ''}
+          {stats.visitors}{' '}visitors{stats.today != null ? ` · ${stats.today} today` : ''}
           {stats.users != null ? ` · ${stats.users} registered` : ''}
         </>
       ) : (

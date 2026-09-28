@@ -21,7 +21,7 @@ function About() {
           ? 'Gushenle is a small companion site for personal and family investing. Happy trading, relaxed investing — no gambling, no tilting, no rage, no quitting.'
           : '股神乐是个人与家庭的投资陪伴小站。快乐炒股，轻松投资；不赌不堵，不气不弃。'}
       </p>
-      <h4 className={h4}>{en ? 'The core: Valley-Peak Rhythm' : '核心：谷峰律动'}</h4>
+      <h4 className={h4}>{en ? 'The core: Trough-Peak Rhythm' : '核心：谷峰律动'}</h4>
       <p className={p}>
         {en
           ? 'Rhythm is not a crystal ball — it\'s a behavior mirror. When things run too hot it warns you not to chase; when you\'ve fallen too far it stops you from panic-selling. Every call is anchored to the last 3 months, thresholds adapt to volatility, and a high score without speed reads as "Strong near the top", not overheated.'
@@ -203,7 +203,7 @@ function Timeline() {
     ['2026-08-20', 'PIIS 思路初成型', '第一版 Personal Investment Intelligent System（个人投资智能系统）项目思路浮现、初成型。', 'PIIS idea takes shape', 'The first Personal Investment Intelligent System concept emerged and took shape.'],
     ['2026-08-22', '股神乐品牌诞生', '股神乐品牌名诞生，gushenle.com 域名注册成功。', 'Gushenle brand is born', 'The Gushenle brand name was born; gushenle.com registered.'],
     ['2026-09-20', '原型诞生', '第一版想法和原型，股神乐有了雏形。', 'Prototype', 'First ideas and prototype — Gushenle takes shape.'],
-    ['2026-09-22', '正式上线', 'www.gushenle.com 首版发布。谷峰律动 v2：结论锚定近 3 月、波动自适应阈值、"判断复盘"上线；自选体系确立；四个小游戏上线。', 'Launch', 'www.gushenle.com v1 goes live. Valley-Peak Rhythm v2: calls anchored to 3 months, volatility-adaptive thresholds, backtest panel; watchlist system; four mini-games.'],
+    ['2026-09-22', '正式上线', 'www.gushenle.com 首版发布。谷峰律动 v2：结论锚定近 3 月、波动自适应阈值、"判断复盘"上线；自选体系确立；四个小游戏上线。', 'Launch', 'www.gushenle.com v1 goes live. Trough-Peak Rhythm v2: calls anchored to 3 months, volatility-adaptive thresholds, backtest panel; watchlist system; four mini-games.'],
     ['2026-09-23', '账号与家人', 'Supabase 邮箱登录、游戏战绩云同步；家人页换真内容：分享圈、今日大事、财经日历；盘中实时股价；股票名单库与发现股票；操作记忆 AI 建议；真实成本试算器。', 'Accounts & family', 'Supabase email login, game scores synced to cloud; Family tab goes real: sharing circle, today\'s events, economic calendar; live intraday quotes; stock universe + discover stocks; memory AI advice; true cost calculator.'],
     ['2026-09-23', 'GSL 1.0 Beta', '服务功能基本齐备，Beta 版成功上线。快乐炒股，轻松投资。🎉', 'GSL 1.0 Beta', 'Feature set complete — Beta is live. Happy trading, relaxed investing. 🎉'],
     ['2026-09-23', '搜得更快、看得更远', '发现股票支持拼音搜索（pg→苹果）、昵称别名（小火箭→RKLB、海力士→000660.KS）、打错自动纠正；韩股接入 Naver 真实行情，韩元价格本地化显示；修复中文输入法组词 bug。', 'Search faster, see further', 'Discover stocks: pinyin search (pg → Apple), nickname aliases (little rocket → RKLB, Hynix → 000660.KS), typo auto-correct; Korean stocks via Naver real quotes with KRW localization; Chinese IME composition bug fixed.'],

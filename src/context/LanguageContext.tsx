@@ -64,12 +64,23 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     return text;
   };
 
+  const title =
+    lang === 'zh'
+      ? '股神乐 (Gushenle) - 个人与家庭投资伴侣'
+      : 'Gushenle - Personal & family investment companion';
+
   return (
-    <LanguageContext.Provider
-      value={{ lang, toggleLanguage, setLang, t, words: LEGACY_WORDS[lang] }}
-    >
-      {children}
-    </LanguageContext.Provider>
+    <>
+      {/* React 19 会把这个 <title> hoist 到 head 最前面（先于 metadata 的 title），
+          浏览器取第一个 <title>，且 Next 的 head 管理也会以它为准同步 document.title。
+          之前只用 document.title 赋值会被 Next 的 head 管理覆盖回去，故改走声明式。 */}
+      <title>{title}</title>
+      <LanguageContext.Provider
+        value={{ lang, toggleLanguage, setLang, t, words: LEGACY_WORDS[lang] }}
+      >
+        {children}
+      </LanguageContext.Provider>
+    </>
   );
 }
 
