@@ -112,7 +112,7 @@ export async function GET(req: Request) {
     const loadItems = async (d: string): Promise<ScanItem[]> => {
       const r = await sb.from('market_scan').select(cols).eq('scan_date', d);
       if (r.error) throw r.error;
-      return toItems((r.data || []) as Record<string, unknown>[]);
+      return toItems((r.data || []) as unknown as Record<string, unknown>[]);
     };
 
     // 三行算法（与原来一致）：先 hot，再 cold（排除 hot），再 middle（排除 hot+cold）
