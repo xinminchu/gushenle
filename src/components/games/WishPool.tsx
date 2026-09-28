@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Lightbulb, MessageSquareHeart, Send, Trash2, Reply } from 'lucide-react';
+import { Send, Trash2, Reply } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useNickname } from '@/hooks/useNickname';
@@ -30,8 +30,8 @@ interface EndorseInfo {
 }
 
 const KIND_META = {
-  idea: { label: '游戏设想', icon: <Lightbulb className="w-3 h-3" />, chip: 'bg-violet-500/15 text-violet-300 border-violet-500/30' },
-  review: { label: '玩家评价', icon: <MessageSquareHeart className="w-3 h-3" />, chip: 'bg-sky-500/15 text-sky-300 border-sky-500/30' },
+  idea: { label: '游戏设想', text: 'text-slate-500' },
+  review: { label: '玩家评价', text: 'text-slate-500' },
 } as const;
 
 const fmtTime = (iso: string) => {
@@ -381,23 +381,23 @@ export default function WishPool() {
             <button
               key={k}
               onClick={() => setKind(k)}
-              className={`flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full border ${
+              className={`text-[11px] px-2.5 py-1.5 rounded-full border ${
                 kind === k
                   ? 'bg-sky-600 text-white border-sky-500 font-semibold'
                   : 'text-slate-400 border-slate-700'
               }`}
             >
-              {KIND_META[k].icon} {KIND_META[k].label}
+              {KIND_META[k].label}
             </button>
           ))}
         </div>
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          rows={2}
+          rows={3}
           maxLength={500}
           placeholder={kind === 'idea' ? '比如：来个"抄底接飞刀"游戏，越跌越买…' : '比如：割肉那个太真实了，玩完不敢乱卖了…'}
-          className="w-full bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 placeholder:text-slate-600 outline-none focus:border-sky-500 resize-none"
+          className="w-full bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 placeholder:text-slate-600 outline-none focus:border-sky-500 resize-none"
         />
         <div className="flex gap-2">
           {!user && (
@@ -422,7 +422,7 @@ export default function WishPool() {
       </div>
 
       {/* 留言列表 */}
-      <div className="mt-3 space-y-2">
+      <div className="mt-3 space-y-2.5">
         {wishes.length === 0 && (
           <p className="text-center text-[11px] text-slate-600 py-4">
             许愿池空空如也——来许第一个愿吧 🌱
@@ -431,10 +431,10 @@ export default function WishPool() {
         {wishes.map((w) => {
           const st = endorsements[w.id];
           return (
-          <div key={w.id} className="bg-slate-800/40 border border-slate-700/60 rounded-xl px-3 py-2.5">
+          <div key={w.id} className="bg-slate-800/40 border border-slate-700/60 rounded-xl px-3.5 py-3">
             <div className="flex items-center gap-1.5 mb-1">
-              <span className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border ${KIND_META[w.kind].chip}`}>
-                {KIND_META[w.kind].icon} {KIND_META[w.kind].label}
+              <span className={`text-[10px] ${KIND_META[w.kind].text}`}>
+                {KIND_META[w.kind].label}
               </span>
               <span className="text-[11px] text-slate-300 font-medium">{w.nickname}</span>
               {w.adopted && (
@@ -477,7 +477,7 @@ export default function WishPool() {
 
             {/* EaaS v0 · 认同区：具名认同，认同即定价（023 没跑时整行隐藏） */}
             {endorseReady && (
-              <div className="mt-1.5 flex items-center gap-2 min-w-0">
+              <div className="mt-2 flex items-center gap-2 min-w-0">
                 <button
                   onClick={() => toggleEndorse(w)}
                   disabled={endorseBusy === w.id}
@@ -487,7 +487,7 @@ export default function WishPool() {
                       : 'text-amber-300/90 border-amber-500/30 bg-amber-500/10'
                   }`}
                 >
-                  🤝 {st?.mine ? '已认同' : '认同'}
+                  {st?.mine ? '已认同' : '认同'}
                   {st && st.count > 0 ? `（${st.count}）` : ''}
                 </button>
                 {st && st.count > 0 && (
