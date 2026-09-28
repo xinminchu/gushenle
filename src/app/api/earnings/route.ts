@@ -100,6 +100,7 @@ export interface SymbolReactions {
 }
 
 const reactCache = new Map<string, { at: number; data: SymbolReactions }>();
+// 6 小时：财报日历本身是低频数据；长 TTL 避免每个用户访问都触发上百次 Nasdaq 日历扫描
 const REACT_TTL = 6 * 60 * 60 * 1000;
 
 function addDays(base: Date, n: number): Date {
