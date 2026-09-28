@@ -512,15 +512,6 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
 
   return (
     <div className="w-full space-y-4">
-      {/* 今日信号：全市场扫描的三行（涨太猛了/看一眼/跌过头了），点一只直接看它的价格走势 */}
-      <MarketSignalBoard
-        onPick={(s) => {
-          setSymbol(s);
-          requestAnimationFrame(() => {
-            priceChartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          });
-        }}
-      />
       {/* 标题 + 自选管理 + 标的选择 */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -1238,6 +1229,16 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
         </div>
       )}
       </div>{/* 价格走势区锚点结束 */}
+
+      {/* 今日信号：挪到首页最底部——进来先看自选和走势，信号在下面等着 */}
+      <MarketSignalBoard
+        onPick={(s) => {
+          setSymbol(s);
+          requestAnimationFrame(() => {
+            priceChartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+        }}
+      />
 
       {/* 沉思乐：涨太猛了时点击诊断卡弹出的冷静拦截（看持仓说话） */}
       {showZenModal && data && judgment && (
