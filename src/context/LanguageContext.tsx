@@ -33,6 +33,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+      document.title =
+        lang === 'zh'
+          ? '股神乐 (Gushenle) - 个人与家庭投资伴侣'
+          : 'Gushenle - Personal & family investment companion';
     } catch {
       /* 忽略 */
     }

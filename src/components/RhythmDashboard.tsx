@@ -1013,7 +1013,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               <div className="mt-1.5 flex justify-between text-[10px] text-slate-600">
                 <span>{en ? `Band position · past ${rangeName}${data.slicePos == null ? ' (not enough points)' : ''}` : `近${rangeName}分位位置${data.slicePos == null ? '（点数不足）' : ''}`}</span>
                 <span>
-                  {en ? `${data.series.length} points · updated ` : `数据点: ${data.series.length} 天 · 数据更新于 `}
+                  {en ? `${data.series.length} points · updated` : `数据点: ${data.series.length} 天 · 数据更新于`}
+                  {'\u00A0'}
                   {new Date(data.updatedAt).toLocaleTimeString(en ? 'en-US' : 'zh-CN', {
                     hour: '2-digit',
                     minute: '2-digit',

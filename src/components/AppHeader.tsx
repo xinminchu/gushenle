@@ -19,6 +19,7 @@ import { OPEN_LOGIN_EVENT } from './games/LoginNudge';
 export default function AppHeader() {
   const { user, loading, configured, signOut } = useAuth();
   const { lang, setLang, t } = useLanguage();
+  const en = lang === 'en';
   const { theme, toggle } = useTheme();
   const [loginOpen, setLoginOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -56,9 +57,9 @@ export default function AppHeader() {
     <div className="max-w-md mx-auto">
       <div className="px-4 pt-4 pb-1.5">
         <header className="flex justify-between items-center gap-2">
-          {/* 左：Logo 中英常驻，不随语言切换 */}
+          {/* 左：Logo，英文模式只显示 Gushenle */}
           <h1 className="text-xl font-bold text-slate-100 whitespace-nowrap">
-            股神乐 Gushenle
+            {en ? 'Gushenle' : '股神乐 Gushenle'}
           </h1>
           {/* 右：操作行 */}
           <div className="flex items-center gap-1.5 shrink-0">
@@ -179,10 +180,10 @@ export default function AppHeader() {
             {/* 主题切换：深色 / 浅色（文字按钮，长辈一眼看懂） */}
             <button
               onClick={toggle}
-              title={theme === 'dark' ? '切换到浅色' : '切换到深色'}
+              title={theme === 'dark' ? (en ? 'Switch to light mode' : '切换到浅色') : (en ? 'Switch to dark mode' : '切换到深色')}
               className="bg-slate-800 border border-slate-700 text-slate-400 hover:text-slate-200 text-[10px] px-2 py-1 rounded-full active:scale-95 transition whitespace-nowrap"
             >
-              {theme === 'dark' ? '浅色' : '深色'}
+              {theme === 'dark' ? (en ? 'Light' : '浅色') : (en ? 'Dark' : '深色')}
             </button>
             {/* 站长专属：工具箱入口 */}
             {isAdmin && (

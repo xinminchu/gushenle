@@ -172,7 +172,7 @@ function FlowDonut({
             );
           })}
           <text x="90" y="82" textAnchor="middle" fontSize="11" fill="#94a3b8">
-            {net >= 0 ? '净流入' : '净流出'}
+            {net >= 0 ? (en ? 'Net inflow' : '净流入') : (en ? 'Net outflow' : '净流出')}
           </text>
           <text
             x="90"
@@ -190,12 +190,12 @@ function FlowDonut({
       {/* 流入 vs 流出：金额 + 占总和比例 */}
       <div className="flex justify-center gap-6 mt-1 text-[11px]">
         <span className="tabular-nums">
-          <span className="text-emerald-400 font-medium">流入</span>{' '}
+          <span className="text-emerald-400 font-medium">{en ? 'Inflow' : '流入'}</span>{' '}
           <span className="text-slate-200 font-semibold">{fmtCompactMoney(symbol, totalIn)}</span>{' '}
           <span className="text-slate-500">{inPct}%</span>
         </span>
         <span className="tabular-nums">
-          <span className="text-rose-400 font-medium">流出</span>{' '}
+          <span className="text-rose-400 font-medium">{en ? 'Outflow' : '流出'}</span>{' '}
           <span className="text-slate-200 font-semibold">{fmtCompactMoney(symbol, totalOut)}</span>{' '}
           <span className="text-slate-500">{outPct}%</span>
         </span>
@@ -206,13 +206,13 @@ function FlowDonut({
         {arcs.slice(0, 3).map((a, i) => (
           <span key={i} className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-sm inline-block" style={{ background: a.color }} />
-            {a.short}流入 {Math.round(a.frac * 100)}%
+            {a.short}{en ? ' inflow' : '流入'} {Math.round(a.frac * 100)}%
           </span>
         ))}
         {arcs.slice(3).map((a, i) => (
           <span key={i} className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-sm inline-block" style={{ background: a.color }} />
-            {a.short}流出 {Math.round(a.frac * 100)}%
+            {a.short}{en ? ' outflow' : '流出'} {Math.round(a.frac * 100)}%
           </span>
         ))}
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 
 /**
  * 双时钟：纽约 / 北京实时时间，左右分布，每秒跳动。
@@ -41,6 +42,8 @@ const nyDate = new Intl.DateTimeFormat('en-US', {
 });
 
 export default function WorldClock() {
+  const { lang } = useLanguage();
+  const en = lang === 'en';
   // null 占位：避免 SSR 与客户端水合不一致，挂载后再走表
   const [now, setNow] = useState<Date | null>(null);
 
@@ -57,11 +60,11 @@ export default function WorldClock() {
   return (
     <div className="flex items-center justify-center gap-1.5 px-4 pt-1.5 text-[11px] tabular-nums select-none whitespace-nowrap">
       <span className="text-slate-500">
-        <span className="text-slate-300 font-medium">{bj}</span> 北京
+        <span className="text-slate-300 font-medium">{bj}</span> {en ? 'Beijing' : '北京'}
       </span>
       <span aria-hidden="true" className="text-[11px]">🤝</span>
       <span className="text-slate-500">
-        纽约 <span className="text-slate-300 font-medium">{ny}</span>
+        {en ? 'New York' : '纽约'} <span className="text-slate-300 font-medium">{ny}</span>
       </span>
     </div>
   );
