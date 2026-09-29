@@ -25,6 +25,7 @@ const EncyclopediaGame = dynamic(() => import('../games/EncyclopediaGame'), { ss
 const WheelGame = dynamic(() => import('../games/WheelGame'), { ssr: false });
 const DiceGame = dynamic(() => import('../games/DiceGame'), { ssr: false });
 const DrunkardGame = dynamic(() => import('../games/DrunkardGame'), { ssr: false });
+const ChartQuizGame = dynamic(() => import('../games/ChartQuizGame'), { ssr: false });
 
 export default function FunTab() {
   const [activeGame, setActiveGame] = useState<string | null>(null);
@@ -191,6 +192,13 @@ export default function FunTab() {
       hot: true,
       credit: '@vipdongxia',
     },
+    {
+      id: 'chartquiz',
+      name: '股民必备手册',
+      icon: GAME_ICONS.chartquiz,
+      level: '🟢 极低',
+      hot: true,
+    },
   ];
 
   const getGameTitle = (id: string | null) => {
@@ -331,6 +339,7 @@ export default function FunTab() {
               {activeGame === 'stockbox' && <StockBoxGame onGoEndorse={goEndorse} />}
               {activeGame === 'dice' && <DiceGame />}
               {activeGame === 'drunk' && <DrunkardGame />}
+              {activeGame === 'chartquiz' && <ChartQuizGame />}
             </div>
           </div>
         </div>
