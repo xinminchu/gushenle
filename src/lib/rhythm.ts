@@ -445,7 +445,7 @@ export interface RhythmResponse {
   /** true=报价接口给的价（盘中实时或盘后），false=日线收盘价 */
   priceLive: boolean;
   /** 价格来源的会话：live=盘中，after-hours=盘后，close=日线收盘 */
-  priceSession: 'live' | 'pre-market' | 'after-hours' | 'close';
+  priceSession: 'live' | 'pre-market' | 'after-hours' | 'after-hours-frozen' | 'close';
   /** 实时价的时间戳（美东），收盘价时为 null */
   priceTime: string | null;
   /** 涨跌幅（%）：盘中相对昨收；盘后相对上一日线收盘（即今日至今）；收盘价时为 null */

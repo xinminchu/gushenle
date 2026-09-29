@@ -1171,7 +1171,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                         </span>
                       </>
                     )}
-                    {data.priceSession === 'after-hours' && (
+                    {(data.priceSession === 'after-hours' ||
+                    data.priceSession === 'after-hours-frozen') && (
                       <>
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
                         <span className="text-amber-300">
