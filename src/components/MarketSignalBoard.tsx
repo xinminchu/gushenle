@@ -25,14 +25,14 @@ interface ScanPayload {
   cold?: ScanItem[];
   /** 每行实际用的数据日期（空行回补时与 scanDate 不同） */
   rowDates?: { hot: string; middle: string; cold: string };
-  /** 中间行是否经过"近20天净流入为正"过滤 */
+  /** 中间行是否经过"近20天流入（估算）为正"过滤 */
   flowFilter?: boolean;
 }
 
 /**
  * 首页「今日信号」：每天收盘后批处理扫精选池，摆三行
  * 🔥 涨得欢：冲高过热，按分从高到低前 5 —— 慎追，当心套牢（红框栏杆）
- * 👀 看一眼：离50由近到远、50上下成对比较，留近20天净流入为正者；
+ * 👀 看一眼：离50由近到远、50上下成对比较，留近20天流入（估算）为正者；
  *   都为正取20天流入（估算）大者 —— 中间行名字暂定（绿框观察区）
  * 🥶 跌得凶：分最低的 5 只（跌过头判定天然排最前）—— 慎割肉，慎抄底（红框栏杆）
  * 不展示律动分；连涨/连跌≥3 天在 tile 上打标（平盘打断）；点一只直接跳到它的价格走势。
@@ -169,7 +169,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
         data.middle || [],
         `👀 ${tx(lang, 'Worth a look', '看一眼')}`,
         tx(lang, data.flowFilter
-            ? 'near 50 · 20-day net inflow'
+            ? 'near 50 · 20-day inflow (est.)'
             : 'closest to score 50', data.flowFilter
             ? '离50近 · 近20天买入多'
             : '离50分最近'),
