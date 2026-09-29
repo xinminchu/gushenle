@@ -36,8 +36,14 @@ function buildResponse(
   const lastClose = closes[closes.length - 1];
   const first = closes[0];
 
-  // 盘中用实时价，否则用日线收盘价；诊断（judgment）永远走日线收盘序列，不受盘中噪音影响
-  const livePrice = live && live.marketOpen && live.price > 0 ? live.price : null;
+  // 价格来源：盘中用实时价；盘后也用报价接口（日线接口要到次日才发布今日的 bar，
+  // 收盘后若只看日线会停留在上一交易日的收盘价）。诊断（judgment）永远走日线收盘序列，不受影响。
+  const quoteOk = !!live && live.price > 0;
+  const afterHours =
+    quoteOk && !live!.marketOpen && live!.marketStatus === 'After-Hours';
+  const livePrice = quoteOk && (live!.marketOpen || afterHours) ? live!.price : null;
+  const priceSession: 'live' | 'after-hours' | 'close' =
+    livePrice != null ? (live!.marketOpen ? 'live' : 'after-hours') : 'close';
   const displayPrice = livePrice ?? lastClose;
 
   // 所选区间的分位低点/高点（5%/95% 分位数，抗离群点）
@@ -64,8 +70,15 @@ function buildResponse(
     range: rangeId,
     price: Number(displayPrice.toFixed(2)),
     priceLive: livePrice != null,
+    priceSession,
     priceTime: livePrice != null ? live!.time || null : null,
-    dayChangePct: livePrice != null ? live!.dayChangePct : null,
+    // 盘中：报价接口的当日涨跌；盘后：相对上一日线收盘（即今日至今的涨跌）
+    dayChangePct:
+      priceSession === 'live'
+        ? live!.dayChangePct
+        : priceSession === 'after-hours'
+          ? Number((((livePrice! - lastClose) / lastClose) * 100).toFixed(2))
+          : null,
     prevClose: Number(lastClose.toFixed(2)),
     changePct: Number((((displayPrice - first) / first) * 100).toFixed(2)),
     low: Number(low.toFixed(2)),

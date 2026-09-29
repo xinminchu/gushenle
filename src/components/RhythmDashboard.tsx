@@ -293,7 +293,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
 
   // 盘中每 60 秒静默刷新一次实时价（页面切到后台时不拉；收盘后自动停）
   useEffect(() => {
-    if (!data?.priceLive) return;
+    if (data?.priceSession !== 'live') return;
     const id = setInterval(() => {
       if (document.hidden) return;
       getRhythm(symbol, range, { force: true, lang })
@@ -301,7 +301,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
         .catch((err) => console.error('盘中刷新失败:', err));
     }, 60000);
     return () => clearInterval(id);
-  }, [data?.priceLive, symbol, range, lang]);
+  }, [data?.priceSession, symbol, range, lang]);
 
   // 事件标记：当前标的的财报日（过去 4 次 + 下一次）+ 宏观事件，画在 K 线图上。
   // 拿不到就空着，不影响主流程。
@@ -1159,10 +1159,21 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                 </span>
                 {data.priceLive ? (
                   <span className="flex items-center gap-1 shrink-0 text-[9px]" title={data.priceTime ?? undefined}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-emerald-400">
-                      {en ? 'Live' : '实时'}{quoteTimeShort ? ` ${quoteTimeShort}` : ''}
-                    </span>
+                    {data.priceSession === 'after-hours' ? (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
+                        <span className="text-amber-300">
+                          {en ? 'After-hr' : '盘后'}{quoteTimeShort ? ` ${quoteTimeShort}` : ''}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-emerald-400">
+                          {en ? 'Live' : '实时'}{quoteTimeShort ? ` ${quoteTimeShort}` : ''}
+                        </span>
+                      </>
+                    )}
                     {data.dayChangePct != null && (
                       <span className={data.dayChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
                         {data.dayChangePct >= 0 ? '+' : ''}

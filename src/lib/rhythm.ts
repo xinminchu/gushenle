@@ -442,11 +442,13 @@ export interface RhythmResponse {
   symbol: string;
   range: string;
   price: number;
-  /** true=盘中实时价，false=日线收盘价 */
+  /** true=报价接口给的价（盘中实时或盘后），false=日线收盘价 */
   priceLive: boolean;
+  /** 价格来源的会话：live=盘中，after-hours=盘后，close=日线收盘 */
+  priceSession: 'live' | 'after-hours' | 'close';
   /** 实时价的时间戳（美东），收盘价时为 null */
   priceTime: string | null;
-  /** 当日涨跌幅（%，相对昨收）；仅实时价时有值 */
+  /** 涨跌幅（%）：盘中相对昨收；盘后相对上一日线收盘（即今日至今）；收盘价时为 null */
   dayChangePct: number | null;
   /** 日线最后一根收盘价；盘中时=昨收（图上红线就是它），收盘后=现价 */
   prevClose: number | null;

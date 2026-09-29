@@ -311,6 +311,7 @@ async function getNaverLiveQuote(code: string): Promise<LiveQuote | null> {
       dayChangePct: Number((((price - open) / open) * 100).toFixed(2)),
       time: String(last.localDateTime || ''),
       marketOpen: isKrxOpen(),
+      marketStatus: '',
     };
   } catch {
     return null;
@@ -374,6 +375,8 @@ export interface LiveQuote {
   /** 如 "Sep 23, 2026 11:37 AM ET" */
   time: string;
   marketOpen: boolean;
+  /** Nasdaq 原始 marketStatus：'Open' | 'After-Hours' | 'Pre-Market' | 'Closed' 等 */
+  marketStatus: string;
 }
 
 /**
@@ -413,6 +416,7 @@ export async function getLiveQuote(symbol: string): Promise<LiveQuote | null> {
       dayChangePct: Number.isFinite(dayChangePct) ? Number(dayChangePct.toFixed(2)) : 0,
       time: String(p?.lastTradeTimestamp || ''),
       marketOpen: data?.marketStatus === 'Open',
+      marketStatus: String(data?.marketStatus || ''),
     };
   } catch {
     return null;
