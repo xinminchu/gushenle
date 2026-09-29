@@ -8,7 +8,7 @@ import { useNickname } from '@/hooks/useNickname';
 import { isAdminEmail } from '@/lib/admin';
 import { REPLY_DRAFTS } from '@/lib/replyDrafts';
 import { grantEndorseBonus, BONUS_PER_ENDORSE } from '@/lib/stockbox';
-import { zh2hant } from '@/lib/hant';
+import { tx, zh2hant } from '@/lib/hant';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Lang } from '@/lib/i18n';
 
@@ -33,14 +33,16 @@ interface EndorseInfo {
 }
 
 const KIND_META = {
-  idea: { label: '游戏设想', text: 'text-slate-500' },
-  review: { label: '玩家评价', text: 'text-slate-500' },
+  idea: { zh: '游戏设想', en: 'Game idea', text: 'text-slate-500' },
+  review: { zh: '玩家评价', en: 'Player review', text: 'text-slate-500' },
 } as const;
 
 const fmtTime = (lang: Lang, iso: string) => {
   try {
     const d = new Date(iso);
-    return zh2hant(lang, `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+    const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    if (lang === 'en') return `${d.getMonth() + 1}/${d.getDate()} ${hm}`;
+    return zh2hant(lang, `${d.getMonth() + 1}月${d.getDate()}日 ${hm}`);
   } catch {
     return '';
   }
@@ -108,7 +110,7 @@ export default function WishPool() {
         }[]) {
           const m = map[e.wish_id] ?? (map[e.wish_id] = { count: 0, names: [], mine: false });
           m.count += 1;
-          if (m.names.length < 3) m.names.push(e.display_name || '股友');
+          if (m.names.length < 3) m.names.push(e.display_name || tx(lang, 'a fellow player', '股友'));
           if (user && e.user_id === user.id) m.mine = true;
         }
         setEndorsements(map);
@@ -196,12 +198,12 @@ export default function WishPool() {
   const toggleEndorse = async (w: Wish) => {
     if (!supabase || endorseBusy) return;
     if (!user) {
-      setMsg(zh2hant(lang, '登录后可认同'));
+      setMsg(tx(lang, 'Sign in to endorse', '登录后可认同'));
       setTimeout(() => setMsg(''), 3000);
       return;
     }
     if (w.user_id && w.user_id === user.id) {
-      setMsg(zh2hant(lang, '自己的许愿不用认同啦～'));
+      setMsg(tx(lang, "No need to endorse your own wish~", '自己的许愿不用认同啦～'));
       setTimeout(() => setMsg(''), 3000);
       return;
     }
@@ -224,7 +226,7 @@ export default function WishPool() {
         if (error) throw error;
         // EaaS v0 联动：认同一条留言，股票盲盒 +5 次（每条终身只加一次）
         const bonus = grantEndorseBonus(w.id);
-        setMsg(bonus ? zh2hant(lang, `已认同！股票盲盒 +${BONUS_PER_ENDORSE} 次 🎁`) : zh2hant(lang, '已认同'));
+        setMsg(bonus ? tx(lang, `Endorsed! Stock blind box +${BONUS_PER_ENDORSE} 🎁`, `已认同！股票盲盒 +${BONUS_PER_ENDORSE} 次 🎁`) : tx(lang, 'Endorsed', '已认同'));
         setTimeout(() => setMsg(''), 3000);
       }
       await loadEndorsements(wishes.map((x) => x.id));
@@ -250,10 +252,10 @@ export default function WishPool() {
       });
       const j = await res.json();
       if (!res.ok || !j.ok) throw new Error(j.error || '认领失败');
-      setMsg(zh2hant(lang, '已提交认领「') + w.nickname + zh2hant(lang, '」，等站长审核～'));
+      setMsg(tx(lang, 'Claim submitted for \"', '已提交认领「') + w.nickname + tx(lang, '\", awaiting review~', '」，等站长审核～'));
       await loadClaims();
     } catch (e) {
-      setMsg(e instanceof Error ? zh2hant(lang, e.message) : zh2hant(lang, '认领失败'));
+      setMsg(e instanceof Error ? e.message : tx(lang, 'Claim failed', '认领失败'));
     } finally {
       setClaimBusy(null);
       setTimeout(() => setMsg(''), 4000);
@@ -263,15 +265,15 @@ export default function WishPool() {
   const submit = async () => {
     const text = content.trim();
     if (!text) {
-      setMsg(zh2hant(lang, '先写点什么再发送吧～'));
+      setMsg(tx(lang, 'Write something first~', '先写点什么再发送吧～'));
       return;
     }
     if (!supabase) {
-      setMsg(zh2hant(lang, '留言功能还没准备好，稍后再试'));
+      setMsg(tx(lang, "Comments aren't ready yet, try again later", '留言功能还没准备好，稍后再试'));
       return;
     }
     if (!user && !guestName.trim()) {
-      setMsg(zh2hant(lang, '匿名留言请填个昵称，以后认领得靠它～'));
+      setMsg(tx(lang, "Add a nickname for anonymous posts — you'll need it to claim them later~", '匿名留言请填个昵称，以后认领得靠它～'));
       return;
     }
     setPosting(true);
@@ -286,10 +288,10 @@ export default function WishPool() {
       });
       if (error) throw error;
       setContent('');
-      setMsg(zh2hant(lang, user ? '已收到！贡献值 +10 🎉' : '已收到！登录后留言可获得贡献值'));
+      setMsg(tx(lang, user ? 'Got it! +10 contribution pts 🎉' : 'Got it! Sign in to earn contribution pts', user ? '已收到！贡献值 +10 🎉' : '已收到！登录后留言可获得贡献值'));
       await load();
     } catch {
-      setMsg(zh2hant(lang, '发送失败，检查网络后重试'));
+      setMsg(tx(lang, 'Send failed, check your connection and retry', '发送失败，检查网络后重试'));
     } finally {
       setPosting(false);
       setTimeout(() => setMsg(''), 3000);
@@ -321,7 +323,7 @@ export default function WishPool() {
       setReplyText('');
       await load();
     } catch (e) {
-      setMsg(e instanceof Error ? zh2hant(lang, e.message) : zh2hant(lang, '保存失败'));
+      setMsg(e instanceof Error ? e.message : tx(lang, 'Save failed', '保存失败'));
       setTimeout(() => setMsg(''), 4000);
     } finally {
       setReplyBusy(false);
@@ -366,16 +368,16 @@ export default function WishPool() {
   return (
     <section className="mt-6">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-sm font-bold text-slate-200">{zh2hant(lang, '💡 游戏许愿池')}</h2>
+        <h2 className="text-sm font-bold text-slate-200">{tx(lang, '💡 Game Wish Pool', '💡 游戏许愿池')}</h2>
         {user && (
           <span className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-full px-2 py-0.5">
-            {zh2hant(lang, `我的贡献值：${points}`)}
+            {tx(lang, `My pts: ${points}`, `我的贡献值：${points}`)}
           </span>
         )}
       </div>
       <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
-        {zh2hant(lang, '想玩什么股票主题游戏？直接许愿——你的设想可能变成下一个游戏，贡献者榜上有名。')}
-        {!user && <span className="text-slate-400">{zh2hant(lang, '匿名留言请填昵称（以后登录可认领），登录后留言计贡献值。')}</span>}
+        {tx(lang, 'What stock-themed game do you want? Make a wish — your idea could become the next game, with your name on the contributors list.', '想玩什么股票主题游戏？直接许愿——你的设想可能变成下一个游戏，贡献者榜上有名。')}
+        {!user && <span className="text-slate-400">{tx(lang, 'Anonymous posts need a nickname (claimable after sign-in); signed-in posts earn pts.', '匿名留言请填昵称（以后登录可认领），登录后留言计贡献值。')}</span>}
       </p>
 
       {/* 发表区 */}
@@ -391,7 +393,7 @@ export default function WishPool() {
                   : 'text-slate-400 border-slate-700'
               }`}
             >
-              {zh2hant(lang, KIND_META[k].label)}
+              {tx(lang, KIND_META[k].en, KIND_META[k].zh)}
             </button>
           ))}
         </div>
@@ -400,7 +402,7 @@ export default function WishPool() {
           onChange={(e) => setContent(e.target.value)}
           rows={3}
           maxLength={500}
-          placeholder={zh2hant(lang, kind === 'idea' ? '比如：来个"抄底接飞刀"游戏，越跌越买…' : '比如：割肉那个太真实了，玩完不敢乱卖了…')}
+          placeholder={tx(lang, kind === 'idea' ? 'e.g. a "catch the falling knife" game — buy more as it drops…' : "e.g. the cut-loss game felt too real — I won't sell recklessly again…", kind === 'idea' ? '比如：来个"抄底接飞刀"游戏，越跌越买…' : '比如：割肉那个太真实了，玩完不敢乱卖了…')}
           className="w-full bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 placeholder:text-slate-600 outline-none focus:border-sky-500 resize-none"
         />
         <div className="flex gap-2">
@@ -409,7 +411,7 @@ export default function WishPool() {
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
               maxLength={20}
-              placeholder={zh2hant(lang, '昵称（必填）')}
+              placeholder={tx(lang, 'Nickname (required)', '昵称（必填）')}
               className="w-28 bg-slate-900/80 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 placeholder:text-slate-600 outline-none focus:border-sky-500"
             />
           )}
@@ -419,7 +421,7 @@ export default function WishPool() {
             className="flex-1 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-bold flex items-center justify-center gap-1"
           >
             <Send className="w-3.5 h-3.5" />
-            {posting ? zh2hant(lang, '发送中…') : user ? zh2hant(lang, '许愿（+10 贡献值）') : zh2hant(lang, '匿名许愿')}
+            {posting ? tx(lang, 'Sending…', '发送中…') : user ? tx(lang, 'Make a wish (+10 pts)', '许愿（+10 贡献值）') : tx(lang, 'Wish anonymously', '匿名许愿')}
           </button>
         </div>
         {msg && <p className="text-[11px] text-emerald-300">{msg}</p>}
@@ -429,7 +431,7 @@ export default function WishPool() {
       <div className="mt-3 space-y-2.5">
         {wishes.length === 0 && (
           <p className="text-center text-[11px] text-slate-600 py-4">
-            {zh2hant(lang, '许愿池空空如也——来许第一个愿吧 🌱')}
+            {tx(lang, 'The wish pool is empty — make the first wish 🌱', '许愿池空空如也——来许第一个愿吧 🌱')}
           </p>
         )}
         {wishes.map((w) => {
@@ -438,30 +440,30 @@ export default function WishPool() {
           <div key={w.id} className="bg-slate-800/40 border border-slate-700/60 rounded-xl px-3.5 py-3">
             <div className="flex items-center gap-1.5 mb-1">
               <span className={`text-[10px] ${KIND_META[w.kind].text}`}>
-                {zh2hant(lang, KIND_META[w.kind].label)}
+                {tx(lang, KIND_META[w.kind].en, KIND_META[w.kind].zh)}
               </span>
               <span className="text-[11px] text-slate-300 font-medium">{w.nickname}</span>
               {w.adopted && (
                 <span className="text-[10px] text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded">
-                  {zh2hant(lang, '🎉 已被采纳')}
+                  {tx(lang, '🎉 Adopted', '🎉 已被采纳')}
                 </span>
               )}
               {w.user_id && (
                 <span className="text-[10px] text-amber-400/80">
-                  {zh2hant(lang, `+${10 + (w.bonus_points || 0)} 贡献`)}
+                  {tx(lang, `+${10 + (w.bonus_points || 0)} pts`, `+${10 + (w.bonus_points || 0)} 贡献`)}
                 </span>
               )}
               {/* EaaS v0 · 昵称认领：登录用户可认领无人认领的具名留言，站长审批 */}
               {claimReady && user && !w.user_id && w.nickname !== '匿名股友' && (
                 pendingClaims.has(w.nickname) ? (
-                  <span className="text-[10px] text-slate-500">{zh2hant(lang, '📥 审核中')}</span>
+                  <span className="text-[10px] text-slate-500">{tx(lang, '📥 Under review', '📥 审核中')}</span>
                 ) : (
                   <button
                     onClick={() => claimNickname(w)}
                     disabled={claimBusy === w.nickname}
                     className="text-[10px] text-sky-400/90 underline underline-offset-2 disabled:opacity-50"
                   >
-                    {claimBusy === w.nickname ? zh2hant(lang, '提交中…') : zh2hant(lang, '📥 认领')}
+                    {claimBusy === w.nickname ? tx(lang, 'Submitting…', '提交中…') : tx(lang, '📥 Claim', '📥 认领')}
                   </button>
                 )
               )}
@@ -473,7 +475,7 @@ export default function WishPool() {
                     confirmDel === w.id ? 'bg-rose-600 text-white' : 'text-slate-500'
                   }`}
                 >
-                  {confirmDel === w.id ? zh2hant(lang, '确认删？') : <Trash2 className="w-3 h-3" />}
+                  {confirmDel === w.id ? tx(lang, 'Delete?', '确认删？') : <Trash2 className="w-3 h-3" />}
                 </button>
               )}
             </div>
@@ -491,18 +493,18 @@ export default function WishPool() {
                       : 'text-amber-300/90 border-amber-500/30 bg-amber-500/10'
                   }`}
                 >
-                  {st?.mine ? zh2hant(lang, '已认同') : zh2hant(lang, '认同')}
-                  {st && st.count > 0 ? zh2hant(lang, `（${st.count}）`) : ''}
+                  {st?.mine ? tx(lang, 'Endorsed', '已认同') : tx(lang, 'Endorse', '认同')}
+                  {st && st.count > 0 ? tx(lang, ` (${st.count})`, `（${st.count}）`) : ''}
                 </button>
                 {st && st.count > 0 && (
                   <span className="text-[10px] text-slate-500 truncate">
                     {st.names.join('、')}
-                    {st.count > st.names.length ? zh2hant(lang, ` 等 ${st.count} 人`) : ''}
-                    {zh2hant(lang, '认同了这条')}
+                    {st.count > st.names.length ? tx(lang, ` +${st.count - st.names.length} more`, ` 等 ${st.count} 人`) : ''}
+                    {tx(lang, 'endorsed this', '认同了这条')}
                   </span>
                 )}
                 {!st?.mine && (
-                  <span className="text-[10px] text-slate-600 shrink-0">{zh2hant(lang, `认同+${BONUS_PER_ENDORSE}次盲盒`)}</span>
+                  <span className="text-[10px] text-slate-600 shrink-0">{tx(lang, `Endorse: +${BONUS_PER_ENDORSE} blind boxes`, `认同+${BONUS_PER_ENDORSE}次盲盒`)}</span>
                 )}
               </div>
             )}
@@ -511,7 +513,7 @@ export default function WishPool() {
             {w.reply_text && (
               <div className="mt-2 bg-emerald-500/10 border border-emerald-500/25 rounded-lg px-2.5 py-2">
                 <div className="text-[10px] text-emerald-300 font-semibold mb-0.5">
-                  {zh2hant(lang, '✦ Mas 回复')}
+                  {tx(lang, '✦ Mas replied', '✦ Mas 回复')}
                   {w.replied_at && (
                     <span className="font-normal text-emerald-400/60 ml-1">{fmtTime(lang, w.replied_at)}</span>
                   )}
@@ -530,12 +532,12 @@ export default function WishPool() {
                     {/* 草稿轮盘：点选填入，可再修改，发布仍由站长亲手点（无草稿时整行隐藏） */}
                     {REPLY_DRAFTS.length > 0 && (
                       <div className="flex items-center gap-1.5 overflow-x-auto">
-                        <span className="text-[10px] text-slate-500 shrink-0">{zh2hant(lang, '📋 草稿')}</span>
+                        <span className="text-[10px] text-slate-500 shrink-0">{tx(lang, '📋 Drafts', '📋 草稿')}</span>
                         {REPLY_DRAFTS.map((d) => (
                           <button
                             key={d.label}
                             onClick={() => {
-                              if (replyText.trim() && !window.confirm(zh2hant(lang, '用这条草稿替换已输入的内容？')))
+                              if (replyText.trim() && !window.confirm(tx(lang, 'Replace what you typed with this draft?', '用这条草稿替换已输入的内容？')))
                                 return;
                               setReplyText(zh2hant(lang, d.text));
                             }}
@@ -551,7 +553,7 @@ export default function WishPool() {
                       onChange={(e) => setReplyText(e.target.value)}
                       rows={3}
                       maxLength={500}
-                      placeholder={zh2hant(lang, '以 Mas 的名义公开回复…')}
+                      placeholder={tx(lang, 'Reply publicly as Mas…', '以 Mas 的名义公开回复…')}
                       className="w-full bg-slate-900/80 border border-emerald-500/40 rounded-lg px-2.5 py-2 text-xs text-slate-200 placeholder:text-slate-600 outline-none focus:border-emerald-400 resize-none"
                     />
                     <div className="flex gap-1.5">
@@ -560,7 +562,7 @@ export default function WishPool() {
                         disabled={replyBusy || !replyText.trim()}
                         className="text-[11px] px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold disabled:opacity-50"
                       >
-                        {replyBusy ? zh2hant(lang, '保存中…') : zh2hant(lang, '发布回复')}
+                        {replyBusy ? tx(lang, 'Saving…', '保存中…') : tx(lang, 'Publish', '发布回复')}
                       </button>
                       <button
                         onClick={() => {
@@ -569,7 +571,7 @@ export default function WishPool() {
                         }}
                         className="text-[11px] px-2.5 py-1.5 rounded-lg border border-slate-700 text-slate-400"
                       >
-                        {zh2hant(lang, '取消')}
+                        {tx(lang, 'Cancel', '取消')}
                       </button>
                       {w.reply_text && (
                         <button
@@ -577,7 +579,7 @@ export default function WishPool() {
                           disabled={replyBusy}
                           className="text-[11px] px-2.5 py-1.5 rounded-lg border border-rose-500/40 text-rose-400 ml-auto"
                         >
-                          {zh2hant(lang, '删除回复')}
+                          {tx(lang, 'Delete reply', '删除回复')}
                         </button>
                       )}
                     </div>
@@ -591,7 +593,7 @@ export default function WishPool() {
                     className="flex items-center gap-1 text-[10px] text-sky-400/80 hover:text-sky-300 px-1 py-0.5"
                   >
                     <Reply className="w-3 h-3" />
-                    {w.reply_text ? zh2hant(lang, '修改回复') : zh2hant(lang, '回复')}
+                    {w.reply_text ? tx(lang, 'Edit reply', '修改回复') : tx(lang, 'Reply', '回复')}
                   </button>
                 )}
               </div>

@@ -276,12 +276,12 @@ export default function FunTab() {
                   compact ? (
                     <span className="flex items-center gap-0.5">
                       <Trophy className="w-2.5 h-2.5 text-amber-400 shrink-0" />
-                      {tx(lang, `${st.plays} plays`, `${st.plays} 次`)}
+                      {st.plays === 1 ? tx(lang, '1 play', '1 次') : tx(lang, `${st.plays} plays`, `${st.plays} 次`)}
                     </span>
                   ) : (
                     <span className="flex items-center gap-1">
                       <Trophy className="w-3 h-3 text-amber-400 shrink-0" />
-                      {tx(lang, `${st.plays} plays · ${st.totalScore} pts`, `玩了 ${st.plays} 次 · ${st.totalScore} 分`)}
+                      {st.plays === 1 ? tx(lang, `1 play · ${st.totalScore} pts`, `玩了 1 次 · ${st.totalScore} 分`) : tx(lang, `${st.plays} plays · ${st.totalScore} pts`, `玩了 ${st.plays} 次 · ${st.totalScore} 分`)}
                     </span>
                   )
                 ) : compact ? (

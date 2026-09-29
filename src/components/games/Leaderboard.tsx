@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Trophy, ChevronDown, ChevronUp } from 'lucide-react';
 import { GAME_NAMES, GAME_ICONS, GameId } from '@/lib/gameStats';
-import { zh2hant } from '@/lib/hant';
+import { tx, zh2hant } from '@/lib/hant';
 import { useLanguage } from '@/context/LanguageContext';
 
 /**
@@ -48,12 +48,11 @@ function IconTab({
   active: boolean;
   onClick: () => void;
 }) {
-  const { lang } = useLanguage();
   return (
     <button
       onClick={onClick}
-      title={zh2hant(lang, label)}
-      aria-label={zh2hant(lang, label)}
+      title={label}
+      aria-label={label}
       className={`group relative shrink-0 w-11 h-11 rounded-xl border flex items-center justify-center transition active:scale-95 ${
         active
           ? 'bg-amber-500/20 border-amber-500/60 shadow-[0_0_8px_rgba(245,158,11,0.25)]'
@@ -63,7 +62,7 @@ function IconTab({
       <span className="text-xl leading-none">{icon}</span>
       {/* 桌面端悬停提示游戏名 */}
       <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-100 opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 z-10 hidden sm:block">
-        {zh2hant(lang, label)}
+        {label}
       </span>
     </button>
   );
@@ -107,24 +106,25 @@ export default function Leaderboard() {
     tab === 'all'
       ? data.globalTop.map((e) => ({
           name: e.name,
-          left: `累计 ${fmt(e.score)} 分`,
-          right: `${fmt(e.plays)} 次`,
+          left: tx(lang, `${fmt(e.score)} pts total`, `累计 ${fmt(e.score)} 分`),
+          right: tx(lang, `${fmt(e.plays)} plays`, `${fmt(e.plays)} 次`),
         }))
       : (data.perGame[tab] || []).map((e) => ({
           name: e.name,
-          left: `最高 ${fmt(e.best)} 分`,
-          right: `${fmt(e.plays)} 次`,
+          left: tx(lang, `best ${fmt(e.best)} pts`, `最高 ${fmt(e.best)} 分`),
+          right: tx(lang, `${fmt(e.plays)} plays`, `${fmt(e.plays)} 次`),
         }));
 
   const tabLabel =
     tab === 'all' ? (
       <>
-        {ALL_ICON} {zh2hant(lang, '总榜')} <span className="text-slate-500 font-normal">{zh2hant(lang, '· 按累计分')}</span>
+        {ALL_ICON} {tx(lang, 'Overall', '总榜')}{' '}
+        <span className="text-slate-500 font-normal">{tx(lang, '· by total pts', '· 按累计分')}</span>
       </>
     ) : (
       <>
         {GAME_ICONS[tab]} {zh2hant(lang, GAME_NAMES[tab])}{' '}
-        <span className="text-slate-500 font-normal">{zh2hant(lang, '· 按最高分')}</span>
+        <span className="text-slate-500 font-normal">{tx(lang, '· by best score', '· 按最高分')}</span>
       </>
     );
 
@@ -133,9 +133,9 @@ export default function Leaderboard() {
       {/* 头部：点整行收放 */}
       <button onClick={toggleOpen} className="w-full flex items-center gap-1.5 text-left">
         <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
-        <h2 className="text-sm font-bold text-slate-100">{zh2hant(lang, '英雄榜')}</h2>
+        <h2 className="text-sm font-bold text-slate-100">{tx(lang, 'Leaderboard', '英雄榜')}</h2>
         <span className="text-[10px] text-slate-500 truncate ml-1">
-          {zh2hant(lang, `${fmt(data.totals.players)} 位玩家 · 累计 ${fmt(data.totals.score)} 分`)}
+          {tx(lang, `${fmt(data.totals.players)} players · ${fmt(data.totals.score)} pts total`, `${fmt(data.totals.players)} 位玩家 · 累计 ${fmt(data.totals.score)} 分`)}
         </span>
         <span className="ml-auto text-slate-500 shrink-0">
           {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -145,17 +145,20 @@ export default function Leaderboard() {
       {open && (
         <>
           <p className="text-[11px] text-slate-400 mt-1 mb-2.5">
-            {zh2hant(lang, '全站累计')} <span className="text-amber-300 font-bold">{fmt(data.totals.plays)}</span>{' '}
-            {zh2hant(lang, '次游玩 · ')}<span className="text-amber-300 font-bold">{fmt(data.totals.players)}</span>{' '}
-            {zh2hant(lang, '位玩家 · 累计')}{' '}
-            <span className="text-amber-300 font-bold">{fmt(data.totals.score)}</span> {zh2hant(lang, '分')}
+            {tx(lang, 'Site total', '全站累计')}{' '}
+            <span className="text-amber-300 font-bold">{fmt(data.totals.plays)}</span>{' '}
+            {tx(lang, 'plays · ', '次游玩 · ')}
+            <span className="text-amber-300 font-bold">{fmt(data.totals.players)}</span>{' '}
+            {tx(lang, 'players · ', '位玩家 · 累计')}
+            <span className="text-amber-300 font-bold">{fmt(data.totals.score)}</span>{' '}
+            {tx(lang, 'pts', '分')}
           </p>
 
           {/* 榜单切换：多排小图标，无横向滚动 */}
           <div className="flex flex-wrap gap-1.5 mb-2">
             <IconTab
               icon={ALL_ICON}
-              label="总榜"
+              label={tx(lang, 'Overall', '总榜')}
               active={tab === 'all'}
               onClick={() => setTab('all')}
             />
@@ -163,7 +166,7 @@ export default function Leaderboard() {
               <IconTab
                 key={id}
                 icon={GAME_ICONS[id]}
-                label={GAME_NAMES[id]}
+                label={zh2hant(lang, GAME_NAMES[id])}
                 active={tab === id}
                 onClick={() => setTab(id)}
               />
@@ -174,7 +177,7 @@ export default function Leaderboard() {
           <p className="text-[11px] text-slate-300 font-semibold mb-1">{tabLabel}</p>
 
           {rows.length === 0 ? (
-            <p className="text-[11px] text-slate-500 py-2 text-center">{zh2hant(lang, '还没人上榜，快来当第一个吧')}</p>
+            <p className="text-[11px] text-slate-500 py-2 text-center">{tx(lang, "Nobody's on the board yet — be the first!", '还没人上榜，快来当第一个吧')}</p>
           ) : (
             <ol className="divide-y divide-slate-800/80">
               {rows.map((r, i) => (
@@ -184,16 +187,16 @@ export default function Leaderboard() {
                   </span>
                   <span className="flex-1 text-xs text-slate-200 truncate">{r.name}</span>
                   <span className="text-[11px] text-amber-300/90 font-semibold shrink-0">
-                    {zh2hant(lang, r.left)}
+                    {r.left}
                   </span>
                   <span className="text-[10px] text-slate-500 shrink-0 w-14 text-right">
-                    {zh2hant(lang, r.right)}
+                    {r.right}
                   </span>
                 </li>
               ))}
             </ol>
           )}
-          <p className="text-[10px] text-slate-600 mt-2">{zh2hant(lang, '登录玩家自动上榜 · 游客分数只保存在本机')}</p>
+          <p className="text-[10px] text-slate-600 mt-2">{tx(lang, 'Signed-in players join automatically · guest scores stay on this device', '登录玩家自动上榜 · 游客分数只保存在本机')}</p>
         </>
       )}
     </section>
