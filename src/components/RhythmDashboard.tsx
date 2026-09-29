@@ -291,9 +291,14 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     };
   }, [symbol, range, autoTick, retryKey, lang]);
 
-  // 盘中每 60 秒静默刷新一次实时价（页面切到后台时不拉；收盘后自动停）
+  // 盘中 / 盘前 / 盘后每 60 秒静默刷新一次价格（页面切到后台时不拉；收盘后自动停）
   useEffect(() => {
-    if (data?.priceSession !== 'live') return;
+    if (
+      data?.priceSession !== 'live' &&
+      data?.priceSession !== 'after-hours' &&
+      data?.priceSession !== 'pre-market'
+    )
+      return;
     const id = setInterval(() => {
       if (document.hidden) return;
       getRhythm(symbol, range, { force: true, lang })
@@ -1157,16 +1162,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                 <span className="text-sm font-semibold text-slate-200 shrink-0">
                   {fmtPrice(data.price)}
                 </span>
-                {data.priceLive ? (
-                  <span className="flex items-center gap-1 shrink-0 text-[9px]" title={data.priceTime ?? undefined}>
-                    {data.priceSession === 'after-hours' ? (
-                      <>
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
-                        <span className="text-amber-300">
-                          {en ? 'After-hr' : '盘后'}{quoteTimeShort ? ` ${quoteTimeShort}` : ''}
-                        </span>
-                      </>
-                    ) : (
+                <span className="flex items-center gap-1 shrink-0 text-[9px]" title={data.priceTime ?? undefined}>
+                    {data.priceSession === 'live' && (
                       <>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         <span className="text-emerald-400">
@@ -1174,19 +1171,35 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                         </span>
                       </>
                     )}
+                    {data.priceSession === 'after-hours' && (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
+                        <span className="text-amber-300">
+                          {en ? 'After-hr' : '盘后'}{quoteTimeShort ? ` ${quoteTimeShort}` : ''}
+                        </span>
+                      </>
+                    )}
+                    {data.priceSession === 'pre-market' && (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                        <span className="text-sky-400">
+                          {en ? 'Pre-mkt' : '盘前'}{quoteTimeShort ? ` ${quoteTimeShort}` : ''}
+                        </span>
+                      </>
+                    )}
+                    {data.priceSession === 'close' && (
+                      <span className="text-slate-500">{en ? 'Close' : '收盘价'}</span>
+                    )}
                     {data.dayChangePct != null && (
                       <span className={data.dayChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
                         {data.dayChangePct >= 0 ? '+' : ''}
                         {data.dayChangePct}%
                       </span>
                     )}
-                    {data.prevClose != null && (
+                    {data.priceLive && data.prevClose != null && (
                       <span className="text-slate-500">{en ? `Prev close ${fmtPrice(data.prevClose)}` : `昨收 ${fmtPrice(data.prevClose)}`}</span>
                     )}
                   </span>
-                ) : (
-                  <span className="text-[9px] text-slate-500 shrink-0">{en ? 'Close' : '收盘价'}</span>
-                )}
                 <div className="flex-1 h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full bg-gradient-to-r ${scoreGradient(
