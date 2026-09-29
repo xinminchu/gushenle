@@ -48,7 +48,7 @@ function candidateReason(
       case 'bottomUp':
         return `Rhythm ${s} — ${label}. Downward momentum is fading and the level is modest — worth watching, in batches.`;
       case 'sideways':
-        return `Rhythm ${s} — ${label}. Direction is unclear but the level is mid-range: don't chase, don't bottom-fish.`;
+        return `Rhythm ${s} — ${label}. Direction is unclear but the level is mid-range: chasing and bottom-fishing are both risky.`;
       case 'oversoldBottom':
         return `Rhythm ${s} — ${label}. Only small batches — an oversold bounce can keep falling. Keep it light.`;
       case 'hotStrong':
@@ -65,7 +65,7 @@ function candidateReason(
     case 'sideways':
       return `律动 ${s} 分，${label}，方向不明但位置适中，慎追高、慎抄底的心态参与。`;
     case 'oversoldBottom':
-      return `律动 ${s} 分，${label}，只适合小仓位分批试，跌过头也可能继续跌，别重仓。`;
+      return `律动 ${s} 分，${label}，只适合小仓位分批试，跌过头也可能继续跌，重仓要慎。`;
     case 'hotStrong':
       return `律动 ${s} 分，${label}，趋势健康但位置偏高，真要买只适合小仓位分批。`;
     default:
@@ -112,14 +112,14 @@ function singleVerdict(
         case 'bottomUp':
           return `Rhythm ${s} — ${label}, stabilizing. Selling now risks selling at the floor — consider waiting.`;
         case 'oversoldBottom':
-          return `Rhythm ${s} — ${label}. Cutting now would likely mean cutting at the very bottom — holding you back here.`;
+          return `Rhythm ${s} — ${label}. Cutting now would likely mean cutting at the very bottom — worth a second thought?`;
         case 'weakLow':
           return `Rhythm ${s} — ${label}. Selling now means cutting mid-fall; unless you need the cash, wait until it stops dropping.`;
       }
     } else {
       switch (statusKey) {
         case 'overheated':
-          return `Rhythm ${s} — ${label}. Buying now would be chasing — holding you back.`;
+          return `Rhythm ${s} — ${label}. Buying now would be chasing — worth a second thought?`;
         case 'hotStrong':
           return `Rhythm ${s} — ${label}. Trend is healthy but the level is high; small batches only if you really want in.`;
         case 'risingAccel':
@@ -131,7 +131,7 @@ function singleVerdict(
         case 'oversoldBottom':
           return `Rhythm ${s} — ${label}. The oversold signal hasn't been reliable historically — be careful; small batches at most.`;
         case 'weakLow':
-          return `Rhythm ${s} — ${label}. Don't catch a falling knife — wait until it stops dropping.`;
+          return `Rhythm ${s} — ${label}. The knife is still falling — wait until it stops dropping.`;
       }
     }
     return `Rhythm ${s} — ${label}.`;
@@ -139,7 +139,7 @@ function singleVerdict(
   if (side === 'sell') {
     switch (statusKey) {
       case 'overheated':
-        return `律动 ${s} 分，${label}。真想卖，现在卖是止盈不算卖飞；也可以分批卖，别一把清。`;
+        return `律动 ${s} 分，${label}，真想卖，现在卖是止盈不算卖飞；也可以分批卖，一把清要慎。`;
       case 'hotStrong':
         return `律动 ${s} 分，${label}，趋势还健康。不急用钱可以拿着，设条止盈线；想卖就分批。`;
       case 'risingAccel':
@@ -149,26 +149,26 @@ function singleVerdict(
       case 'bottomUp':
         return `律动 ${s} 分，${label}，正在企稳。现在卖容易卖在地板上，建议再等等。`;
       case 'oversoldBottom':
-        return `律动 ${s} 分，${label}。现在割肉大概率割在最低点，拦你一下。`;
+        return `律动 ${s} 分，${label}。现在割肉大概率割在最低点，再想想？`;
       case 'weakLow':
         return `律动 ${s} 分，${label}。现在卖是割在下跌途中，除非急用钱，不然等跌不动了再说。`;
     }
   } else {
     switch (statusKey) {
       case 'overheated':
-        return `律动 ${s} 分，${label}，现在买就是追高，拦一下。`;
+        return `律动 ${s} 分，${label}，现在买就是追高，再想想？`;
       case 'hotStrong':
         return `律动 ${s} 分，${label}，趋势健康但位置偏高，真想买只适合小仓位分批。`;
       case 'risingAccel':
         return `律动 ${s} 分，${label}，离过热线还有距离，现在买不算追高。`;
       case 'sideways':
-        return `律动 ${s} 分，${label}，买了可能磨人，仓位别重。`;
+        return `律动 ${s} 分，${label}，买了可能磨人，仓位宜轻。`;
       case 'bottomUp':
         return `律动 ${s} 分，${label}，下跌动能衰竭，想抄底可以小仓位试试。`;
       case 'oversoldBottom':
         return `律动 ${s} 分，${label}。超卖信号历史上不太准，谨慎，真想买也小仓位。`;
       case 'weakLow':
-        return `律动 ${s} 分，${label}，别接飞刀，等跌不动了再说。`;
+        return `律动 ${s} 分，${label}，飞刀还在落，等跌不动了再说。`;
     }
   }
   return `律动 ${s} 分，${label}。`;

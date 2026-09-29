@@ -282,7 +282,7 @@ const ADVICE: Record<StatusKey, { zh: string; en: string }> = {
     en: 'Up too fast lately — maybe pause? Consider taking some profit in batches.',
   },
   hotStrong: {
-    zh: '趋势挺健康的，拿着就好；先别急着加仓。',
+    zh: '趋势挺健康的，拿着就好；加仓不急。',
     en: 'The trend looks healthy — holding is fine; no rush to add.',
   },
   risingAccel: {
@@ -298,7 +298,7 @@ const ADVICE: Record<StatusKey, { zh: string; en: string }> = {
     en: 'The slide is slowing — revisit why you bought in the first place.',
   },
   weakLow: {
-    zh: '还在下跌趋势里，先别急着抄底。',
+    zh: '还在下跌趋势里，抄底不急。',
     en: 'Still in a downtrend — no rush to catch the falling knife.',
   },
   oversoldBottom: {
@@ -347,7 +347,7 @@ export function adviceWithPosition(
   const en = lang === 'en';
   if (statusKey === 'overheated') {
     if (pnlPct >= -10)
-      return tx(lang, `It's up, but you're still down ${pct}% — this bounce is a good chance to work back toward breakeven. Don't chase, and don't rush to sell it all.`, `涨是涨了，可你还亏 ${pct}%，这波是回本的好机会——别追高，也别急着全走。`);
+      return tx(lang, `It's up, but you're still down ${pct}% — this bounce is a good chance to work back toward breakeven. Chasing is risky, and there's no rush to sell it all.`, `涨是涨了，可你还亏 ${pct}%，这波是回本的好机会——追高要慎，全走也不急。`);
     return tx(lang, `Still down ${pct}% — bounces like this are rare windows to trim losses. Sell a little in batches; don't wait until you can't bear to let go.`, `还套着 ${pct}%，反弹是难得的减亏窗口——分批走一点，别等涨回去又舍不得。`);
   }
   if (statusKey === 'weakLow')

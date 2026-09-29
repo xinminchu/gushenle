@@ -52,9 +52,9 @@ export function flowUsage(totalIn: number, totalOut: number, lang: Lang = 'zh'):
   const en = lang === 'en';
   if (totalIn <= 0 && totalOut <= 0) return tx(lang, 'Not enough data — sit tight', '数据不足，先不动');
   if (totalOut > totalIn * 1.5)
-    return tx(lang, 'Red dominates: sellers are pushing harder — hold off buying', '红色占了一大块：卖盘更用力，先别急着买');
+    return tx(lang, 'Red dominates: sellers are pushing harder — buying can wait', '红色占了一大块：卖盘更用力，买可以缓一缓');
   if (totalIn > totalOut * 1.5)
-    return tx(lang, 'Green dominates: buyers are more active — holders, no need to panic-sell', '绿色占了一大块：买盘更主动，拿着的别慌着卖');
+    return tx(lang, 'Green dominates: buyers are more active — holders, no need to panic-sell', '绿色占了一大块：买盘更主动，拿着的先稳住');
   return tx(lang, 'Roughly even: bulls and bears are deadlocked — if unclear, do nothing', '红绿差不多：多空僵持，看不懂就先不动');
 }
 
@@ -93,9 +93,9 @@ export function estimateFlows(series: RhythmPoint[], symbol: string, lang: Lang 
   if (gross > 0 && Math.abs(net) < gross * 0.1) {
     verdict = tx(lang, 'Inflows and outflows roughly even — bulls and bears deadlocked', '进出基本打平，多空在僵持');
   } else if (net > 0) {
-    verdict = tx(lang, `Net inflow ${fmtCompactMoney(symbol, net)} — buyers more active`, `净流入 ${fmtCompactMoney(symbol, net)}，买盘更主动`);
+    verdict = tx(lang, `Estimated inflow ${fmtCompactMoney(symbol, net)} — buyers more active`, `资金流入（估算）${fmtCompactMoney(symbol, net)}，买盘更主动`);
   } else {
-    verdict = tx(lang, `Net outflow ${fmtCompactMoney(symbol, -net)} — be careful`, `净流出 ${fmtCompactMoney(symbol, -net)}，小心点`);
+    verdict = tx(lang, `Estimated outflow ${fmtCompactMoney(symbol, -net)} — be careful`, `资金流出（估算）${fmtCompactMoney(symbol, -net)}，小心点`);
   }
   return { days: last, net, gross, daysCount: last.length, verdict };
 }

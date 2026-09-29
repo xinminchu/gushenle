@@ -83,7 +83,9 @@ export default function MarketSentimentStrip() {
 
   const note = noteForRating(s.fearGreedRating, lang);
   const extra = s.vix != null ? vixNote(s.vix, lang) : '';
-  const asof = tx(lang, (s.fearGreedDateEn ?? s.vixDateEn ?? ''), (s.fearGreedDateCN ?? s.vixDateCN ?? ''));
+  // newsfun-2：VIX（FRED 数据，日期可能更早）单独标自己的真实日期，不许蹭贪婪指数的"截至"
+  const vixDate = tx(lang, (s.vixDateEn ?? ''), (s.vixDateCN ?? ''));
+  const fgDate = tx(lang, (s.fearGreedDateEn ?? ''), (s.fearGreedDateCN ?? ''));
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2">
@@ -93,6 +95,9 @@ export default function MarketSentimentStrip() {
           <span className="text-xs text-slate-300">
             VIX <span className="font-bold text-slate-100">{s.vix.toFixed(1)}</span>
             <span className="text-slate-500"> · {vixLabel(s.vix, lang)}</span>
+            {vixDate && (
+              <span className="text-[10px] text-slate-600"> · {tx(lang, `as of ${vixDate}`, `截至${vixDate}`)}</span>
+            )}
           </span>
         )}
         {s.fearGreed != null && (
@@ -102,9 +107,9 @@ export default function MarketSentimentStrip() {
             <span className="text-slate-500"> · {ratingLabel(s.fearGreedRating, lang)}</span>
           </span>
         )}
-        {asof && (
+        {fgDate && (
           <span className="text-[10px] text-slate-600 ml-auto shrink-0">
-            {tx(lang, `as of ${asof}`, `截至${asof}`)}
+            {tx(lang, `F&G as of ${fgDate}`, `贪婪指数截至${fgDate}`)}
           </span>
         )}
       </div>

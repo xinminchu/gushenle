@@ -33,13 +33,13 @@ function positionAdvice(lang: Lang, statusKey: string | undefined, pnlPct: numbe
     case 'overheated':
       return p != null && p > 0
         ? tx(lang, `Running too hot, up ${p.toFixed(1)}% — bank some?`, `涨太猛了，浮盈 ${p.toFixed(1)}%，分批落袋？`)
-        : tx(lang, `Running too hot — cool off, don't chase`, '涨太猛了，先冷静，别追');
+        : tx(lang, `Running too hot — cool off, chasing is risky`, '涨太猛了，先冷静，追高要慎');
     case 'hotStrong':
       return tx(lang, 'Strong near the top — hold, set your take-profit', '高位强势，拿着，止盈位设好');
     case 'weakLow':
       return p != null && p < 0
-        ? tx(lang, `Still sliding, down ${Math.abs(p).toFixed(1)}% — don't rush to add`, `还在往下跌，浮亏 ${Math.abs(p).toFixed(1)}%，别急着补`)
-        : tx(lang, `Still sliding — don't add yet`, '还在往下跌，先别加仓');
+        ? tx(lang, `Still sliding, down ${Math.abs(p).toFixed(1)}% — adding can wait`, `还在往下跌，浮亏 ${Math.abs(p).toFixed(1)}%，补仓不急`)
+        : tx(lang, `Still sliding — adding can wait`, '还在往下跌，加仓不急');
     case 'oversoldBottom':
       return p != null && p < 0
         ? tx(lang, `Oversold, down ${Math.abs(p).toFixed(1)}% — hold on for the bounce?`, `跌过头了，浮亏 ${Math.abs(p).toFixed(1)}%，拿住等反弹？`)
@@ -80,6 +80,20 @@ export default function PortfolioTab({
   const [typicalAmt] = useState<number | null>(() => typicalBuyAmount(loadOperations()));
   // 持仓故事展开：一次只展开一只
   const [storySymbol, setStorySymbol] = useState<string | null>(null);
+  // 添加持仓表单的滚动锚点：点"添加持仓"后自动滚到表单并聚焦第一个字段（portfolio-1）
+  const addFormRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!showAdd) return;
+    const el = addFormRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // 等滚动开始后再聚焦，避免 focus 把页面拽回去
+    const t = setTimeout(() => {
+      const first = el.querySelector('select, input') as HTMLElement | null;
+      first?.focus({ preventScroll: true });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [showAdd]);
   // 本周关注手动加码
   const [showFocusAdd, setShowFocusAdd] = useState(false);
   const [focusAddCode, setFocusAddCode] = useState('');
@@ -912,7 +926,7 @@ export default function PortfolioTab({
       )}
 
       {showAdd && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+        <div ref={addFormRef} className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 scroll-mt-4">
           <div className="text-sm font-medium text-slate-200">{tx(lang, 'Add holding', '添加持仓')}</div>
           <div>
             <label className="text-[11px] text-slate-400">{tx(lang, 'Stock (pick from your watchlist)', '股票（从自选里选）')}</label>

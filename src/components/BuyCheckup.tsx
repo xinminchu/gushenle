@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, AlertTriangle, XCircle, Minus, X } from 'lucide-react';
 import type { RhythmPoint, StatusKey } from '@/lib/rhythm';
+import { statusLabel } from '@/lib/rhythm';
 import { loadPositions } from '@/lib/positions';
 import { loadOperations } from '@/lib/operations';
 import { getRhythm } from '@/lib/market';
@@ -63,6 +64,7 @@ export default function BuyCheckup({
   name,
   score,
   hot,
+  statusKey,
   highs,
   price,
   series,
@@ -116,25 +118,37 @@ export default function BuyCheckup({
 
   const checks: Check[] = [];
 
-  // 1. 律动过热吗
-  if (score >= hot) {
-    checks.push({
-      icon: 'bad',
-      title: tx(lang, 'Rhythm overheated', '律动过热'),
-      detail: tx(lang, `Rhythm ${score}, above the ${hot} overheat line — too hot, don't chase`, `律动 ${score} 分，过了 ${hot} 分的过热线——太热了，先别追`),
-    });
-  } else if (score >= hot - 15) {
-    checks.push({
-      icon: 'warn',
-      title: tx(lang, 'Rhythm running warm', '律动偏热'),
-      detail: tx(lang, `Rhythm ${score}, not far from the overheat line — take it easy`, `律动 ${score} 分，离过热线不远，悠着点`),
-    });
-  } else {
-    checks.push({
-      icon: 'ok',
-      title: tx(lang, 'Rhythm not hot', '律动不热'),
-      detail: tx(lang, `Rhythm ${score} — not in the chasing danger zone`, `律动 ${score} 分，没到追高的危险区`),
-    });
+  // 1. 律动状态：跟律动卡共用同一套判定（statusKey 由父组件按 judgeFromScore 传入）。
+  //    不再自己按 score >= hot 另起一套——89 分这种"高位稳着涨"不会再被误判成"过热别追"。
+  switch (statusKey) {
+    case 'overheated':
+      checks.push({
+        icon: 'bad',
+        title: tx(lang, 'Rhythm running too hot', '律动过热'),
+        detail: tx(lang, `Rhythm ${score} — ${statusLabel(statusKey, 'en')}. Chasing here means buying the top; wait for it to cool`, `律动 ${score} 分，${statusLabel(statusKey, 'zh')}——现在买是追高，等它冷静冷静`),
+      });
+      break;
+    case 'hotStrong':
+    case 'risingAccel':
+      checks.push({
+        icon: 'warn',
+        title: tx(lang, 'Rhythm warm', '律动偏热'),
+        detail: tx(lang, `Rhythm ${score} — ${statusLabel(statusKey, 'en')}. The trend is OK but the level is high; chasing is risky`, `律动 ${score} 分，${statusLabel(statusKey, 'zh')}——趋势还行，但位置偏高，追高有风险`),
+      });
+      break;
+    case undefined:
+      checks.push({
+        icon: 'na',
+        title: tx(lang, 'Rhythm', '律动'),
+        detail: tx(lang, 'No rhythm data — no guessing', '律动数据还没到，不瞎判'),
+      });
+      break;
+    default:
+      checks.push({
+        icon: 'ok',
+        title: tx(lang, 'Rhythm not hot', '律动不热'),
+        detail: tx(lang, `Rhythm ${score} — ${statusLabel(statusKey, 'en')}, not in the chasing danger zone`, `律动 ${score} 分，${statusLabel(statusKey, 'zh')}，没到追高的危险区`),
+      });
   }
 
   // 2. 财报临近吗
@@ -309,14 +323,14 @@ export default function BuyCheckup({
       : warns > 0
         ? `${warns} to watch, ${oks} passed`
         : oks === 5
-          ? 'All 5 passed — if you really want in, go in batches'
-          : `${oks} passed, ${nas} no data — everything checkable passed. If you really want in, go in batches`, bads > 0
+          ? 'All 5 passed — no red flags; decide at your own pace'
+          : `${oks} passed, ${nas} no data — everything checkable passed, no red flags`, bads > 0
       ? `有 ${bads} 项亮红灯，再想想`
       : warns > 0
         ? `${warns} 项要注意，${oks} 项通过`
         : oks === 5
-          ? '5 项都过，真想买可以分批'
-          : `${oks} 项通过，${nas} 项没数据——能查的都过了，真想买可以分批`);
+          ? '5 项都过，没有红灯，按你的节奏来'
+          : `${oks} 项通过，${nas} 项没数据——能查的都过了，没有红灯`);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>

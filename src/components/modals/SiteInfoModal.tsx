@@ -39,7 +39,7 @@ function About() {
         {tx(lang, 'My job is simple: pull your sleeve when you chase, hold your hand when you want to cut losses. I have no crystal ball and I don\'t predict prices — but keeping you from doing silly things and sleeping well? That\'s my thing.', '我的职责很单纯：你追高时拽你一把，你想割肉时按住你的手。水晶球我没有，不预测涨跌；但"让你少犯糊涂、多睡安稳觉"，这事我在行。')}
       </p>
       <p className={p}>
-        {tx(lang, 'If rhythm once saved you from chasing a top, or a mini-game made you laugh, feel free to buy me a coffee ☕. Made money in the market? Tips welcome — I\'ll spend them on chicken legs for the server 🍗 (the tip button is on its way; for now it\'s in the little notebook 📒).', '要是律动帮你躲开了一次追高，或者小游戏把你逗乐了，欢迎请我喝杯咖啡 ☕。股市赚了钱，记得给我打赏，我拿去给服务器加鸡腿 🍗（打赏按钮正在路上，先记小本本上 📒）。')}
+        {tx(lang, 'If rhythm once saved you from chasing a top, or a mini-game made you laugh, feel free to buy me a coffee ☕. I\'ll spend it on chicken legs for the server 🍗 (the tip button is on its way; for now it\'s in the little notebook 📒).', '要是律动帮你躲开了一次追高，或者小游戏把你逗乐了，欢迎请我喝杯咖啡 ☕，我拿去给服务器加鸡腿 🍗（打赏按钮正在路上，先记小本本上 📒）。')}
       </p>
     </div>
   );
@@ -75,9 +75,9 @@ function Guide() {
     ],
     [
       '资讯',
-      '盘前瞻、盘后总结每天两报；今日大事看美股 / 国内快讯，财经日历看 FOMC、CPI、财报日。朋友圈发买入逻辑、避坑经验，顺手给朋友点赞。登录后可用。',
+      '盘前瞻、盘后总结每天两报；最新快讯看美股 / 国内快讯，财经日历看 FOMC、CPI、财报日。朋友圈发买入逻辑、避坑经验，顺手给朋友点赞。登录后可用。',
       'News',
-      'Pre-market outlook and post-market recap, twice a day; Today\'s events for US / China headlines; the economic calendar for FOMC, CPI and earnings dates. The friends\' circle is for sharing buy logic and lessons learned — drop a like on friends\' posts. Login required.',
+      'Pre-market outlook and post-market recap, twice a day; Latest news for US / China headlines; the economic calendar for FOMC, CPI and earnings dates. The friends\' circle is for sharing buy logic and lessons learned — drop a like on friends\' posts. Login required.',
     ],
     [
       '娱乐',
@@ -166,7 +166,7 @@ function Legal() {
       </ul>
       <h4 className={h4}>{tx(lang, 'Privacy', '隐私')}</h4>
       <p className={p}>
-        {tx(lang, 'Watchlist, holdings and memory live in your browser by default. After login, game scores, posts and nicknames sync to the cloud (Supabase) for multi-device use. We don\'t collect or sell your personal data.', '自选、持仓、操作记忆默认只保存在你的浏览器本地。登录后，游戏战绩、帖子、昵称会同步到云端（Supabase）用于多设备同步。我们不收集、不出售你的个人信息。')}
+        {tx(lang, 'Watchlist, holdings and memory live in your browser by default. After login, game scores, posts and nicknames sync to the cloud (Supabase) for multi-device use. Note: wish-pool messages and survey votes are uploaded to the server even when anonymous — that\'s how everyone can see and count them. We don\'t collect or sell your personal data.', '自选、持仓、操作记忆默认只保存在你的浏览器本地。登录后，游戏战绩、帖子、昵称会同步到云端（Supabase）用于多设备同步。注意：许愿池留言和小调查投票即使匿名也会上传到服务器——不然大家看不到、也计不了票。我们不收集、不出售你的个人信息。')}
       </p>
       <h4 className={h4}>{tx(lang, 'Feedback', '反馈')}</h4>
       <p className={p}>

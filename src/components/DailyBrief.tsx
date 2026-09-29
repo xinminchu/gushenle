@@ -389,7 +389,7 @@ function FlowChip({ m, dir }: { m: ScanMini; dir: 1 | -1 }) {
           : 'text-rose-300 border-rose-500/30 bg-rose-500/10'
       }`}
     >
-      {m.symbol} {dir === 1 ? tx(lang, 'Net inflow', '净流入') : tx(lang, 'Net outflow', '净流出')} {amt}
+      {m.symbol} {dir === 1 ? tx(lang, 'Inflow (est.)', '流入（估算）') : tx(lang, 'Outflow (est.)', '流出（估算）')} {amt}
     </span>
   );
 }

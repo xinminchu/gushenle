@@ -46,10 +46,35 @@ export default function StockBriefs({
   // 数据还没回来、且一行都拼不出来时，整个卡片先不露面（模拟数据兜底的股票静默跳过）
   if (!loading && rows.length === 0) return null;
 
+  // portfolio-2：播报卡注明数据口径——盘中实时 or 某日收盘
+  const anyLive = symbols.some((sym) => {
+    const d = dataMap[sym];
+    return !!d && d.dayChangePct != null && d.priceSession !== 'close';
+  });
+  let freshTxt = '';
+  if (anyLive) {
+    freshTxt = tx(lang, 'Intraday live', '盘中实时');
+  } else {
+    const dates = symbols
+      .map((sym) => dataMap[sym]?.series)
+      .filter((s): s is NonNullable<typeof s> => !!s && s.length > 0)
+      .map((s) => s[s.length - 1].date)
+      .sort();
+    const last = dates[dates.length - 1];
+    if (last) {
+      const md = last.slice(5).split('-');
+      const short = `${Number(md[0])}/${Number(md[1])}`;
+      freshTxt = tx(lang, `Last close ${short}`, `${short} 收盘`);
+    }
+  }
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
       <h2 className="text-sm font-semibold text-slate-200">{tx(lang, 'One-line brief', '一句话播报')}</h2>
-      <p className="text-[10px] text-slate-500 mt-0.5 mb-2">{tx(lang, 'Facts and discipline only — no price predictions', '只讲事实和纪律，不预测涨跌')}</p>
+      <p className="text-[10px] text-slate-500 mt-0.5 mb-2">
+        {tx(lang, 'Facts and discipline only — no price predictions', '只讲事实和纪律，不预测涨跌')}
+        {freshTxt && <span className="text-slate-600"> · 📡 {freshTxt}</span>}
+      </p>
       {loading && rows.length === 0 ? (
         <div className="space-y-2">
           {symbols.slice(0, 4).map((sym) => (

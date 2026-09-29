@@ -80,6 +80,9 @@ export function invalidateRhythm(symbol?: string): void {
 
 /** 日涨跌幅：用日线最后两个收盘价计算（持仓页用，不再另起接口）。 */
 export function dayChangePct(data: RhythmResponse): number | null {
+  // portfolio-2：盘中/盘后用服务端算好的实时涨跌幅（相对昨收），跟今日页同口径；
+  // 只有纯收盘会话才回退到日线最后两根收盘价
+  if (data.dayChangePct != null && data.priceSession !== 'close') return data.dayChangePct;
   const s = data.series;
   if (s.length < 2) return null;
   const prev = s[s.length - 2].close;

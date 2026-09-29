@@ -140,11 +140,11 @@ export default function FamilyNews() {
 
   return (
     <div className="space-y-4">
-      {/* 今日大事 */}
+      {/* 最新快讯（newsfun-7：原名"今日大事"只覆盖很短的滚动窗口，改个诚实的名字） */}
       <section className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
-            <Newspaper className="w-3.5 h-3.5 text-sky-400" /> {tx(lang, "Today's events", '今日大事')}
+            <Newspaper className="w-3.5 h-3.5 text-sky-400" /> {tx(lang, 'Latest news', '最新快讯')}
           </div>
           <div className="flex items-center gap-2">
             <div className="flex bg-slate-800 rounded-full p-0.5 text-[10px]">
@@ -206,19 +206,24 @@ export default function FamilyNews() {
                       ) : (
                         <p className="text-[11px] font-semibold text-slate-200 leading-snug">{headline}</p>
                       )}
+                      {/* newsfun-7：每条标注来源；"查看原文"外露，不用点开才看得见 */}
+                      <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-slate-600">
+                        <span>{tx(lang, 'Source: Wall Street CN', '来源：华尔街见闻')}</span>
+                        {n.uri && (
+                          <a
+                            href={n.uri}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-0.5 text-sky-400 hover:text-sky-300"
+                          >
+                            {tx(lang, 'View source', '查看原文')} <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
                       {expanded && expandable && (
                         <div className="mt-1 space-y-1.5">
                           <p className="text-[11px] text-slate-400 leading-relaxed">{n.content}</p>
-                          {n.uri && (
-                            <a
-                              href={n.uri}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-0.5 text-[10px] text-sky-400 hover:text-sky-300"
-                            >
-                              {tx(lang, 'View source', '查看原文')} <ExternalLink className="w-3 h-3" />
-                            </a>
-                          )}
                         </div>
                       )}
                     </div>

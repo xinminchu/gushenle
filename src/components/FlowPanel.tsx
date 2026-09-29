@@ -174,7 +174,7 @@ function FlowDonut({
             );
           })}
           <text x="90" y="82" textAnchor="middle" fontSize="11" fill="#94a3b8">
-            {net >= 0 ? (tx(lang, 'Net inflow', '净流入')) : (tx(lang, 'Net outflow', '净流出'))}
+            {net >= 0 ? (tx(lang, 'Inflow (est.)', '流入（估算）')) : (tx(lang, 'Outflow (est.)', '流出（估算）'))}
           </text>
           <text
             x="90"

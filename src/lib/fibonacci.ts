@@ -367,7 +367,10 @@ export function fibPlainAdvice(input: FibPlainAdviceInput): string[] | null {
   }
 
   // 第二句：怎么办（按持仓）
-  const NEAR = 2; // 贴近阈值 %
+  // NEAR：只有离线不到约 0.3% 才算"已到"（today-4：之前 2% 会把"离压力位还有 1.5%"
+  // 写成"已经涨到压力位了"，跟事实打架）。"接飞刀"只留给跌破支撑还在跌，
+  // 追高场景一律说"追高容易站岗"。
+  const NEAR = 0.3; // 贴近阈值 %
   if (has) {
     if (!up) {
       lines.push(
@@ -390,7 +393,7 @@ export function fibPlainAdvice(input: FibPlainAdviceInput): string[] | null {
         tx(lang, pnl >= 0
             ? `Near the ${name(dn)} — hold steady, wait for it to stabilize.`
             : `Near the ${name(dn)} and you're ${pnlTxt} — selling at the floor hurts most. Hold for stabilization.`, pnl >= 0
-            ? `跌到${name(dn)}附近了，拿住别慌，等它站稳再说。`
+            ? `跌到${name(dn)}附近了，拿住等它站稳再说。`
             : `跌到${name(dn)}附近，你${pnlTxt}——割在地板上最亏，拿住等企稳。`),
       );
     } else if (pnl >= 15) {
@@ -399,7 +402,7 @@ export function fibPlainAdvice(input: FibPlainAdviceInput): string[] | null {
       );
     } else if (pnl >= 0) {
       lines.push(
-        tx(lang, `${pnlTxt}, ${r1(distUp!)}% below the ${name(up)} — keep holding, but don't add.`, `${pnlTxt}，离${name(up)}还有 ${r1(distUp!)}%，继续拿，但别加仓。`),
+        tx(lang, `${pnlTxt}, ${r1(distUp!)}% below the ${name(up)} — keep holding; adding can wait.`, `${pnlTxt}，离${name(up)}还有 ${r1(distUp!)}%，继续拿，加仓可以缓一缓。`),
       );
     } else {
       lines.push(
@@ -409,15 +412,15 @@ export function fibPlainAdvice(input: FibPlainAdviceInput): string[] | null {
   } else {
     if (!up) {
       lines.push(
-        tx(lang, `Above every reference line — chasing now is catching a falling knife. Stay put.`, `已经涨过所有参考线了，现在追=接飞刀，按兵不动。`),
+        tx(lang, `Above every reference line — chasing here easily leaves you holding the top. Stay put.`, `已经涨过所有参考线了，现在追容易站岗，按兵不动。`),
       );
     } else if (distUp! <= NEAR) {
       lines.push(
         tx(lang, dn
-            ? `Already at the ${name(up)} — chasing is catching a falling knife. Wait for a pullback toward the ${name(dn)} near ${fmt(dn.price)}.`
-            : `Already at the ${name(up)} — chasing is catching a falling knife. Stay put.`, dn
-            ? `已经涨到${name(up)}了，现在追=接飞刀；按兵不动，等回调到${name(dn)} ${fmt(dn.price)} 一带再看。`
-            : `已经涨到${name(up)}了，现在追=接飞刀，按兵不动。`),
+            ? `Already at the ${name(up)} — chasing here easily leaves you holding the top. Wait for a pullback toward the ${name(dn)} near ${fmt(dn.price)}.`
+            : `Already at the ${name(up)} — chasing here easily leaves you holding the top. Stay put.`, dn
+            ? `已经涨到${name(up)}了，现在追容易站岗；按兵不动，等回调到${name(dn)} ${fmt(dn.price)} 一带再看。`
+            : `已经涨到${name(up)}了，现在追容易站岗，按兵不动。`),
       );
     } else if (dn && distDn! <= NEAR) {
       lines.push(
@@ -453,11 +456,11 @@ export function fibAdviceHint(
   const at = tx(lang, `${fibRatioLabel(level)} ${fibKindLabel(level.kind, lang)} ($${level.price})`, `${fibRatioLabel(level)}${fibKindLabel(level.kind)}（$${level.price}）`);
   switch (level.kind) {
     case 'support':
-      return tx(lang, `📐 Price near ${at} — dips tend to hold here. Don't panic-sell`, `📐 现价贴近${at}——跌到这儿容易稳住，别慌着割肉`);
+      return tx(lang, `📐 Price near ${at} — dips tend to hold here, no need to panic-sell`, `📐 现价贴近${at}——跌到这儿容易稳住，割肉不急`);
     case 'resistance':
-      return tx(lang, `📐 Price near ${at} — bounces often stall here. Don't chase`, `📐 现价贴近${at}——反弹到这儿容易遇阻，别急着追`);
+      return tx(lang, `📐 Price near ${at} — bounces often stall here, chasing is risky`, `📐 现价贴近${at}——反弹到这儿容易遇阻，追高要慎`);
     case 'target-up':
-      return tx(lang, `📐 Price near ${at} — don't chase up here, let it rest`, `📐 现价接近${at}——涨到这儿别追高，让子弹歇会儿`);
+      return tx(lang, `📐 Price near ${at} — chasing up here is risky, let it rest`, `📐 现价接近${at}——涨到这儿追高要慎，让子弹歇会儿`);
     case 'target-down':
       return tx(lang, `📐 Price near ${at} — don't rush to buy the dip, wait for it to stabilize`, `📐 现价接近${at}——跌到这儿别急着抄底，等它站稳再说`);
   }

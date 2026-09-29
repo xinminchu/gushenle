@@ -8,7 +8,7 @@ import { useLanguage } from '@/context/LanguageContext';
 
 /**
  * 🌱 登录提示横幅：只在未登录时出现在娱乐页顶部。
- * 卖的不是"登录功能"，是"所有权"：贡献归你、创意署名、树长大有所有者回报。
+ * 卖的不是"登录功能"，是"归属感"：贡献归你、创意署名、一起把树养大。
  * 本次访问可关闭（X），下次进娱乐页再出现——保证到达率。
  * 点按钮通过自定义事件让 AppHeader 打开登录弹窗（弹窗状态是 AppHeader 私有的）。
  */
@@ -54,8 +54,8 @@ export default function LoginNudge() {
           {zh2hant(lang, '好创意被采纳，署你的名、发贡献值，被更多人看到、用上')}
         </li>
         <li>
-          <span className="text-emerald-300 font-semibold">{zh2hant(lang, '🌳 所有者回报：')}</span>
-          {zh2hant(lang, '等这棵树长大了，第一批浇水的人，有所有者回报')}
+          <span className="text-emerald-300 font-semibold">{zh2hant(lang, '🌳 一起长大：')}</span>
+          {zh2hant(lang, '等这棵树长大了，第一批浇水的人，名字都刻在树上')}
         </li>
         <li>
           <span className="text-emerald-300 font-semibold">{zh2hant(lang, '🔒 隐私放心：')}</span>

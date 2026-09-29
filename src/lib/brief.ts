@@ -13,21 +13,21 @@ import { tx } from '@/lib/hant';
 const ACTION_TIP: Record<string, string> = {
   overheated: '追高慎重',
   hotStrong: '拿着可以，追就免了',
-  risingAccel: '涨速起来了，别追',
+  risingAccel: '涨速起来了，追高要慎',
   sideways: '先看着',
-  bottomUp: '跌不动了，别急着割',
-  weakLow: '还在跌，别接飞刀',
-  oversoldBottom: '别急着割肉',
+  bottomUp: '跌不动了，割肉不急',
+  weakLow: '还在跌，飞刀别伸手接',
+  oversoldBottom: '割肉可以再等等',
 };
 
 /** 行动提示英文版：商量式语气 */
 const ACTION_TIP_EN: Record<string, string> = {
   overheated: 'Careful chasing',
   hotStrong: 'Fine to hold, skip the chase',
-  risingAccel: "Picking up speed — don't chase",
+  risingAccel: "Picking up speed — chasing is risky",
   sideways: 'Wait and see',
   bottomUp: 'Selling pressure easing — no rush to cut',
-  weakLow: "Still falling — don't catch the knife",
+  weakLow: 'Still falling — catching the knife hurts',
   oversoldBottom: 'No rush to cut losses',
 };
 
@@ -56,10 +56,12 @@ export function buildBrief(symbol: string, name: string, d: RhythmResponse, lang
   const s = d.series;
   if (s.length < 2) return null;
 
-  // 当日涨跌：用日线最后两根收盘价（盘中/收盘都一致）
+  // 当日涨跌：盘中/盘后用服务端实时口径（dayChangePct，相对昨收），跟今日页一致；
+  // 只有纯收盘会话才用日线最后两根收盘价（portfolio-2）
   const last = s[s.length - 1];
   const prev = s[s.length - 2];
-  const chg = prev.close > 0 ? ((last.close - prev.close) / prev.close) * 100 : 0;
+  const liveChg = d.dayChangePct != null && d.priceSession !== 'close' ? d.dayChangePct : null;
+  const chg = liveChg ?? (prev.close > 0 ? ((last.close - prev.close) / prev.close) * 100 : 0);
 
   let moveTxt: string;
   if (chg >= 3) moveTxt = tx(lang, `Up big ${chg.toFixed(1)}%`, `大涨 ${chg.toFixed(1)}%`);
