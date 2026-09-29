@@ -434,7 +434,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   /** 自选股全量 1Y 数据：关键价位线用，每只只拉一次（播报已搬到持仓页，用自己的 hook） */
   const wlSymbols = useMemo(() => watchlist.map((i) => i.symbol), [watchlist]);
   const wlData = useWatchlistData(wlSymbols);
-  /** 当前标的的关键价位线（年高/年低/MA50） */
+  /** 当前标的的关键价位线（年高/年低/MA50/20日高低点） */
   const keyLevels = useMemo(() => {
     const yd = wlData[symbol];
     if (!yd) return null;

@@ -149,14 +149,11 @@ export interface KeyLevel {
 }
 
 /**
- * 关键价位：年内最高 / 年内最低 / 50 日均线 / 年内低点→高点的
- * 黄金分割回撤 0.382 / 0.5 / 0.618。细虚线 + 轴上小标签，不喧宾夺主。
- * 需要至少 50 个点（算 MA50）；不够返回 null。
- */
-/**
- * 关键价位：年内最高 / 年内最低 / 50 日均线。
+ * 关键价位：年内最高 / 年内最低 / 50 日均线 / 20 日高点 / 20 日低点。
  * 分工：回撤线归「黄金分割」模式管（两处曾用不同锚导致 0.618 打架，
  * 2026-09-28 起关键价位不再画回撤线，只留大位置，避免重复）。
+ * 20 日高低点 = 近 20 个交易日的最高/最低（唐奇安通道上下轨），
+ * 是"近端位置"，与年高/年低的"大位置"互补。
  */
 export function computeKeyLevels(
   d: RhythmResponse,
@@ -168,10 +165,17 @@ export function computeKeyLevels(
   if (!hl) return null;
   const closes = s.map((p) => p.close);
   const ma50 = closes.slice(-50).reduce((a, b) => a + b, 0) / 50;
-  const en = lang === 'en';
-  return [
+  const hl20 = actualHighLow(s.slice(-20));
+  const levels: KeyLevel[] = [
     { label: tx(lang, '1Y high', '年高'), price: hl.high, color: 'rgba(244,114,182,0.55)' },
     { label: tx(lang, '1Y low', '年低'), price: hl.low, color: 'rgba(56,189,248,0.55)' },
     { label: 'MA50', price: ma50, color: 'rgba(167,139,250,0.55)' },
   ];
+  if (hl20) {
+    levels.push(
+      { label: tx(lang, '20D high', '20日高点'), price: hl20.high, color: 'rgba(251,146,60,0.55)' },
+      { label: tx(lang, '20D low', '20日低点'), price: hl20.low, color: 'rgba(45,212,191,0.55)' },
+    );
+  }
+  return levels;
 }
