@@ -11,6 +11,7 @@ import {
   type SignalStatusKey,
 } from '@/lib/rhythm';
 import type { Lang } from '@/lib/i18n';
+import { toHantDeep } from '@/lib/hant';
 import { getFullSeries } from '@/lib/marketData';
 
 /**
@@ -73,16 +74,19 @@ const pct1 = (v: number) => Math.round(v * 1000) / 10;
 
 export async function GET(req: NextRequest) {
   const symbol = (req.nextUrl.searchParams.get('symbol') || 'AAPL').toUpperCase();
-  const lang: Lang = req.nextUrl.searchParams.get('lang') === 'en' ? 'en' : 'zh';
+  const lp = req.nextUrl.searchParams.get('lang');
+  const lang: Lang = lp === 'en' ? 'en' : lp === 'hant' ? 'hant' : 'zh';
   const en = lang === 'en';
+  // 繁体：中文链路照常生成，输出前整包转繁体（键名不动）；缓存 key 已含 lang，各语言独立缓存
+  const out = (d: unknown) => NextResponse.json(lang === 'hant' ? toHantDeep(d) : d);
 
   const cacheKey = `${symbol}:${lang}`;
   const hit = accCache.get(cacheKey);
-  if (hit && hit.expires > Date.now()) return NextResponse.json(hit.data);
+  if (hit && hit.expires > Date.now()) return out(hit.data);
 
   const { series, source } = await getFullSeries(symbol);
   if (source === 'simulated') {
-    return NextResponse.json({
+    return out({
       symbol,
       available: false,
       reason: en ? 'Demo data — excluded from backtests.' : '当前为演示数据，不参与复盘。',
@@ -168,6 +172,7 @@ export async function GET(req: NextRequest) {
       : '四状态分别验证：涨太猛了/高位稳着涨/还在往下跌（别追、别抄底语义）次日涨幅<+0.5%算命中；跌过头了（赌反弹语义）次日涨幅>-0.5%算命中；中间分数不记信号。基线为同期全部交易日的天然命中率。',
     computedAt: new Date().toISOString(),
   };
+  // 缓存存原文（简体），每次响应时再转繁体，保证只转一次
   accCache.set(cacheKey, { data, expires: Date.now() + 3_600_000 });
-  return NextResponse.json(data);
+  return out(data);
 }

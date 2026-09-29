@@ -2,24 +2,26 @@
 
 import React from 'react';
 import { sectorLabel, themeLabel, type StockInfo } from '@/lib/stockList';
+import type { Lang } from '@/lib/i18n';
+import { tx, zh2hant } from '@/lib/hant';
 
 /**
  * 🏢 公司介绍：大白话一句话 + 板块/主题标签。
  * 数据来自本地 stockList.ts（原创大白话，非券商翻译腔），零外部依赖、零维护。
  * 名单库里没有的自选代码不显示。
  */
-export default function CompanyIntro({ info, lang = 'zh' }: { info: StockInfo; lang?: 'zh' | 'en' }) {
+export default function CompanyIntro({ info, lang = 'zh' }: { info: StockInfo; lang?: Lang }) {
   const en = lang === 'en';
   if (!info.blurb && info.themes.length === 0) return null;
   return (
     <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl px-3 py-2.5">
-      <div className="text-[10px] text-slate-500 mb-1">{en ? '🏢 What this company does' : '🏢 这家公司是干嘛的'}</div>
+      <div className="text-[10px] text-slate-500 mb-1">{tx(lang, '🏢 What this company does', '🏢 这家公司是干嘛的')}</div>
       <p className="text-xs text-slate-300 leading-relaxed">
-        <span className="text-slate-100 font-medium">{en ? info.en : info.zh}</span>
+        <span className="text-slate-100 font-medium">{tx(lang, info.en, info.zh)}</span>
         {!en && info.blurb && (
           <>
             <span className="text-slate-500">：</span>
-            {info.blurb}
+            {zh2hant(lang, info.blurb)}
           </>
         )}
       </p>

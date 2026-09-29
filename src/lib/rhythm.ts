@@ -13,6 +13,7 @@
  */
 
 import type { Lang } from './i18n';
+import { tx } from '@/lib/hant';
 
 export interface RhythmPoint {
   /** YYYY-MM-DD */
@@ -49,7 +50,7 @@ export const RANGE_DEFS: RangeDef[] = [
 
 /** 按语言取区间展示词 */
 export const rangeLabel = (d: RangeDef, lang: Lang = 'zh'): string =>
-  lang === 'en' ? d.labelEn : d.label;
+  tx(lang, d.labelEn, d.label);
 
 export const RANGE_MAP: Record<string, RangeDef> = Object.fromEntries(
   RANGE_DEFS.map((d) => [d.id, d]),
@@ -170,13 +171,7 @@ export interface RhythmThresholds {
 
 /** 按语言取波动档位展示词（thresholdsFor 只存中文，en 模式走这里） */
 export const tierLabelFor = (tier: VolTier, lang: Lang = 'zh'): string =>
-  lang === 'en'
-    ? tier === 'high'
-      ? 'High-vol mode'
-      : 'Steady mode'
-    : tier === 'high'
-      ? '高波模式'
-      : '稳健模式';
+  tx(lang, tier === 'high' ? 'High-vol mode' : 'Steady mode', tier === 'high' ? '高波模式' : '稳健模式');
 
 /**
  * trailing 波动率：近 VOL_WINDOW 个交易日的日收益率样本标准差。
@@ -321,7 +316,8 @@ export function judgeFromScore(
 ): { statusKey: StatusKey; advice: string; overheated: boolean } {
   const pick = (statusKey: StatusKey, overheated: boolean) => ({
     statusKey,
-    advice: ADVICE[statusKey][lang],
+    // 繁体走中文链路，输出前由 API 层 toHantDeep 统一转繁体
+    advice: ADVICE[statusKey][lang === 'hant' ? 'zh' : lang],
     overheated,
   });
   if (score >= th.hot) {
@@ -351,21 +347,13 @@ export function adviceWithPosition(
   const en = lang === 'en';
   if (statusKey === 'overheated') {
     if (pnlPct >= -10)
-      return en
-        ? `It's up, but you're still down ${pct}% — this bounce is a good chance to work back toward breakeven. Don't chase, and don't rush to sell it all.`
-        : `涨是涨了，可你还亏 ${pct}%，这波是回本的好机会——别追高，也别急着全走。`;
-    return en
-      ? `Still down ${pct}% — bounces like this are rare windows to trim losses. Sell a little in batches; don't wait until you can't bear to let go.`
-      : `还套着 ${pct}%，反弹是难得的减亏窗口——分批走一点，别等涨回去又舍不得。`;
+      return tx(lang, `It's up, but you're still down ${pct}% — this bounce is a good chance to work back toward breakeven. Don't chase, and don't rush to sell it all.`, `涨是涨了，可你还亏 ${pct}%，这波是回本的好机会——别追高，也别急着全走。`);
+    return tx(lang, `Still down ${pct}% — bounces like this are rare windows to trim losses. Sell a little in batches; don't wait until you can't bear to let go.`, `还套着 ${pct}%，反弹是难得的减亏窗口——分批走一点，别等涨回去又舍不得。`);
   }
   if (statusKey === 'weakLow')
-    return en
-      ? `Still sliding, and you're down ${pct}% — selling halfway down hurts the most. Hang on a bit longer.`
-      : `还在往下跌，你套着 ${pct}%，割在半山腰最亏，再忍一忍。`;
+    return tx(lang, `Still sliding, and you're down ${pct}% — selling halfway down hurts the most. Hang on a bit longer.`, `还在往下跌，你套着 ${pct}%，割在半山腰最亏，再忍一忍。`);
   if (statusKey === 'oversoldBottom')
-    return en
-      ? `Oversold, and you're down ${pct}% — selling at the floor hurts the most.`
-      : `跌过头了，你套着 ${pct}%，割在地板上最亏。`;
+    return tx(lang, `Oversold, and you're down ${pct}% — selling at the floor hurts the most.`, `跌过头了，你套着 ${pct}%，割在地板上最亏。`);
   return advice;
 }
 
@@ -385,9 +373,9 @@ export function describeStatus(closes: number[], pos: number, lang: Lang = 'zh')
   const winPct = (w: number[]): number =>
     w[0] > 0 ? ((w[w.length - 1] - w[0]) / w[0]) * 100 : 0;
   const longWin = closes.slice(-66);
-  const longLabel = n >= 66 ? (en ? 'Last 3M' : '近3月') : en ? `Last ${longWin.length}d` : `近${longWin.length}天`;
+  const longLabel = n >= 66 ? (tx(lang, 'Last 3M', '近3月')) : tx(lang, `Last ${longWin.length}d`, `近${longWin.length}天`);
   const parts: string[] = [`${longLabel} ${fmtSignedPct(winPct(longWin))}`];
-  if (n >= 22) parts.push(`${en ? 'Last 1M' : '近1月'} ${fmtSignedPct(winPct(closes.slice(-22)))}`);
+  if (n >= 22) parts.push(`${tx(lang, 'Last 1M', '近1月')} ${fmtSignedPct(winPct(closes.slice(-22)))}`);
   const tail = closes.slice(-21); // 20 个涨跌
   let up = 0;
   let down = 0;
@@ -395,9 +383,9 @@ export function describeStatus(closes: number[], pos: number, lang: Lang = 'zh')
     if (tail[i] > tail[i - 1]) up++;
     else if (tail[i] < tail[i - 1]) down++;
   }
-  parts.push(en ? `${up} up / ${down} down in last ${tail.length - 1}d` : `近${tail.length - 1}天${up}涨${down}跌`);
+  parts.push(tx(lang, `${up} up / ${down} down in last ${tail.length - 1}d`, `近${tail.length - 1}天${up}涨${down}跌`));
   parts.push(
-    pos >= 90 ? (en ? 'Near highs' : '处高位') : pos <= 10 ? (en ? 'Near lows' : '处低位') : en ? 'Mid-range' : '处中部',
+    pos >= 90 ? (tx(lang, 'Near highs', '处高位')) : pos <= 10 ? (tx(lang, 'Near lows', '处低位')) : tx(lang, 'Mid-range', '处中部'),
   );
   return parts.join(' · ');
 }
@@ -411,18 +399,16 @@ export function buildJudgment(closes: number[], lang: Lang = 'zh'): Judgment {
   if (!s) {
     return {
       score: 50,
-      status: en ? 'Not enough data' : '数据不足',
+      status: tx(lang, 'Not enough data', '数据不足'),
       statusDetail: '',
-      advice: en
-        ? 'Listed too recently — not enough data for a read.'
-        : '上市时间较短，暂无足够数据做出判断。',
+      advice: tx(lang, 'Listed too recently — not enough data for a read.', '上市时间较短，暂无足够数据做出判断。'),
       pos: 50,
       trend: 50,
       vel: 50,
       overheated: false,
       anchorRange: ANCHOR_RANGE_ID,
       thresholds,
-      note: en ? 'Not enough data' : '数据不足',
+      note: tx(lang, 'Not enough data', '数据不足'),
     };
   }
   const { statusKey, advice, overheated } = judgeFromScore(s.score, s.trend, s.vel, thresholds, lang);

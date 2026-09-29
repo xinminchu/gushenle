@@ -1,6 +1,7 @@
 import type { RhythmPoint } from './rhythm';
 import { fmtMoney } from './currency';
 import type { Lang } from './i18n';
+import { tx } from '@/lib/hant';
 
 export interface ChipBin {
   /**  bin 中心价 */
@@ -131,28 +132,16 @@ export function estimateChips(series: RhythmPoint[], price: number, symbol: stri
   }
 
   const pr = Math.round(profit * 100);
-  const en = lang === 'en';
   let verdict: string;
   if (profit >= 0.9) {
-    verdict = en
-      ? `Almost everyone is in profit (${pr}%) — watch for profit-taking higher up`
-      : `几乎人人赚钱（获利盘${pr}%），越往上越要防获利回吐`;
+    verdict = tx(lang, `Almost everyone is in profit (${pr}%) — watch for profit-taking higher up`, `几乎人人赚钱（获利盘${pr}%），越往上越要防获利回吐`);
   } else if (profit <= 0.15) {
     verdict = trapPeak
-      ? en
-        ? `Big overhang above — expect selling pressure near ${fmtMoney(symbol, trapPeak[0])}`
-        : `大片筹码套在上面，涨到 ${fmtMoney(symbol, trapPeak[0])} 附近可能遇到抛压`
-      : en
-        ? `Only ${pr}% in profit — almost all trapped above. Don't chase`
-        : `获利盘只有${pr}%，上面全是套牢盘，别急着追`;
+      ? tx(lang, `Big overhang above — expect selling pressure near ${fmtMoney(symbol, trapPeak[0])}`, `大片筹码套在上面，涨到 ${fmtMoney(symbol, trapPeak[0])} 附近可能遇到抛压`): tx(lang, `Only ${pr}% in profit — almost all trapped above. Don't chase`, `获利盘只有${pr}%，上面全是套牢盘，别急着追`);
   } else if (avgCost > price) {
-    verdict = en
-      ? `Average cost is above current price — most are still underwater. No rush`
-      : `平均成本在现价之上，大部分人还亏着，先别急`;
+    verdict = tx(lang, `Average cost is above current price — most are still underwater. No rush`, `平均成本在现价之上，大部分人还亏着，先别急`);
   } else {
-    verdict = en
-      ? `Chips are scattered (${pr}% in profit) — no clear battleground`
-      : `筹码比较分散（获利盘${pr}%），没有明显的多空决战区`;
+    verdict = tx(lang, `Chips are scattered (${pr}% in profit) — no clear battleground`, `筹码比较分散（获利盘${pr}%），没有明显的多空决战区`);
   }
 
   return { bins, profitRatio: profit, avgCost, conc70: best, trapPeak, days: bars.length, verdict };

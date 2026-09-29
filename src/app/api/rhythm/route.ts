@@ -10,6 +10,8 @@ import {
   type RhythmResponse,
 } from '@/lib/rhythm';
 import { getFullSeries, getLiveQuote, type LiveQuote } from '@/lib/marketData';
+import type { Lang } from '@/lib/i18n';
+import { toHantDeep } from '@/lib/hant';
 
 /**
  * 设计说明：
@@ -47,7 +49,7 @@ function buildResponse(
   full: RhythmPoint[],
   source: RhythmResponse['source'],
   live: LiveQuote | null,
-  lang: 'zh' | 'en',
+  lang: Lang,
 ): RhythmResponse {
   const series = sliceRange(full, rangeId);
   const closes = series.map((p) => p.close);
@@ -133,15 +135,18 @@ function buildResponse(
 export async function GET(req: NextRequest) {
   const symbol = (req.nextUrl.searchParams.get('symbol') || 'AAPL').toUpperCase();
   const range = req.nextUrl.searchParams.get('range') || ANCHOR_RANGE_ID;
-  const lang = req.nextUrl.searchParams.get('lang') === 'en' ? 'en' : 'zh';
+  const lp = req.nextUrl.searchParams.get('lang');
+  const lang: Lang = lp === 'en' ? 'en' : lp === 'hant' ? 'hant' : 'zh';
   const debug = req.nextUrl.searchParams.get('debug') === '1';
 
   const { series, source, errors } = await getFullSeries(symbol);
   // 实时报价失败不影响主流程，静默降级为日线收盘价
   const live = await getLiveQuote(symbol).catch(() => null);
   const data = buildResponse(symbol, range, series, source, live, lang);
+  // 繁体：中文链路照常生成，输出前整包转繁体（键名不动，只转一次）
   if (debug) {
-    return NextResponse.json({ ...data, _debug: { errors, fullPoints: series.length } });
+    const dbg = { ...data, _debug: { errors, fullPoints: series.length } };
+    return NextResponse.json(lang === 'hant' ? toHantDeep(dbg) : dbg);
   }
-  return NextResponse.json(data);
+  return NextResponse.json(lang === 'hant' ? toHantDeep(data) : data);
 }

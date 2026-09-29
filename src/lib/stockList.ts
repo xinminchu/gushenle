@@ -5,6 +5,7 @@
  */
 
 import type { Lang } from './i18n';
+import { zh2hant } from './hant';
 
 export interface StockInfo {
   code: string;
@@ -31,7 +32,7 @@ export const SECTORS = [
 export function displayStockName(symbol: string, lang: Lang, storedName?: string): string {
   const info = STOCK_LIST.find((s) => s.code === symbol);
   if (lang === 'en' && info?.en) return info.en;
-  return storedName || info?.zh || symbol;
+  return zh2hant(lang, storedName || info?.zh || symbol);
 }
 
 export const STOCK_LIST: StockInfo[] = [
@@ -399,10 +400,10 @@ const THEME_EN: Record<string, string> = {
   金融科技: 'Fintech',
 };
 /** 板块/主题英文名：英文模式展示用（无对照则原样返回） */
-export const sectorLabel = (zh: string, lang: 'zh' | 'en' = 'zh'): string =>
-  lang === 'en' ? SECTOR_EN[zh] ?? zh : zh;
-export const themeLabel = (zh: string, lang: 'zh' | 'en' = 'zh'): string =>
-  lang === 'en' ? THEME_EN[zh] ?? zh : zh;
+export const sectorLabel = (zh: string, lang: Lang = 'zh'): string =>
+  lang === 'en' ? SECTOR_EN[zh] ?? zh : zh2hant(lang, zh);
+export const themeLabel = (zh: string, lang: Lang = 'zh'): string =>
+  lang === 'en' ? THEME_EN[zh] ?? zh : zh2hant(lang, zh);
 
 /** 全部主题（去重，供筛选器用） */
 export function allThemes(): string[] {

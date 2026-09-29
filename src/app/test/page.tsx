@@ -62,7 +62,7 @@ function TestContent() {
           onClick={toggleLanguage}
           className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition"
         >
-          🌐 {lang === 'zh' ? 'English' : '中文'}
+          🌐 {lang === 'en' ? '中文' : 'English'}
         </button>
       </div>
 

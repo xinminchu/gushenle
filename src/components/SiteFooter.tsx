@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import type { InfoSection } from './modals/SiteInfoModal';
+import { tx } from '@/lib/hant';
 
 type Stats = { visitors: number | null; today: number | null; users: number | null };
 
@@ -33,16 +34,9 @@ function SiteStatsLine() {
   if (!stats || stats.visitors == null) return null;
   return (
     <p className="text-center text-[10px] text-slate-600 mt-1">
-      {en ? (
-        <>
-          {stats.visitors}{' '}visitors{stats.today != null ? ` · ${stats.today} today` : ''}
-          {stats.users != null ? ` · ${stats.users} registered` : ''}
-        </>
-      ) : (
-        <>
-          已有 {stats.visitors} 位访客{stats.today != null ? ` · 今日 ${stats.today} 位` : ''}
-          {stats.users != null ? ` · ${stats.users} 位用户注册` : ''}
-        </>
+      {tx(lang,
+        `${stats.visitors} visitors${stats.today != null ? ` · ${stats.today} today` : ''}${stats.users != null ? ` · ${stats.users} registered` : ''}`,
+        `已有 ${stats.visitors} 位访客${stats.today != null ? ` · 今日 ${stats.today} 位` : ''}${stats.users != null ? ` · ${stats.users} 位用户注册` : ''}`,
       )}
     </p>
   );
@@ -53,10 +47,10 @@ export default function SiteFooter({ onOpen }: { onOpen: (s: InfoSection) => voi
   const { lang } = useLanguage();
   const en = lang === 'en';
   const links: [InfoSection, string][] = [
-    ['about', en ? 'About' : '简介'],
-    ['guide', en ? 'Guide' : '用法'],
-    ['legal', en ? 'Legal' : '版权与法律'],
-    ['timeline', en ? 'Timeline' : '时间轴'],
+    ['about', tx(lang, 'About', '简介')],
+    ['guide', tx(lang, 'Guide', '用法')],
+    ['legal', tx(lang, 'Legal', '版权与法律')],
+    ['timeline', tx(lang, 'Timeline', '时间轴')],
   ];
   return (
     <footer className="max-w-md mx-auto px-4 pt-6 pb-2">
@@ -72,9 +66,7 @@ export default function SiteFooter({ onOpen }: { onOpen: (s: InfoSection) => voi
         ))}
       </div>
       <p className="text-center text-[10px] text-slate-600 mt-2 leading-relaxed">
-        {en
-          ? '© 2026 Gushenle gushenle.com · Investing involves risk; content is for reference only'
-          : '© 2026 股神乐 gushenle.com · 投资有风险，内容仅供参考'}
+        {tx(lang, '© 2026 Gushenle gushenle.com · Investing involves risk; content is for reference only', '© 2026 股神乐 gushenle.com · 投资有风险，内容仅供参考')}
       </p>
       <SiteStatsLine />
     </footer>

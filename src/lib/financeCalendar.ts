@@ -1,6 +1,9 @@
 // 财经日历：固定日程（FOMC/CPI/休市/巴菲特/Jackson Hole）+ 规则生成（非农）
 // FOMC 日期来自美联储官方日程，CPI 来自 BLS 发布日程；每年初更新一次即可。
 
+import type { Lang } from '@/lib/i18n';
+import { tx } from '@/lib/hant';
+
 export type CalKind =
   | 'fomc'
   | 'cpi'
@@ -145,12 +148,11 @@ export function formatDateCN(dateStr: string): string {
 
 /** 今天（用户时区）的 YYYY-MM-DD */
 /** 财报时段标签：API 返回 canonical key（pre/after/during/tbd），展示层按语言映射 */
-export function sessionLabel(key: string, lang: 'zh' | 'en' = 'zh'): string {
-  const en = lang === 'en';
-  if (key === 'pre') return en ? 'Pre-market' : '盘前';
-  if (key === 'after') return en ? 'After hours' : '盘后';
-  if (key === 'during') return en ? 'During hours' : '盘中';
-  return en ? 'TBD' : '时间未定';
+export function sessionLabel(key: string, lang: Lang = 'zh'): string {
+  if (key === 'pre') return tx(lang, 'Pre-market', '盘前');
+  if (key === 'after') return tx(lang, 'After hours', '盘后');
+  if (key === 'during') return tx(lang, 'During hours', '盘中');
+  return tx(lang, 'TBD', '时间未定');
 }
 
 export function todayStr(): string {

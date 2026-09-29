@@ -3,11 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { displayStockName } from '@/lib/stockList';
+import { tx } from '@/lib/hant';
 
 /** 首页三行的大白话标题（用户定版；中间行名字暂定） */
-const HOT_LABEL: Record<string, string> = { zh: '涨得欢', en: 'Hot' };
-const MIDDLE_LABEL: Record<string, string> = { zh: '看一眼', en: 'Worth a look' };
-const COLD_LABEL: Record<string, string> = { zh: '跌得凶', en: 'Cold' };
 
 interface ScanItem {
   symbol: string;
@@ -80,7 +78,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
   const asOfNote = (k: 'hot' | 'middle' | 'cold'): string => {
     const rd = data.rowDates;
     if (!rd || !rd[k] || rd[k] === md) return '';
-    return en ? `(${shortDate(rd[k])} data)` : `（${shortDate(rd[k])}数据）`;
+    return tx(lang, `(${shortDate(rd[k])} data)`, `（${shortDate(rd[k])}数据）`);
   };
   // scanDate 是 YYYY-MM-DD（最新一根日线的日期）：中文显示"数据截至 9月25日（周五收盘）"
   function fmtScanDate(s: string): string {
@@ -90,9 +88,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
     const weekCn = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
     const monthEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
     const weekEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
-    return en
-      ? `Data as of ${monthEn} ${Number(m[3])} (${weekEn} close)`
-      : `数据截至 ${Number(m[2])}月${Number(m[3])}日（${weekCn}收盘）`;
+    return tx(lang, `Data as of ${monthEn} ${Number(m[3])} (${weekEn} close)`, `数据截至 ${Number(m[2])}月${Number(m[3])}日（${weekCn}收盘）`);
   }
 
   // tone: 三行去背景，只留边框 —— 上下红框（栏杆），中间绿框（观察区）；某行空时显示"今日暂无"
@@ -122,12 +118,12 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
               <div className="text-[9px] text-slate-500 leading-tight truncate">{displayStockName(s.symbol, lang, s.name)}</div>
               {s.upStreak != null && s.upStreak >= 3 && (
                 <div className="text-[9px] leading-tight mt-0.5 text-amber-300">
-                  📈{s.upStreak}{en ? '-day rise' : '连涨'}
+                  📈{s.upStreak}{tx(lang, '-day rise', '连涨')}
                 </div>
               )}
               {s.downStreak != null && s.downStreak >= 3 && (
                 <div className="text-[9px] leading-tight mt-0.5 text-sky-300">
-                  📉{s.downStreak}{en ? '-day slide' : '连跌'}
+                  📉{s.downStreak}{tx(lang, '-day slide', '连跌')}
                 </div>
               )}
               <div
@@ -147,7 +143,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
       </div>
       ) : (
         <div className="text-[10px] text-slate-500 py-2 text-center">
-          {en ? 'none today' : '今日暂无'}
+          {tx(lang, 'none today', '今日暂无')}
         </div>
       )}
     </div>
@@ -157,52 +153,44 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
     <div className="rounded-xl border border-slate-800 bg-slate-900 p-3 mb-3">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-semibold text-slate-100">
-          📡 {en ? 'Market Signals' : '今日信号'}
+          📡 {tx(lang, 'Market Signals', '今日信号')}
           {md && <span className="text-[10px] font-normal text-slate-500 ml-1.5">📅 {fmtScanDate(md)}</span>}
         </span>
-        <span className="text-[10px] text-slate-500">{en ? 'data only' : '只摆数据·仅供参考'}</span>
+        <span className="text-[10px] text-slate-500">{tx(lang, 'data only', '只摆数据·仅供参考')}</span>
       </div>
       {row(
         data.hot,
-        `🔥 ${HOT_LABEL[lang]}`,
-        en ? 'don\u2019t chase, beware of getting trapped' : '慎追，当心套牢',
+        `🔥 ${tx(lang, 'Hot', '涨得欢')}`,
+        tx(lang, 'don\u2019t chase, beware of getting trapped', '慎追，当心套牢'),
         'red',
         asOfNote('hot'),
       )}
       {row(
         data.middle || [],
-        `👀 ${MIDDLE_LABEL[lang]}`,
-        en
-          ? data.flowFilter
+        `👀 ${tx(lang, 'Worth a look', '看一眼')}`,
+        tx(lang, data.flowFilter
             ? 'near 50 · 20-day net inflow'
-            : 'closest to score 50'
-          : data.flowFilter
+            : 'closest to score 50', data.flowFilter
             ? '离50近 · 近20天买入多'
-            : '离50分最近',
+            : '离50分最近'),
         'green',
         asOfNote('middle'),
       )}
       {row(
         data.cold || [],
-        `🥶 ${COLD_LABEL[lang]}`,
-        en ? 'be careful about selling the bottom or catching the knife' : '慎割肉，慎抄底',
+        `🥶 ${tx(lang, 'Cold', '跌得凶')}`,
+        tx(lang, 'be careful about selling the bottom or catching the knife', '慎割肉，慎抄底'),
         'red',
         asOfNote('cold'),
       )}
       <div className="mt-2 text-[10px] leading-relaxed text-slate-500">
-        {en
-          ? '📌 Hot: don\u2019t chase, beware of getting trapped; Cold: be careful about selling the bottom or catching the knife; Take a look: net inflow — all three describe conditions, you make your own calls.'
-          : '📌 涨得欢：慎追，当心套牢；跌得凶：慎割肉，慎抄底；看一眼：买入多——三行都是状态，买卖自己定。'}
+        {tx(lang, '📌 Hot: don\u2019t chase, beware of getting trapped; Cold: be careful about selling the bottom or catching the knife; Take a look: net inflow — all three describe conditions, you make your own calls.', '📌 涨得欢：慎追，当心套牢；跌得凶：慎割肉，慎抄底；看一眼：买入多——三行都是状态，买卖自己定。')}
       </div>
       <div className="mt-1 text-[10px] leading-relaxed text-slate-600">
-        {en
-          ? '📊 Streaks count consecutive up/down closes; shown only at 3+ days, a flat day breaks the streak.'
-          : '📊 连涨/连跌按收盘价连续天数算，满 3 天才标，平盘打断。'}
+        {tx(lang, '📊 Streaks count consecutive up/down closes; shown only at 3+ days, a flat day breaks the streak.', '📊 连涨/连跌按收盘价连续天数算，满 3 天才标，平盘打断。')}
       </div>
       <div className="mt-1 text-[10px] leading-relaxed text-slate-600">
-        {en
-          ? '👀 Middle: pairs nearest to 50 above/below; keep 20-day net inflow; both positive → larger 20-day inflow wins.'
-          : '👀 中间行取法：离50由近到远、上下成对比较，留近20天买入多者；都多时取20天净流入大者。'}
+        {tx(lang, '👀 Middle: pairs nearest to 50 above/below; keep 20-day net inflow; both positive → larger 20-day inflow wins.', '👀 中间行取法：离50由近到远、上下成对比较，留近20天买入多者；都多时取20天净流入大者。')}
       </div>
     </div>
   );

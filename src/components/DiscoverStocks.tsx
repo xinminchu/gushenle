@@ -18,6 +18,7 @@ import { loadUniverse, searchUniverse, type UniverseEntry } from '@/lib/universe
 import { useWatchlist } from './WatchlistContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { displayStockName } from '@/lib/stockList';
+import { tx } from '@/lib/hant';
 
 /** 精选名单代码集合：全市场搜索时排除，精选优先 */
 const CURATED_CODES = new Set(STOCK_LIST.map((s) => s.code));
@@ -89,7 +90,7 @@ export default function DiscoverStocks() {
     const t = q.trim();
     if (!t) return '';
     const c = CODE_CORRECTIONS[t.toUpperCase()];
-    return c ? (en ? `Auto-corrected to ${c}` : `已自动纠正为 ${c}`) : '';
+    return c ? (tx(lang, `Auto-corrected to ${c}`, `已自动纠正为 ${c}`)) : '';
   }, [q]);
 
   const chip = (active: boolean) =>
@@ -106,8 +107,8 @@ export default function DiscoverStocks() {
         className="w-full flex items-center justify-between text-sm text-slate-200"
       >
         <span className="flex items-center gap-1.5 font-medium">
-          <Compass className="w-4 h-4 text-blue-400" /> {en ? 'Discover stocks' : '发现股票'}
-          <span className="text-[10px] text-slate-500 font-normal">{en ? 'By sector · by theme' : '按板块 · 按主题'}</span>
+          <Compass className="w-4 h-4 text-blue-400" /> {tx(lang, 'Discover stocks', '发现股票')}
+          <span className="text-[10px] text-slate-500 font-normal">{tx(lang, 'By sector · by theme', '按板块 · 按主题')}</span>
         </span>
         <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -120,7 +121,7 @@ export default function DiscoverStocks() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder={en ? 'Search code / English name, e.g. tsla, apple' : '搜代码 / 拼音 / 中英文名，如 pg、特斯拉、小火箭'}
+              placeholder={tx(lang, 'Search code / English name, e.g. tsla, apple', '搜代码 / 拼音 / 中英文名，如 pg、特斯拉、小火箭')}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -129,9 +130,9 @@ export default function DiscoverStocks() {
           )}
           {/* 板块 */}
           <div>
-            <div className="text-[10px] text-slate-500 mb-1">{en ? 'Sector' : '板块'}</div>
+            <div className="text-[10px] text-slate-500 mb-1">{tx(lang, 'Sector', '板块')}</div>
             <div className="flex gap-1.5 overflow-x-auto pb-1">
-              <button onClick={() => setSector('')} className={chip(!sector)}>{en ? 'All' : '全部'}</button>
+              <button onClick={() => setSector('')} className={chip(!sector)}>{tx(lang, 'All', '全部')}</button>
               {SECTORS.map((s) => (
                 <button key={s} onClick={() => setSector(sector === s ? '' : s)} className={chip(sector === s)}>
                   {sectorLabel(s, lang)}
@@ -141,9 +142,9 @@ export default function DiscoverStocks() {
           </div>
           {/* 主题 */}
           <div>
-            <div className="text-[10px] text-slate-500 mb-1">{en ? 'Theme' : '主题'}</div>
+            <div className="text-[10px] text-slate-500 mb-1">{tx(lang, 'Theme', '主题')}</div>
             <div className="flex gap-1.5 overflow-x-auto pb-1">
-              <button onClick={() => setTheme('')} className={chip(!theme)}>{en ? 'All' : '全部'}</button>
+              <button onClick={() => setTheme('')} className={chip(!theme)}>{tx(lang, 'All', '全部')}</button>
               {themes.map((t) => (
                 <button key={t} onClick={() => setTheme(theme === t ? '' : t)} className={chip(theme === t)}>
                   {themeLabel(t, lang)}
@@ -152,7 +153,7 @@ export default function DiscoverStocks() {
             </div>
           </div>
           {/* 结果 */}
-          <div className="text-[10px] text-slate-500">{en ? `${results.length} found` : `共 ${results.length} 只`}</div>
+          <div className="text-[10px] text-slate-500">{tx(lang, `${results.length} found`, `共 ${results.length} 只`)}</div>
           <div className="max-h-64 overflow-y-auto space-y-1.5 pr-0.5">
             {results.map((s) => {
               const added = inList.has(s.code);
@@ -166,21 +167,19 @@ export default function DiscoverStocks() {
                       {s.code} <span className="font-normal text-slate-300">{displayStockName(s.code, lang, s.zh)}</span>
                     </div>
                     <div className="text-[10px] text-slate-500 truncate">
-                      {en
-                        ? [s.sector && sectorLabel(s.sector, 'en'), ...s.themes.slice(0, 3).map((t) => themeLabel(t, 'en'))].filter(Boolean).join(' · ')
-                        : s.blurb ?? `${s.en} · ${s.sector}${s.themes.length > 0 ? ` · ${s.themes.join(' ')}` : ''}`}
+                      {tx(lang, [s.sector && sectorLabel(s.sector, 'en'), ...s.themes.slice(0, 3).map((t) => themeLabel(t, 'en'))].filter(Boolean).join(' · '), s.blurb ?? `${s.en} · ${s.sector}${s.themes.length > 0 ? ` · ${s.themes.join(' ')}` : ''}`)}
                     </div>
                   </div>
                   {added ? (
                     <span className="flex items-center gap-1 text-[11px] text-slate-500 shrink-0 ml-2">
-                      <Check className="w-3.5 h-3.5" /> {en ? 'Watchlisted' : '已在自选'}
+                      <Check className="w-3.5 h-3.5" /> {tx(lang, 'Watchlisted', '已在自选')}
                     </span>
                   ) : (
                     <button
                       onClick={() => addItem(s.code, s.zh)}
                       className="flex items-center gap-1 text-[11px] bg-blue-600 hover:bg-blue-500 text-white rounded-full px-2.5 py-1 shrink-0 ml-2"
                     >
-                      <Plus className="w-3 h-3" /> {en ? 'Add' : '加入'}
+                      <Plus className="w-3 h-3" /> {tx(lang, 'Add', '加入')}
                     </button>
                   )}
                 </div>
@@ -191,7 +190,7 @@ export default function DiscoverStocks() {
                 {uniResults.length > 0 ? (
                   <div className="space-y-1.5">
                     <div className="text-[11px] text-slate-500 text-center">
-                      {en ? 'Not in the curated list — found these market-wide:' : '精选名单没有，全市场找到这几只：'}
+                      {tx(lang, 'Not in the curated list — found these market-wide:', '精选名单没有，全市场找到这几只：')}
                     </div>
                     {uniResults.map((u) => {
                       const added = inList.has(u.code);
@@ -208,14 +207,14 @@ export default function DiscoverStocks() {
                           </div>
                           {added ? (
                             <span className="flex items-center gap-1 text-[11px] text-slate-500 shrink-0 ml-2">
-                              <Check className="w-3.5 h-3.5" /> {en ? 'Watchlisted' : '已在自选'}
+                              <Check className="w-3.5 h-3.5" /> {tx(lang, 'Watchlisted', '已在自选')}
                             </span>
                           ) : (
                             <button
                               onClick={() => addItem(u.code, u.en)}
                               className="flex items-center gap-1 text-[11px] bg-blue-600 hover:bg-blue-500 text-white rounded-full px-2.5 py-1 shrink-0 ml-2"
                             >
-                              <Plus className="w-3 h-3" /> {en ? 'Add' : '加入'}
+                              <Plus className="w-3 h-3" /> {tx(lang, 'Add', '加入')}
                             </button>
                           )}
                         </div>
@@ -224,7 +223,7 @@ export default function DiscoverStocks() {
                   </div>
                 ) : (
                   <div className="text-center space-y-2">
-                    <div className="text-[11px] text-slate-500">{en ? 'No match — try different filters' : '没找到，换个条件试试'}</div>
+                    <div className="text-[11px] text-slate-500">{tx(lang, 'No match — try different filters', '没找到，换个条件试试')}</div>
                     {/^([A-Za-z]{1,8}|\d{6}\.[A-Za-z]{2})$/.test(q.trim()) &&
                       !inList.has(q.trim().toUpperCase()) && (
                         <button
@@ -234,7 +233,7 @@ export default function DiscoverStocks() {
                           }}
                           className="text-[11px] text-blue-400 underline underline-offset-2 hover:text-blue-300"
                         >
-                          {en ? `Not in the list — add \u201c${q.trim().toUpperCase()}\u201d to watchlist anyway` : `名单里没有，直接添加「${q.trim().toUpperCase()}」到自选`}
+                          {tx(lang, `Not in the list — add \u201c${q.trim().toUpperCase()}\u201d to watchlist anyway`, `名单里没有，直接添加「${q.trim().toUpperCase()}」到自选`)}
                         </button>
                       )}
                   </div>

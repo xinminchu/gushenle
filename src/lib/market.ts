@@ -4,6 +4,7 @@
 
 import type { RhythmResponse } from './rhythm';
 import { getAHPrint, saveAHPrint } from './ahCache';
+import type { Lang } from '@/lib/i18n';
 
 const cache = new Map<string, { data: RhythmResponse; fetchedAt: number }>();
 const inflight = new Map<string, Promise<RhythmResponse>>();
@@ -27,7 +28,7 @@ function fetchWithTimeout(url: string): Promise<Response> {
 export function getRhythm(
   symbol: string,
   range: string,
-  opts?: { force?: boolean; lang?: 'zh' | 'en' },
+  opts?: { force?: boolean; lang?: Lang },
 ): Promise<RhythmResponse> {
   const lang = opts?.lang ?? 'zh';
   const key = `${symbol}:${range}:${lang}`;

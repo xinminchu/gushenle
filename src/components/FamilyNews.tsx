@@ -16,6 +16,7 @@ import {
 import { loadWatchlist } from '@/lib/watchlist';
 import type { NewsItem } from '@/app/api/news/route';
 import type { EarningsEvent, SymbolReactions } from '@/app/api/earnings/route';
+import { tx } from '@/lib/hant';
 
 function fmtTime(ms: number): string {
   const d = new Date(ms);
@@ -27,7 +28,6 @@ type NewsMarket = 'us' | 'cn';
 
 export default function FamilyNews() {
   const { lang } = useLanguage();
-  const en = lang === 'en';
   const [news, setNews] = useState<NewsItem[]>([]);
   const [newsOpen, setNewsOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -278,10 +278,8 @@ export default function FamilyNews() {
                               className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300 text-left"
                             >
                               <span>
-                                📜 {en ? 'Track record' : '往绩'} ·{' '}
-                                {en
-                                  ? `last ${r.past.length} earnings, next-day: `
-                                  : `近${r.past.length}次财报后次日：`}
+                                📜 {tx(lang, 'Track record', '往绩')} ·{' '}
+                                {tx(lang, `last ${r.past.length} earnings, next-day: `, `近${r.past.length}次财报后次日：`)}
                                 <span
                                   className={
                                     r.avg != null && r.avg > 0
@@ -292,15 +290,15 @@ export default function FamilyNews() {
                                   }
                                 >
                                   {r.up}
-                                  {en ? ' up ' : '涨'}
+                                  {tx(lang, ' up ', '涨')}
                                   {r.down}
-                                  {en ? ' down' : '跌'}
+                                  {tx(lang, ' down', '跌')}
                                   {r.avg != null &&
-                                    `, ${en ? 'avg ' : '平均'}${r.avg > 0 ? '+' : ''}${r.avg}%`}
+                                    `, ${tx(lang, 'avg ', '平均')}${r.avg > 0 ? '+' : ''}${r.avg}%`}
                                 </span>
                                 {mixed && (
                                   <span className="text-slate-500">
-                                    {en ? ' · mixed — go easy before earnings' : ' · 涨跌参半，财报前下手要慎'}
+                                    {tx(lang, ' · mixed — go easy before earnings', ' · 涨跌参半，财报前下手要慎')}
                                   </span>
                                 )}
                               </span>

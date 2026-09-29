@@ -13,6 +13,7 @@ import AdminToolsModal from './modals/AdminToolsModal';
 import WorldClock from './WorldClock';
 import SloganShow from './SloganShow';
 import { OPEN_LOGIN_EVENT } from './games/LoginNudge';
+import { tx } from '@/lib/hant';
 
 /** 全页面共用顶栏：不论底部切到哪个 tab（今日/持仓/记忆/资讯/娱乐）都显示
  *  Logo 中英常驻；下方一条 slogan 横幅，一行中文，不折行 */
@@ -59,7 +60,7 @@ export default function AppHeader() {
         <header className="flex justify-between items-center gap-2">
           {/* 左：Logo，英文模式只显示 Gushenle */}
           <h1 className="text-xl font-bold text-slate-100 whitespace-nowrap">
-            {en ? 'Gushenle' : '股神乐 Gushenle'}
+            {tx(lang, 'Gushenle', '股神乐 Gushenle')}
           </h1>
           {/* 右：操作行（窄屏允许换行折叠，保证主题按钮不被挤出屏幕） */}
           <div className="flex items-center gap-1.5 flex-wrap justify-end min-w-0">
@@ -163,7 +164,7 @@ export default function AppHeader() {
             )}
             {/* 语言切换：登录右边 */}
             <div className="flex bg-slate-800 border border-slate-700 rounded-full text-[10px] overflow-hidden">
-              {(['zh', 'en'] as const).map((l) => (
+              {(['zh', 'hant', 'en'] as const).map((l) => (
                 <button
                   key={l}
                   onClick={() => setLang(l)}
@@ -173,17 +174,17 @@ export default function AppHeader() {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  {l === 'zh' ? '中' : 'EN'}
+                  {l === 'zh' ? '简' : l === 'hant' ? '繁' : 'En'}
                 </button>
               ))}
             </div>
             {/* 主题切换：深色 / 浅色（文字按钮，长辈一眼看懂） */}
             <button
               onClick={toggle}
-              title={theme === 'dark' ? (en ? 'Switch to light mode' : '切换到浅色') : (en ? 'Switch to dark mode' : '切换到深色')}
+              title={theme === 'dark' ? (tx(lang, 'Switch to light mode', '切换到浅色')) : (tx(lang, 'Switch to dark mode', '切换到深色'))}
               className="bg-slate-800 border border-slate-700 text-slate-400 hover:text-slate-200 text-[10px] px-2 py-1 rounded-full active:scale-95 transition whitespace-nowrap"
             >
-              {theme === 'dark' ? (en ? 'Light' : '浅色') : (en ? 'Dark' : '深色')}
+              {theme === 'dark' ? (tx(lang, 'Light', '浅色')) : (tx(lang, 'Dark', '深色'))}
             </button>
             {/* 站长专属：工具箱入口 */}
             {isAdmin && (

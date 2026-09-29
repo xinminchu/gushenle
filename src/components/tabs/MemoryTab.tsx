@@ -23,6 +23,7 @@ import { lastSyncAt, markSynced, SYNC_DUP_WINDOW_MS } from '@/lib/positions';
 import { loadWatchlist } from '@/lib/watchlist';
 import { findSimilarRecord, findDuplicateGroups, type SimilarHit } from '@/lib/memoryParse';
 import PortraitPanel from '@/components/memory/PortraitPanel';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface Review { r5: number | null; r20: number | null }
 
@@ -55,6 +56,7 @@ interface SingleAdvice {
 }
 
 export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | null }) {
+  const { lang } = useLanguage();
   const [inputText, setInputText] = useState('');
   // 从持仓故事"补一笔"跳过来：输入框预填"买入XXX"，用户补个数和价即可
   useEffect(() => {
@@ -221,7 +223,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       const res = await fetch('/api/advise', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'single', symbol, side }),
+        body: JSON.stringify({ mode: 'single', symbol, side, lang }),
       });
       const json = await res.json();
       if (json.success && json.single) {
@@ -249,6 +251,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
         body: JSON.stringify({
           symbols: items.map((i) => ({ symbol: i.symbol, name: i.name })),
           exclude: [...held],
+          lang,
         }),
       });
       const json = await res.json();

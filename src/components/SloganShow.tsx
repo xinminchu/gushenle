@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
+import { tx, zh2hant } from '@/lib/hant';
 
 /**
  * slogan 背景：时刻变换的红绿折线。
@@ -68,9 +69,7 @@ function SloganBackdrop() {
 export default function SloganShow() {
   const { lang } = useLanguage();
   const en = lang === 'en';
-  const disclaimer = en
-    ? 'This site provides free information only — it is not a trading platform. Nothing on this site is investment advice; all content is for reference only.'
-    : '本站仅提供免费资讯，非交易平台；本站所有信息皆非投资建议性质，仅供参考。';
+  const disclaimer = tx(lang, 'This site provides free information only — it is not a trading platform. Nothing on this site is investment advice; all content is for reference only.', '本站仅提供免费资讯，非交易平台；本站所有信息皆非投资建议性质，仅供参考。');
   return (
     <div className="relative overflow-hidden">
       <SloganBackdrop />
@@ -82,7 +81,7 @@ export default function SloganShow() {
           </div>
         </div>
         <p className="whitespace-nowrap overflow-hidden text-center text-[12px] tracking-wide text-slate-100 pb-2">
-          {en ? (
+          {lang === 'en' ? (
             <>
               Happy trading <span className="text-slate-500 mx-0.5">·</span> Relaxed investing{' '}
               <span className="text-slate-500 mx-0.5">·</span> No gambling{' '}
@@ -90,9 +89,9 @@ export default function SloganShow() {
             </>
           ) : (
             <>
-              快乐炒股 <span className="text-slate-500 mx-0.5">·</span> 轻松投资{' '}
-              <span className="text-slate-500 mx-0.5">·</span> 不赌不堵{' '}
-              <span className="text-slate-500 mx-0.5">·</span> 不气不弃
+              {zh2hant(lang, '快乐炒股')} <span className="text-slate-500 mx-0.5">·</span> {zh2hant(lang, '轻松投资')}{' '}
+              <span className="text-slate-500 mx-0.5">·</span> {zh2hant(lang, '不赌不堵')}{' '}
+              <span className="text-slate-500 mx-0.5">·</span> {zh2hant(lang, '不气不弃')}
             </>
           )}
         </p>

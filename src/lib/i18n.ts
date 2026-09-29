@@ -1,8 +1,8 @@
 /**
-* 双语字典。中英切换：先覆盖"壳"（顶栏/底栏/登录弹窗），各 tab 正文后排期渐进接入。
+* 三语字典（简/繁/英）。繁体由简体经 src/lib/hant.ts 自动转换生成，不手写；各 tab 正文后排期渐进接入。
 * 另保留 /test 调试页用的旧 key，保证编译不断。
 */
-export type Lang = 'zh' | 'en';
+export type Lang = 'zh' | 'hant' | 'en';
 
 const zh = {
 // —— 壳：顶栏 ——
@@ -104,9 +104,54 @@ returnDecision: '🚀 Back to Dashboard',
 gameTip: 'Slash floating FOMO bubbles to enter a 20s calm zone',
 };
 
-export const STRINGS: Record<Lang, Strings> = { zh, en};
+const hant: Strings = {
+// —— 壳（由简体自动转换：src/lib/hant.ts toHant） ——
+appName: '股神樂 Gushenle',
+tagline1: '快樂炒股 輕鬆投資',
+tagline2: '不賭不堵 不氣不棄',
+login: '登錄',
+logoutConfirm: '退出登錄？本地戰績不受影響。',
+adminTools: '站長工具',
+navToday: '今日',
+navPortfolio: '持倉',
+navMemory: '記憶',
+navCommunity: '資訊',
+navFun: '娛樂',
+loginTitle: '登錄股神樂',
+loginDesc: '輸入郵箱，我們發一封登錄郵件給你。遊戲積分多設備同步。不登錄也能玩。',
+emailPlaceholder: '你的郵箱',
+sending: '發送中…',
+sendLink: '發送登錄郵件',
+sentTitle: '登錄郵件已發出',
+sentTo: '已發送到',
+sentHint: '打開郵件，點裏面的 Sign in 鏈接即可登錄。鏈接會在新頁面打開，回來這裏會自動登錄。收件箱沒有？去垃圾箱找找。',
+resendIn: '重新發送 ({s}s)',
+resend: '沒收到？重新發送',
+changeEmail: '換個郵箱',
+title: '股神樂 (Gushenle)',
+subtitle: '理性投資與情緒調節助手',
+testConnection: '點擊開始測試連通性',
+testing: '測試運行中...',
+supabaseDb: '1. Supabase 數據庫',
+geminiApi: '2. Gemini Flash API',
+gameTitle: '🎮 沉思樂：',
+slicedCount: '🌱 已割韭菜情緒',
+timeLeft: '⏱️ 冷靜倒計時',
+speedLabel: '韭菜飄升速度',
+speedSlow: '🐢 悠閒',
+speedNormal: '🚶 標準',
+speedFast: '⚡ 暴走',
+calmTitle: '理性已迴歸！',
+calmDesc: '你成功切碎了 {count} 株衝動韭菜！\n“市場永遠不缺機會，冷靜才是最大的紅利。”',
+playAgain: '🔄 再割一把',
+returnDecision: '🚀 返回決策',
+gameTip: '划動光標/手指割斷韭菜氣泡，冷靜 20 秒',
+};
+
+export const STRINGS: Record<Lang, Strings> = { zh, hant, en };
 
 export const LEGACY_WORDS: Record<Lang, string[]> = {
 zh: ['追高梭哈', '听小道消息', '割肉离场', '加杠杆', '恐慌抛售', '凭感觉买入', '频繁交易', '盲目跟风'],
+hant: ['追高梭哈', '聽小道消息', '割肉離場', '加槓桿', '恐慌拋售', '憑感覺買入', '頻繁交易', '盲目跟風'],
 en: ['FOMO All-In', 'Rumor Trading', 'Panic Selling', 'Over-Leverage', 'Panic Dump', 'Gut-Buying', 'Over-Trading', 'Blind Herd'],
 };

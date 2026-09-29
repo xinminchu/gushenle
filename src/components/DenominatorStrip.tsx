@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
+import { tx } from '@/lib/hant';
 
 interface MacroData {
   ok: boolean;
@@ -17,7 +18,6 @@ interface MacroData {
 
 export default function DenominatorStrip() {
   const { lang } = useLanguage();
-  const en = lang === 'en';
   const [data, setData] = useState<MacroData | null>(null);
 
   useEffect(() => {
@@ -38,19 +38,19 @@ export default function DenominatorStrip() {
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2">
       <div className="flex items-baseline gap-2">
-        <span className="text-[11px] text-slate-500 shrink-0">{en ? '📐 Denominator · cost of money' : '📐 分母 · 钱的成本'}</span>
+        <span className="text-[11px] text-slate-500 shrink-0">{tx(lang, '📐 Denominator · cost of money', '📐 分母 · 钱的成本')}</span>
         <span className="text-xs text-slate-300">
-          {en ? '30-yr Treasury' : '30年国债'} <span className="font-bold text-slate-100">{data.y30.toFixed(2)}%</span>
+          {tx(lang, '30-yr Treasury', '30年国债')} <span className="font-bold text-slate-100">{data.y30.toFixed(2)}%</span>
           {data.y10 != null && (
-            <span className="text-slate-400"> · {en ? '10-yr' : '10年国债'} {data.y10.toFixed(2)}%</span>
+            <span className="text-slate-400"> · {tx(lang, '10-yr', '10年国债')} {data.y10.toFixed(2)}%</span>
           )}
         </span>
         {data.dateCN && (
-          <span className="text-[10px] text-slate-600 ml-auto shrink-0">{en ? `as of ${data.dateEn ?? data.dateCN}` : `截至${data.dateCN}`}</span>
+          <span className="text-[10px] text-slate-600 ml-auto shrink-0">{tx(lang, `as of ${data.dateEn ?? data.dateCN}`, `截至${data.dateCN}`)}</span>
         )}
       </div>
       {data.note && (
-        <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{en ? (data.noteEn ?? data.note) : data.note}</p>
+        <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{tx(lang, (data.noteEn ?? data.note), data.note)}</p>
       )}
     </div>
   );

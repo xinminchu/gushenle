@@ -3,6 +3,8 @@ import { buildJudgment, STATUS_LABELS, type StatusKey } from '@/lib/rhythm';
 import { getFullSeries } from '@/lib/marketData';
 import { symbolToName } from '@/lib/stockAliases';
 import { findStock } from '@/lib/stockList';
+import type { Lang } from '@/lib/i18n';
+import { toHantDeep } from '@/lib/hant';
 
 /**
  * 按谷峰律动给"买什么"建议。
@@ -125,8 +127,13 @@ async function judgeOne(symbol: string) {
 }
 
 export async function POST(req: NextRequest) {
+  // 繁体：中文链路照常生成，输出前整包转繁体（键名不动）
+  let lang: Lang = 'zh';
+  const out = (d: unknown, status?: number) =>
+    NextResponse.json(lang === 'hant' ? toHantDeep(d) : d, status ? { status } : undefined);
   try {
     const body = await req.json();
+    lang = body.lang === 'hant' ? 'hant' : 'zh';
 
     // 单只咨询模式：问"今天可以卖IBM吗"这种
     if (body.mode === 'single' && typeof body.symbol === 'string' && body.symbol.trim()) {
@@ -142,12 +149,12 @@ export async function POST(req: NextRequest) {
         judged = null;
       }
       if (!judged || !judged.statusKey || judged.simulated) {
-        return NextResponse.json(
+        return out(
           { error: `没找到 ${symbol} 的行情数据，检查下代码对不对` },
-          { status: 404 },
+          404,
         );
       }
-      return NextResponse.json({
+      return out({
         success: true,
         single: {
           symbol,
@@ -179,7 +186,7 @@ export async function POST(req: NextRequest) {
       }));
 
     if (list.length === 0) {
-      return NextResponse.json({ error: '没有可评估的股票' }, { status: 400 });
+      return out({ error: '没有可评估的股票' }, 400);
     }
 
     const judged = await Promise.all(
@@ -245,7 +252,7 @@ export async function POST(req: NextRequest) {
         blurb: findStock(r.symbol)?.blurb ?? null,
       }));
 
-    return NextResponse.json({
+    return out({
       success: true,
       candidates,
       excluded,
@@ -254,6 +261,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('advise 失败:', error);
-    return NextResponse.json({ error: '律动扫描失败，稍后再试' }, { status: 500 });
+    return out({ error: '律动扫描失败，稍后再试' }, 500);
   }
 }

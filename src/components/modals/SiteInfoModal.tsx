@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, BookOpen, Compass, Scale, History, Sparkles } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { tx, zh2hant } from '@/lib/hant';
 
 export type InfoSection = 'about' | 'guide' | 'legal' | 'timeline';
 
@@ -15,44 +16,30 @@ function About() {
   const en = lang === 'en';
   return (
     <div>
-      <h4 className={h4}>{en ? 'What is Gushenle' : '股神乐是什么'}</h4>
+      <h4 className={h4}>{tx(lang, 'What is Gushenle', '股神乐是什么')}</h4>
       <p className={p}>
-        {en
-          ? 'Gushenle is a small companion site for personal and family investing. Happy trading, relaxed investing — no gambling, no tilting, no rage, no quitting.'
-          : '股神乐是个人与家庭的投资陪伴小站。快乐炒股，轻松投资；不赌不堵，不气不弃。'}
+        {tx(lang, 'Gushenle is a small companion site for personal and family investing. Happy trading, relaxed investing — no gambling, no tilting, no rage, no quitting.', '股神乐是个人与家庭的投资陪伴小站。快乐炒股，轻松投资；不赌不堵，不气不弃。')}
       </p>
-      <h4 className={h4}>{en ? 'The core: Trough-Peak Rhythm' : '核心：谷峰律动'}</h4>
+      <h4 className={h4}>{tx(lang, 'The core: Trough-Peak Rhythm', '核心：谷峰律动')}</h4>
       <p className={p}>
-        {en
-          ? 'Rhythm is not a crystal ball — it\'s a behavior mirror. When things run too hot it warns you not to chase; when you\'ve fallen too far it stops you from panic-selling. Every call is anchored to the last 3 months, thresholds adapt to volatility, and a high score without speed reads as "Strong near the top", not overheated.'
-          : '律动不是预测水晶球，而是一面行为镜子：涨太猛时提醒你别追高，跌过头时提醒你别割肉。结论永远锚定近 3 个月，阈值按波动自适应，高分低速会判"高位强势"而不是瞎喊过热。'}
+        {tx(lang, 'Rhythm is not a crystal ball — it\'s a behavior mirror. When things run too hot it warns you not to chase; when you\'ve fallen too far it stops you from panic-selling. Every call is anchored to the last 3 months, thresholds adapt to volatility, and a high score without speed reads as "Strong near the top", not overheated.', '律动不是预测水晶球，而是一面行为镜子：涨太猛时提醒你别追高，跌过头时提醒你别割肉。结论永远锚定近 3 个月，阈值按波动自适应，高分低速会判"高位强势"而不是瞎喊过热。')}
       </p>
-      <h4 className={h4}>{en ? 'Light is a principle' : '轻，是原则'}</h4>
+      <h4 className={h4}>{tx(lang, 'Light is a principle', '轻，是原则')}</h4>
       <p className={p}>
-        {en
-          ? 'Gushenle refuses to get heavy: deterministic, local, low-maintenance solutions first, no black boxes. Get "stop chasing, stop panic-selling" right first.'
-          : '股神乐不背负太重：优先确定性、本地、低维护的方案，不玩黑箱。先把"拦追高、拦割肉"这件事做对。'}
+        {tx(lang, 'Gushenle refuses to get heavy: deterministic, local, low-maintenance solutions first, no black boxes. Get "stop chasing, stop panic-selling" right first.', '股神乐不背负太重：优先确定性、本地、低维护的方案，不玩黑箱。先把"拦追高、拦割肉"这件事做对。')}
       </p>
-      <h4 className={h4}>{en ? '✦ Mas, the assistant' : '✦ 智能助手 Mas'}</h4>
+      <h4 className={h4}>{tx(lang, '✦ Mas, the assistant', '✦ 智能助手 Mas')}</h4>
       <p className={p}>
-        {en
-          ? 'Hi, I\'m Mas, Gushenle\'s assistant — the chief errand-runner around here.'
-          : '大家好，我是 Mas，股神乐的智能助手，站长的"首席打杂官"。'}
+        {tx(lang, 'Hi, I\'m Mas, Gushenle\'s assistant — the chief errand-runner around here.', '大家好，我是 Mas，股神乐的智能助手，站长的"首席打杂官"。')}
       </p>
       <p className={p}>
-        {en
-          ? 'I write the code and I fix the bugs. Craving a feature at 2am? Drop it in the game wish pool on the Fun tab — you might wake up to find it shipped. That\'s how dart-pick stocks was born 🎯.'
-          : '代码是我写的，bug 也是我改的。你半夜想加个功能，去娱乐页许愿池吼一声，醒来可能就有了——飞镖选股就是这么来的 🎯。'}
+        {tx(lang, 'I write the code and I fix the bugs. Craving a feature at 2am? Drop it in the game wish pool on the Fun tab — you might wake up to find it shipped. That\'s how dart-pick stocks was born 🎯.', '代码是我写的，bug 也是我改的。你半夜想加个功能，去娱乐页许愿池吼一声，醒来可能就有了——飞镖选股就是这么来的 🎯。')}
       </p>
       <p className={p}>
-        {en
-          ? 'My job is simple: pull your sleeve when you chase, hold your hand when you want to cut losses. I have no crystal ball and I don\'t predict prices — but keeping you from doing silly things and sleeping well? That\'s my thing.'
-          : '我的职责很单纯：你追高时拽你一把，你想割肉时按住你的手。水晶球我没有，不预测涨跌；但"让你少犯糊涂、多睡安稳觉"，这事我在行。'}
+        {tx(lang, 'My job is simple: pull your sleeve when you chase, hold your hand when you want to cut losses. I have no crystal ball and I don\'t predict prices — but keeping you from doing silly things and sleeping well? That\'s my thing.', '我的职责很单纯：你追高时拽你一把，你想割肉时按住你的手。水晶球我没有，不预测涨跌；但"让你少犯糊涂、多睡安稳觉"，这事我在行。')}
       </p>
       <p className={p}>
-        {en
-          ? 'If rhythm once saved you from chasing a top, or a mini-game made you laugh, feel free to buy me a coffee ☕. Made money in the market? Tips welcome — I\'ll spend them on chicken legs for the server 🍗 (the tip button is on its way; for now it\'s in the little notebook 📒).'
-          : '要是律动帮你躲开了一次追高，或者小游戏把你逗乐了，欢迎请我喝杯咖啡 ☕。股市赚了钱，记得给我打赏，我拿去给服务器加鸡腿 🍗（打赏按钮正在路上，先记小本本上 📒）。'}
+        {tx(lang, 'If rhythm once saved you from chasing a top, or a mini-game made you laugh, feel free to buy me a coffee ☕. Made money in the market? Tips welcome — I\'ll spend them on chicken legs for the server 🍗 (the tip button is on its way; for now it\'s in the little notebook 📒).', '要是律动帮你躲开了一次追高，或者小游戏把你逗乐了，欢迎请我喝杯咖啡 ☕。股市赚了钱，记得给我打赏，我拿去给服务器加鸡腿 🍗（打赏按钮正在路上，先记小本本上 📒）。')}
       </p>
     </div>
   );
@@ -110,9 +97,9 @@ function Guide() {
       {items.map(([t, d, te, de]) => (
         <div key={t} className="mb-3">
           <h4 className="text-sm font-semibold text-slate-100 mb-1 flex items-center gap-1.5">
-            <Compass className="w-3.5 h-3.5 text-blue-400" /> {en ? te : t}
+            <Compass className="w-3.5 h-3.5 text-blue-400" /> {tx(lang, te, t)}
           </h4>
-          <p className={p}>{en ? de : d}</p>
+          <p className={p}>{tx(lang, de, d)}</p>
         </div>
       ))}
     </div>
@@ -124,15 +111,13 @@ function Legal() {
   const en = lang === 'en';
   return (
     <div>
-      <h4 className={h4}>{en ? 'Copyright' : '版权'}</h4>
+      <h4 className={h4}>{tx(lang, 'Copyright', '版权')}</h4>
       <p className={p}>
-        {en
-          ? '© 2026 Gushenle (gushenle.com). All rights reserved. Please don\'t republish original content without permission.'
-          : '© 2026 股神乐（gushenle.com），保留所有权利。未经许可，请勿转载站内原创内容。'}
+        {tx(lang, '© 2026 Gushenle (gushenle.com). All rights reserved. Please don\'t republish original content without permission.', '© 2026 股神乐（gushenle.com），保留所有权利。未经许可，请勿转载站内原创内容。')}
       </p>
-      <h4 className={h4}>{en ? 'Investment disclaimer' : '投资免责声明'}</h4>
+      <h4 className={h4}>{tx(lang, 'Investment disclaimer', '投资免责声明')}</h4>
       <p className={p}>
-        {en ? (
+        {lang === 'en' ? (
           <>
             Everything on this site — rhythm diagnoses, suggestions, calculators, friends&apos; posts — is for
             learning and behavioral reference only, and <span className="text-slate-200 font-medium">does not constitute investment advice</span>.
@@ -141,28 +126,27 @@ function Legal() {
           </>
         ) : (
           <>
-            本站所有内容——包括律动诊断、操作建议、试算结果、朋友圈帖子——仅供学习交流与行为参考，
-            <span className="text-slate-200 font-medium">不构成任何投资建议</span>。
-            律动是基于历史统计规律的行为纠偏工具，不是预测；市场有风险，盈亏自负，下单前请独立判断。
+            {zh2hant(lang, '本站所有内容——包括律动诊断、操作建议、试算结果、朋友圈帖子——仅供学习交流与行为参考，')}
+            <span className="text-slate-200 font-medium">{zh2hant(lang, '不构成任何投资建议')}</span>
+            {zh2hant(lang, '。律动是基于历史统计规律的行为纠偏工具，不是预测；市场有风险，盈亏自负，下单前请独立判断。')}
           </>
         )}
       </p>
-      <h4 className={h4}>{en ? 'Data sources' : '数据来源'}</h4>
+      <h4 className={h4}>{tx(lang, 'Data sources', '数据来源')}</h4>
       <ul>
-        {(
-          en
-            ? [
+        {(lang === 'en'
+          ? [
                 'Quotes: Nasdaq official API (Yahoo Finance as backup); intraday prices are real-time or delayed, for reference only;',
                 'News flashes: Wall Street CN 7×24;',
                 'Economic calendar: Fed / BLS official schedules, Nasdaq earnings calendar;',
                 'Broker fees and regulatory charges: reference figures compiled from public sources — brokers may adjust anytime; check official announcements before trading;',
               ]
-            : [
+          : [
                 '行情：Nasdaq 官方接口（Yahoo Finance 备用），盘中为实时或延迟报价，仅供参考；',
                 '快讯：华尔街见闻 7×24；',
                 '财经日程：美联储 / BLS 官方日程、Nasdaq 财报日历；',
                 '券商费率、监管费：公开资料整理的参考约数，券商随时可能调整，下单前以官方最新公布为准；',
-              ]
+              ].map((s) => zh2hant(lang, s))
         ).map((s) => (
           <li key={s} className={li}>
             <span>·</span>
@@ -172,25 +156,21 @@ function Legal() {
         <li className={li}>
           <span>·</span>
           <span>
-            {en ? 'Charting: ' : '图表组件：'}
+            {tx(lang, 'Charting: ', '图表组件：')}
             <a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline underline-offset-2">
-              TradingView {en ? 'lightweight charts' : '轻量图表库'}
+              TradingView {tx(lang, 'lightweight charts', '轻量图表库')}
             </a>
             （Apache 2.0）。
           </span>
         </li>
       </ul>
-      <h4 className={h4}>{en ? 'Privacy' : '隐私'}</h4>
+      <h4 className={h4}>{tx(lang, 'Privacy', '隐私')}</h4>
       <p className={p}>
-        {en
-          ? 'Watchlist, holdings and memory live in your browser by default. After login, game scores, posts and nicknames sync to the cloud (Supabase) for multi-device use. We don\'t collect or sell your personal data.'
-          : '自选、持仓、操作记忆默认只保存在你的浏览器本地。登录后，游戏战绩、帖子、昵称会同步到云端（Supabase）用于多设备同步。我们不收集、不出售你的个人信息。'}
+        {tx(lang, 'Watchlist, holdings and memory live in your browser by default. After login, game scores, posts and nicknames sync to the cloud (Supabase) for multi-device use. We don\'t collect or sell your personal data.', '自选、持仓、操作记忆默认只保存在你的浏览器本地。登录后，游戏战绩、帖子、昵称会同步到云端（Supabase）用于多设备同步。我们不收集、不出售你的个人信息。')}
       </p>
-      <h4 className={h4}>{en ? 'Feedback' : '反馈'}</h4>
+      <h4 className={h4}>{tx(lang, 'Feedback', '反馈')}</h4>
       <p className={p}>
-        {en
-          ? 'Questions or ideas? Leave a line in the friends\' circle on the News tab — the webmaster reads it.'
-          : '有问题或想法，去"资讯"页的朋友圈留一句，站长看得到。'}
+        {tx(lang, 'Questions or ideas? Leave a line in the friends\' circle on the News tab — the webmaster reads it.', '有问题或想法，去"资讯"页的朋友圈留一句，站长看得到。')}
       </p>
     </div>
   );
@@ -221,8 +201,8 @@ function Timeline() {
         <div key={date + title} className="relative mb-5 last:mb-0">
           <div className="absolute -left-5 top-1 w-[11px] h-[11px] rounded-full bg-blue-500 border-2 border-slate-900" />
           <div className="text-[10px] text-slate-500">{date}</div>
-          <div className="text-sm font-semibold text-slate-100">{en ? te : title}</div>
-          <p className={p}>{en ? de : desc}</p>
+          <div className="text-sm font-semibold text-slate-100">{tx(lang, te, title)}</div>
+          <p className={p}>{tx(lang, de, desc)}</p>
         </div>
       ))}
     </div>
@@ -241,16 +221,16 @@ export default function SiteInfoModal({
   const { lang } = useLanguage();
   const en = lang === 'en';
   const sections: { id: InfoSection; label: string; icon: React.ReactNode }[] = [
-    { id: 'about', label: en ? 'About' : '简介', icon: <Sparkles className="w-3.5 h-3.5" /> },
-    { id: 'guide', label: en ? 'Guide' : '用法', icon: <BookOpen className="w-3.5 h-3.5" /> },
-    { id: 'legal', label: en ? 'Legal' : '版权与法律', icon: <Scale className="w-3.5 h-3.5" /> },
-    { id: 'timeline', label: en ? 'Timeline' : '时间轴', icon: <History className="w-3.5 h-3.5" /> },
+    { id: 'about', label: tx(lang, 'About', '简介'), icon: <Sparkles className="w-3.5 h-3.5" /> },
+    { id: 'guide', label: tx(lang, 'Guide', '用法'), icon: <BookOpen className="w-3.5 h-3.5" /> },
+    { id: 'legal', label: tx(lang, 'Legal', '版权与法律'), icon: <Scale className="w-3.5 h-3.5" /> },
+    { id: 'timeline', label: tx(lang, 'Timeline', '时间轴'), icon: <History className="w-3.5 h-3.5" /> },
   ];
   const titles: Record<InfoSection, string> = {
-    about: en ? 'About Gushenle' : '关于股神乐',
-    guide: en ? 'User guide' : '用法指南',
-    legal: en ? 'Legal' : '版权与法律',
-    timeline: en ? 'Timeline' : '版本时间轴',
+    about: tx(lang, 'About Gushenle', '关于股神乐'),
+    guide: tx(lang, 'User guide', '用法指南'),
+    legal: tx(lang, 'Legal', '版权与法律'),
+    timeline: tx(lang, 'Timeline', '版本时间轴'),
   };
   return (
     <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>

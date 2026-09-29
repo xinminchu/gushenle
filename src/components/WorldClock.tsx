@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
+import { tx } from '@/lib/hant';
 
 /**
  * 双时钟：纽约 / 北京实时时间，左右分布，每秒跳动。
@@ -60,11 +61,11 @@ export default function WorldClock() {
   return (
     <div className="flex items-center justify-center gap-1.5 px-4 pt-1.5 text-[11px] tabular-nums select-none whitespace-nowrap">
       <span className="text-slate-500">
-        <span className="text-slate-300 font-medium">{bj}</span> {en ? 'Beijing' : '北京'}
+        <span className="text-slate-300 font-medium">{bj}</span> {tx(lang, 'Beijing', '北京')}
       </span>
       <span aria-hidden="true" className="text-[11px]">🤝</span>
       <span className="text-slate-500">
-        {en ? 'New York' : '纽约'} <span className="text-slate-300 font-medium">{ny}</span>
+        {tx(lang, 'New York', '纽约')} <span className="text-slate-300 font-medium">{ny}</span>
       </span>
     </div>
   );

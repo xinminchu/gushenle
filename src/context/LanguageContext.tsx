@@ -24,7 +24,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const v = window.localStorage.getItem(KEY);
-      if (v === 'en' || v === 'zh') setLangState(v);
+      if (v === 'en' || v === 'zh' || v === 'hant') setLangState(v);
     } catch {
       /* 忽略 */
     }
@@ -32,11 +32,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang === 'hant' ? 'zh-Hant' : 'en';
       document.title =
         lang === 'zh'
           ? '股神乐 (Gushenle) - 个人与家庭投资伴侣'
-          : 'Gushenle - Personal & family investment companion';
+          : lang === 'hant'
+            ? '股神樂 (Gushenle) - 個人與家庭投資伴侶'
+            : 'Gushenle - Personal & family investment companion';
     } catch {
       /* 忽略 */
     }
@@ -67,7 +69,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const title =
     lang === 'zh'
       ? '股神乐 (Gushenle) - 个人与家庭投资伴侣'
-      : 'Gushenle - Personal & family investment companion';
+      : lang === 'hant'
+        ? '股神樂 (Gushenle) - 個人與家庭投資伴侶'
+        : 'Gushenle - Personal & family investment companion';
 
   return (
     <>
