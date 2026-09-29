@@ -41,7 +41,7 @@ export default function LoginNudge() {
 
       <p className="text-[15px] font-bold text-emerald-200 pr-6">{tx(lang, '🌱 This tree is missing one name — yours', '🌱 这棵树，差你一个名字')}</p>
       <p className="text-[11px] text-slate-400 mt-1">
-        {tx(lang, 'Sign in takes ', '登录只要 ')}<span className="text-slate-200 font-semibold">{tx(lang, '1 minute', '1 分钟')}</span>{tx(lang, ': tap the button below → enter your email → click the link in your inbox', '，3 步：点下面按钮 → 输邮箱 → 去邮箱点一下链接')}
+        {tx(lang, 'Sign in takes', '登录只要')}{' '}<span className="text-slate-200 font-semibold">{tx(lang, '1 minute', '1 分钟')}</span>{tx(lang, ': tap the button below → enter your email → click the link in your inbox', '，3 步：点下面按钮 → 输邮箱 → 去邮箱点一下链接')}
       </p>
 
       <ul className="mt-2.5 space-y-1.5 text-[11px] leading-relaxed text-slate-300">
