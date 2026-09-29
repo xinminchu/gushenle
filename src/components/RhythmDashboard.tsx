@@ -168,13 +168,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const [chartTypeOverride, setChartTypeOverride] = useState<ChartType | null>(null);
   const [showRangeHL, setShowRangeHL] = useState(true);
   /** 关键价位线（年高/年低/MA50，大位置）：默认开，可关 */
-  const [showKeyLevels, setShowKeyLevels] = useState(true);
+  const [showKeyLevels, setShowKeyLevels] = useState(false);
   /** 财报后反应实测：当前标的的下次财报日 + 过去财报日（K线图事件标记用） */
   const [earnReact, setEarnReact] = useState<SymbolReactions | null>(null);
   /** 买入前体检弹窗 */
   const [showCheckup, setShowCheckup] = useState(false);
-  /** 黄金分割参考线：开关 + 组合方案 + 波段窗口（调参用） */
-  const [showFib, setShowFib] = useState(false);
+  /** 黄金分割参考线：开关 + 组合方案 + 波段窗口（调参用），默认打开 */
+  const [showFib, setShowFib] = useState(true);
   /** 开关键价位：打开时自动关掉黄金分割（避免线上线太多）；关闭不影响对方 */
   const toggleKeyLevels = () => {
     if (!showKeyLevels) setShowFib(false);
