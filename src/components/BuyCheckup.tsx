@@ -155,7 +155,7 @@ export default function BuyCheckup({
     checks.push({
       icon: 'ok',
       title: en ? 'No earnings soon' : '近期无财报',
-      detail: en ? 'No earnings for this one in 14 days — one less surprise variable' : '14 天内没这只的财报，少一个爆雷变量',
+      detail: en ? 'No earnings for this one in 14 days — no earnings-day blow-up risk' : '14 天内没这只的财报，没有财报爆雷危机',
     });
   } else {
     checks.push({
