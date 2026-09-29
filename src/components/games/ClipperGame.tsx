@@ -1,8 +1,14 @@
 'use client';
 
 import React from 'react';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 
-const htmlContent = `<!DOCTYPE html>
+const CLIPPER_DEFAULT_WORDS = ['追高','梭哈','抄底','杠杆','爆仓','FOMO','听内幕','凭感觉','情绪化','满仓','摊平加仓','频繁交易','听大V','All in','借钱炒股','追涨杀跌','重仓一只','短线神话','一夜暴富','死扛','割肉','踏空焦虑','别人涨我慌','杀跌'];
+
+function makeClipperHtml(lang: string) {
+  const defaultWordsJson = JSON.stringify(CLIPPER_DEFAULT_WORDS.map((w) => zh2hant(lang, w)));
+  return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -81,30 +87,30 @@ const htmlContent = `<!DOCTYPE html>
 </head>
 <body>
   <div class="hud">
-    <span id="scoreText">得分: 0</span>
-    <span id="timeText">倒计时: 30s</span>
+    <span id="scoreText">${zh2hant(lang, '得分: 0')}</span>
+    <span id="timeText">${zh2hant(lang, '倒计时: 30s')}</span>
   </div>
   <canvas id="canvas" width="350" height="520"></canvas>
   <div class="toolbar">
-    <button class="btn-words" onclick="togglePanel(true)">✏️ 自定义词</button>
+    <button class="btn-words" onclick="togglePanel(true)">${zh2hant(lang, '✏️ 自定义词')}</button>
   </div>
 
   <div class="panel" id="wordPanel">
-    <div class="panel-title">✏️ 自定义冲动词</div>
+    <div class="panel-title">${zh2hant(lang, '✏️ 自定义冲动词')}</div>
     <div class="panel-row">
-      <input id="wordInput" placeholder="输入你的冲动词，如：熬夜看盘" maxlength="8" />
-      <button class="btn-add" onclick="addUserWord()">添加</button>
+      <input id="wordInput" placeholder="${zh2hant(lang, '输入你的冲动词，如：熬夜看盘')}" maxlength="8" />
+      <button class="btn-add" onclick="addUserWord()">${zh2hant(lang, '添加')}</button>
     </div>
     <div class="word-list" id="wordList"></div>
-    <div class="panel-hint">灰色是默认词（不可删）；绿色是你的词，点 × 可删</div>
-    <button class="btn-close" onclick="togglePanel(false)">关闭</button>
+    <div class="panel-hint">${zh2hant(lang, '灰色是默认词（不可删）；绿色是你的词，点 × 可删')}</div>
+    <button class="btn-close" onclick="togglePanel(false)">${zh2hant(lang, '关闭')}</button>
   </div>
 
   <div class="overlay" id="overlay">
-    <div class="overlay-title">🎉 挑战结束</div>
-    <div style="color: #94a3b8; font-size: 14px; margin-bottom: 5px;">本局斩获韭菜得分</div>
+    <div class="overlay-title">${zh2hant(lang, '🎉 挑战结束')}</div>
+    <div style="color: #94a3b8; font-size: 14px; margin-bottom: 5px;">${zh2hant(lang, '本局斩获韭菜得分')}</div>
     <div class="overlay-score" id="finalScore">0</div>
-    <button class="btn-retry" onclick="resetGame()">再来一次 🔄</button>
+    <button class="btn-retry" onclick="resetGame()">${zh2hant(lang, '再来一次 🔄')}</button>
   </div>
 
   <script>
@@ -118,7 +124,7 @@ const htmlContent = `<!DOCTYPE html>
     const wordInput = document.getElementById('wordInput');
     const wordList = document.getElementById('wordList');
 
-    const DEFAULT_WORDS = ['追高','梭哈','抄底','杠杆','爆仓','FOMO','听内幕','凭感觉','情绪化','满仓','摊平加仓','频繁交易','听大V','All in','借钱炒股','追涨杀跌','重仓一只','短线神话','一夜暴富','死扛','割肉','踏空焦虑','别人涨我慌','杀跌'];
+    const DEFAULT_WORDS = ${defaultWordsJson};
     const STORE_KEY = 'gushenle:clipper:words:v1';
     let userWords = [];
     try {
@@ -236,7 +242,7 @@ const htmlContent = `<!DOCTYPE html>
         if (paused) return;
         if (timeLeft > 0) {
           timeLeft--;
-          timeText.innerText = \`倒计时: \${timeLeft}s\`;
+          timeText.innerText = \`${zh2hant(lang, '倒计时: ')}\${timeLeft}s\`;
         } else {
           endGame();
         }
@@ -253,8 +259,8 @@ const htmlContent = `<!DOCTYPE html>
 
     function resetGame() {
       score = 0; timeLeft = 30; gameOver = false; targets = []; trail = []; particles = [];
-      scoreText.innerText = "得分: 0";
-      timeText.innerText = "倒计时: 30s";
+      scoreText.innerText = ${JSON.stringify(zh2hant(lang, '得分: 0'))};
+      timeText.innerText = ${JSON.stringify(zh2hant(lang, '倒计时: 30s'))};
       overlay.classList.remove('show');
       startTimer();
     }
@@ -271,7 +277,7 @@ const htmlContent = `<!DOCTYPE html>
           t.sliced = true;
           burst(t.x, t.y);
           score += 10;
-          scoreText.innerText = \`得分: \${score}\`;
+          scoreText.innerText = \`${zh2hant(lang, '得分: ')}\${score}\`;
         }
       });
     }
@@ -315,7 +321,7 @@ const htmlContent = `<!DOCTYPE html>
       if (userWords.length === 0) {
         const hint = document.createElement('span');
         hint.style.cssText = 'font-size:12px;color:#64748b;';
-        hint.textContent = '还没有自定义词，上面输入框添加一个吧';
+        hint.textContent = ${JSON.stringify(zh2hant(lang, '还没有自定义词，上面输入框添加一个吧'))};
         wordList.appendChild(hint);
       }
     }
@@ -375,11 +381,13 @@ const htmlContent = `<!DOCTYPE html>
   </script>
 </body>
 </html>`;
+}
 
 export default function ClipperGame() {
+  const { lang } = useLanguage();
   return (
     <iframe
-      srcDoc={htmlContent}
+      srcDoc={makeClipperHtml(lang)}
       className="w-full h-[620px] border-0 rounded-2xl overflow-hidden"
       title="Clipper Game"
     />

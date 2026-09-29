@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   fillPicks,
   fetchScanPool,
@@ -94,6 +96,7 @@ const TIPS = [
 type Pick = { symbol: string; name: string };
 
 export default function DiceGame() {
+  const { lang } = useLanguage();
   const pref = useRef(loadPref());
   const [diceCount, setDiceCount] = useState<1 | 2>(pref.current.count);
   const [styleId, setStyleId] = useState(pref.current.style);
@@ -142,7 +145,7 @@ export default function DiceGame() {
     const n = picks.length;
     const r = await prepareBuyRevealResilient(picks);
     if (!r) {
-      setErr('行情数据没拉全，换个网络再试一次');
+      setErr(zh2hant(lang, '行情数据没拉全，换个网络再试一次'));
       setPhase('setup');
       return;
     }
@@ -188,7 +191,7 @@ export default function DiceGame() {
     setErr('');
     const fresh = await pickFresh(need, new Set(candidates.map((c) => c.symbol)));
     if (fresh.length < need) {
-      setErr('候选没凑齐，重试一次');
+      setErr(zh2hant(lang, '候选没凑齐，重试一次'));
       setPhase('setup');
       return;
     }
@@ -232,7 +235,7 @@ export default function DiceGame() {
 
   const reveal = () => {
     if (win) setScore((v) => v + 100);
-    setTip(TIPS[Math.floor(Math.random() * TIPS.length)]);
+    setTip(zh2hant(lang, TIPS[Math.floor(Math.random() * TIPS.length)]));
     setPhase('reveal');
   };
 
@@ -242,23 +245,23 @@ export default function DiceGame() {
   return (
     <div className="w-full max-w-[340px] p-3 space-y-3">
       <div className="text-center">
-        <div className="text-sm font-bold text-slate-200">🎲 掷骰子买股</div>
+        <div className="text-sm font-bold text-slate-200">{zh2hant(lang, '🎲 掷骰子买股')}</div>
         <div className="text-[11px] text-slate-500 mt-0.5">
-          真实历史行情 · 天意选股挑战 · 本局 {score} 分
+          {zh2hant(lang, `真实历史行情 · 天意选股挑战 · 本局 ${score} 分`)}
         </div>
       </div>
 
       {phase === 'setup' && (
         <div className="space-y-3">
           <p className="text-xs text-slate-300 leading-relaxed bg-slate-800/60 border border-slate-700 rounded-xl p-3">
-            买股全看天意：候选股票一字排开，
-            <span className="text-slate-100 font-semibold">掷出几点就"买入"第几只</span>，
-            再看它后 5 天能不能跑赢大盘。骰子慎追高，也慎割肉。
+            {zh2hant(lang, '买股全看天意：候选股票一字排开，')}
+            <span className="text-slate-100 font-semibold">{zh2hant(lang, '掷出几点就"买入"第几只')}</span>
+            {zh2hant(lang, '，再看它后 5 天能不能跑赢大盘。骰子慎追高，也慎割肉。')}
           </p>
 
           {/* 骰子数量 */}
           <div>
-            <p className="text-[11px] text-slate-400 mb-1.5 px-1">骰子数量</p>
+            <p className="text-[11px] text-slate-400 mb-1.5 px-1">{zh2hant(lang, '骰子数量')}</p>
             <div className="grid grid-cols-2 gap-2">
               {(
                 [
@@ -278,9 +281,9 @@ export default function DiceGame() {
                   <div
                     className={`text-xs font-bold ${diceCount === o.c ? 'text-amber-200' : 'text-slate-200'}`}
                   >
-                    {o.label}
+                    {zh2hant(lang, o.label)}
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">{o.desc}</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">{zh2hant(lang, o.desc)}</div>
                 </button>
               ))}
             </div>
@@ -288,7 +291,7 @@ export default function DiceGame() {
 
           {/* 骰子样式 */}
           <div>
-            <p className="text-[11px] text-slate-400 mb-1.5 px-1">骰子样式</p>
+            <p className="text-[11px] text-slate-400 mb-1.5 px-1">{zh2hant(lang, '骰子样式')}</p>
             <div className="grid grid-cols-4 gap-2">
               {DIE_STYLES.map((s) => (
                 <button
@@ -304,7 +307,7 @@ export default function DiceGame() {
                   <span
                     className={`text-[10px] ${styleId === s.id ? 'text-amber-200' : 'text-slate-400'}`}
                   >
-                    {s.name}
+                    {zh2hant(lang, s.name)}
                   </span>
                 </button>
               ))}
@@ -314,12 +317,12 @@ export default function DiceGame() {
           {/* 候选预览 + 换一批 */}
           <div>
             <div className="flex items-center justify-between mb-1.5 px-1">
-              <p className="text-[11px] text-slate-400">本轮候选（自选优先）</p>
+              <p className="text-[11px] text-slate-400">{zh2hant(lang, '本轮候选（自选优先）')}</p>
               <button
                 onClick={reshufflePreview}
                 className="text-[11px] text-sky-300 border border-sky-500/40 rounded-full px-2.5 py-1 bg-sky-500/10"
               >
-                🔀 换一批
+                {zh2hant(lang, '🔀 换一批')}
               </button>
             </div>
             <div className="grid grid-cols-3 gap-1.5">
@@ -335,13 +338,13 @@ export default function DiceGame() {
               ))}
             </div>
             <p className="text-[10px] text-slate-600 mt-1 px-1">
-              换一批：从律动扫描池（有律动分的股票）里随机抽
+              {zh2hant(lang, '换一批：从律动扫描池（有律动分的股票）里随机抽')}
             </p>
           </div>
 
           <p className="text-[11px] text-slate-500 leading-relaxed px-1">
-            小说明：用历史上的某一天当"昨日"，这样才能揭晓后 5 天的真实走势。
-            <span className="text-violet-300/80">💡 创意来自 @vipdongxia</span>
+            {zh2hant(lang, '小说明：用历史上的某一天当"昨日"，这样才能揭晓后 5 天的真实走势。')}
+            <span className="text-violet-300/80">{zh2hant(lang, '💡 创意来自')} @vipdongxia</span>
           </p>
           {err && <p className="text-[11px] text-rose-300 px-1">{err}</p>}
           {/* 吸底：按钮永远在一屏内可见，上面内容滚动 */}
@@ -350,14 +353,14 @@ export default function DiceGame() {
               onClick={start}
               className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold shadow-lg"
             >
-              摆好骰子
+              {zh2hant(lang, '摆好骰子')}
             </button>
           </div>
         </div>
       )}
 
       {phase === 'loading' && (
-        <p className="text-center text-xs text-slate-400 py-10">正在请骰子就位…🎲</p>
+        <p className="text-center text-xs text-slate-400 py-10">{zh2hant(lang, '正在请骰子就位…🎲')}</p>
       )}
 
       {(phase === 'ready' || phase === 'rolling') && (
@@ -370,7 +373,7 @@ export default function DiceGame() {
                 </div>
                 {diceCount === 2 && (
                   <span className="text-[10px] text-slate-500">
-                    {i === 0 ? '定区(≤3上/≥4下)' : '定位'}
+                    {i === 0 ? zh2hant(lang, '定区(≤3上/≥4下)') : zh2hant(lang, '定位')}
                   </span>
                 )}
               </div>
@@ -389,21 +392,24 @@ export default function DiceGame() {
             ))}
           </div>
           <p className="text-center text-[11px] text-slate-500">
-            "昨日"（{dayLabel}）· {diceCount === 2 ? '第一颗定区、第二颗定位' : '掷出几点买第几只'}
+            {zh2hant(lang, '"昨日"（')}
+            {dayLabel}
+            {zh2hant(lang, '）· ')}
+            {diceCount === 2 ? zh2hant(lang, '第一颗定区、第二颗定位') : zh2hant(lang, '掷出几点买第几只')}
           </p>
           <div className="flex gap-2">
             <button
               onClick={reshuffle}
               className="flex-1 py-2.5 rounded-xl border border-sky-500/40 bg-sky-500/10 text-sky-200 text-sm font-bold"
             >
-              🔀 换一批
+              {zh2hant(lang, '🔀 换一批')}
             </button>
             <button
               onClick={roll}
               disabled={phase !== 'ready'}
               className="flex-[2] py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm font-bold"
             >
-              {phase === 'ready' ? '🎲 掷骰子！' : '骰子滚动中…'}
+              {phase === 'ready' ? zh2hant(lang, '🎲 掷骰子！') : zh2hant(lang, '骰子滚动中…')}
             </button>
           </div>
         </div>
@@ -418,14 +424,22 @@ export default function DiceGame() {
           </div>
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center">
             <p className="text-sm font-bold text-slate-100">
-              🎲 天意已定！买入 {numLabel(pickIndex)}
+              {zh2hant(lang, '🎲 天意已定！买入 ')}
+              {numLabel(pickIndex)}
               {pick.name}（{pick.symbol}）
             </p>
-            <p className="text-xs text-slate-400 mt-1">"昨日"涨幅 {fmtPct(pick.pct)}</p>
+            <p className="text-xs text-slate-400 mt-1">{zh2hant(lang, '"昨日"涨幅 ')}{fmtPct(pick.pct)}</p>
             {diceCount === 2 && (
               <p className="text-[11px] text-slate-500 mt-1">
-                第一颗 {faces[0]} 点→{faces[0]! <= 3 ? '上半区①-⑥' : '下半区⑦-⑫'}，
-                第二颗 {faces[1]} 点→区内第 {faces[1]} 只
+                {zh2hant(lang, '第一颗 ')}
+                {faces[0]}
+                {zh2hant(lang, ' 点→')}
+                {faces[0]! <= 3 ? zh2hant(lang, '上半区①-⑥') : zh2hant(lang, '下半区⑦-⑫')}
+                {zh2hant(lang, '，第二颗 ')}
+                {faces[1]}
+                {zh2hant(lang, ' 点→区内第 ')}
+                {faces[1]}
+                {zh2hant(lang, ' 只')}
               </p>
             )}
           </div>
@@ -433,7 +447,7 @@ export default function DiceGame() {
             onClick={reveal}
             className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
           >
-            揭晓后 5 天走势
+            {zh2hant(lang, '揭晓后 5 天走势')}
           </button>
         </div>
       )}
@@ -448,10 +462,10 @@ export default function DiceGame() {
             }`}
           >
             <p className="font-semibold text-sm">
-              {win ? '🚀 天意赢了！+100 分' : '📉 这次大盘更稳'}
+              {win ? zh2hant(lang, '🚀 天意赢了！+100 分') : zh2hant(lang, '📉 这次大盘更稳')}
             </p>
             <p className="mt-1 tabular-nums">
-              {pick.name} 后 5 天 {fmtPct(pick.next5)} · 大盘 QQQ {fmtPct(qqq5)}
+              {pick.name} {zh2hant(lang, '后 5 天')} {fmtPct(pick.next5)} {zh2hant(lang, '· 大盘 QQQ')} {fmtPct(qqq5)}
             </p>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed px-1">{tip}</p>
@@ -460,13 +474,13 @@ export default function DiceGame() {
               onClick={reshuffle}
               className="flex-1 py-2.5 rounded-xl border border-sky-500/40 bg-sky-500/10 text-sky-200 text-sm font-bold"
             >
-              🔀 换一批
+              {zh2hant(lang, '🔀 换一批')}
             </button>
             <button
               onClick={start}
               className="flex-[2] py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold"
             >
-              再掷一次
+              {zh2hant(lang, '再掷一次')}
             </button>
           </div>
         </div>

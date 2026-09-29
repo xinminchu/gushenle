@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   readWatchlist,
   fetchSeries,
@@ -65,6 +67,7 @@ const TIPS = [
 ];
 
 export default function DcaGame() {
+  const { lang } = useLanguage();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [phase, setPhase] = useState<Phase>('setup');
   const [list] = useState(readWatchlist);
@@ -178,11 +181,14 @@ export default function DcaGame() {
         setResultGood(correct);
         const wname = actual === 'dca' ? '定投' : actual === 'lump' ? '梭哈' : '打平';
         setResultText(
-          correct
-            ? `🎯 猜对了！${wname}获胜（定投 ${fmtMoney(r.dcaFinal)} vs 梭哈 ${fmtMoney(r.lumpFinal)}），+100 分`
-            : `😅 猜错了！实际是${wname}获胜（定投 ${fmtMoney(r.dcaFinal)} vs 梭哈 ${fmtMoney(r.lumpFinal)}）`,
+          zh2hant(
+            lang,
+            correct
+              ? `🎯 猜对了！${wname}获胜（定投 ${fmtMoney(r.dcaFinal)} vs 梭哈 ${fmtMoney(r.lumpFinal)}），+100 分`
+              : `😅 猜错了！实际是${wname}获胜（定投 ${fmtMoney(r.dcaFinal)} vs 梭哈 ${fmtMoney(r.lumpFinal)}）`,
+          ),
         );
-        setTip(TIPS[Math.floor(Math.random() * TIPS.length)]);
+        setTip(zh2hant(lang, TIPS[Math.floor(Math.random() * TIPS.length)]));
         setPhase('done');
       }
     }, 130);
@@ -195,11 +201,11 @@ export default function DcaGame() {
     if (phase === 'racing' || phase === 'done') {
       const n = phase === 'done' ? race.months : Math.max(2, step);
       drawLines(canvas, [
-        { label: '梭哈', color: '#f43f5e', values: race.lumpVals.slice(0, n) },
-        { label: '定投', color: '#22c55e', values: race.dcaVals.slice(0, n) },
+        { label: zh2hant(lang, '梭哈'), color: '#f43f5e', values: race.lumpVals.slice(0, n) },
+        { label: zh2hant(lang, '定投'), color: '#22c55e', values: race.dcaVals.slice(0, n) },
       ]);
     }
-  }, [race, phase, step]);
+  }, [race, phase, step, lang]);
 
   const fmtMoney = (v: number) =>
     '$' + Math.round(v).toLocaleString('en-US');
@@ -216,16 +222,16 @@ export default function DcaGame() {
   return (
     <div className="w-full max-w-[340px] p-3 space-y-3">
       <div className="text-center">
-        <div className="text-sm font-bold text-slate-200">💰 定投 vs 梭哈</div>
+        <div className="text-sm font-bold text-slate-200">{zh2hant(lang, '💰 定投 vs 梭哈')}</div>
         <div className="text-[11px] text-slate-500 mt-0.5">
-          真实历史行情 · 策略大赛跑 · 本局 {score} 分
+          {zh2hant(lang, `真实历史行情 · 策略大赛跑 · 本局 ${score} 分`)}
         </div>
       </div>
 
       {phase === 'setup' && (
         <div className="space-y-3">
           <div>
-            <p className="text-[11px] text-slate-500 mb-1.5">选一只股票</p>
+            <p className="text-[11px] text-slate-500 mb-1.5">{zh2hant(lang, '选一只股票')}</p>
             <div className="flex flex-wrap gap-1.5">
               {list.slice(0, 10).map((w) => (
                 <button
@@ -243,7 +249,7 @@ export default function DcaGame() {
             </div>
           </div>
           <div>
-            <p className="text-[11px] text-slate-500 mb-1.5">选一段时间</p>
+            <p className="text-[11px] text-slate-500 mb-1.5">{zh2hant(lang, '选一段时间')}</p>
             <div className="flex gap-1.5">
               {PERIODS.map((p) => (
                 <button
@@ -255,13 +261,13 @@ export default function DcaGame() {
                       : 'text-slate-400 border-slate-700'
                   }`}
                 >
-                  {p.label}
+                  {zh2hant(lang, p.label)}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-[11px] text-slate-500 mb-1.5">选市况（抽哪种行情比）</p>
+            <p className="text-[11px] text-slate-500 mb-1.5">{zh2hant(lang, '选市况（抽哪种行情比）')}</p>
             <div className="flex gap-1.5">
               {REGIMES.map((r) => (
                 <button
@@ -273,21 +279,26 @@ export default function DcaGame() {
                       : 'text-slate-400 border-slate-700'
                   }`}
                 >
-                  {r.icon} {r.label}
+                  {r.icon} {zh2hant(lang, r.label)}
                 </button>
               ))}
             </div>
           </div>
           <p className="text-[11px] text-slate-500 leading-relaxed px-1">
-            规则：从过去 3 年里<span className="text-slate-200 font-semibold">随机抽一段 {months / 12} 年{regime === 'random' ? '' : REGIMES.find((r) => r.id === regime)?.label}历史</span>；
-            梭哈开局一把投 {fmtMoney(MONTHLY * months)}，定投每月投 {fmtMoney(MONTHLY)}。先猜谁赢，再看比赛！
-            {regime === 'random' && <span className="text-slate-400">（嫌梭哈总赢？选🐻熊市试试）</span>}
+            {zh2hant(lang, '规则：从过去 3 年里')}
+            <span className="text-slate-200 font-semibold">{zh2hant(lang, `随机抽一段 ${months / 12} 年${regime === 'random' ? '' : REGIMES.find((r) => r.id === regime)?.label}历史`)}</span>
+            {zh2hant(lang, '；梭哈开局一把投')}
+            {fmtMoney(MONTHLY * months)}
+            {zh2hant(lang, '，定投每月投')}
+            {fmtMoney(MONTHLY)}
+            {zh2hant(lang, '。先猜谁赢，再看比赛！')}
+            {regime === 'random' && <span className="text-slate-400">{zh2hant(lang, '（嫌梭哈总赢？选🐻熊市试试）')}</span>}
           </p>
           <button
             onClick={() => setPhase('guess')}
             className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
           >
-            开始比赛
+            {zh2hant(lang, '开始比赛')}
           </button>
         </div>
       )}
@@ -296,27 +307,30 @@ export default function DcaGame() {
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-center space-y-3">
           <p className="text-xs text-slate-300 leading-relaxed">
             <span className="font-bold text-slate-100">{list.find((w) => w.symbol === symbol)?.name}</span>
-            ，随机一段 {months / 12} 年历史，每月 {fmtMoney(MONTHLY)}
+            {zh2hant(lang, '，随机一段 ')}
+            {months / 12}
+            {zh2hant(lang, ' 年历史，每月 ')}
+            {fmtMoney(MONTHLY)}
           </p>
-          <p className="text-sm font-bold text-slate-100">你猜，谁笑到最后？</p>
+          <p className="text-sm font-bold text-slate-100">{zh2hant(lang, '你猜，谁笑到最后？')}</p>
           <div className="flex gap-2">
             <button
               onClick={() => startRace('lump')}
               className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold"
             >
-              🔥 梭哈
+              {zh2hant(lang, '🔥 梭哈')}
             </button>
             <button
               onClick={() => startRace('dca')}
               className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold"
             >
-              🌱 定投
+              {zh2hant(lang, '🌱 定投')}
             </button>
             <button
               onClick={() => startRace('draw')}
               className="flex-1 py-2.5 rounded-xl bg-slate-600 hover:bg-slate-500 text-white text-sm font-bold"
             >
-              🤝 差不多
+              {zh2hant(lang, '🤝 差不多')}
             </button>
           </div>
         </div>
@@ -327,13 +341,13 @@ export default function DcaGame() {
           <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-2">
             <div className="flex items-center justify-between px-1 pb-1 text-[11px]">
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" /> 梭哈
+                <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" /> {zh2hant(lang, '梭哈')}
                 <span className="text-slate-400 tabular-nums">
                   {fmtMoney(race.lumpVals[Math.max(0, Math.min(step, race.months - 1))] || 0)}
                 </span>
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> 定投
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> {zh2hant(lang, '定投')}
                 <span className="text-slate-400 tabular-nums">
                   {fmtMoney(race.dcaVals[Math.max(0, Math.min(step, race.months - 1))] || 0)}
                 </span>
@@ -342,7 +356,7 @@ export default function DcaGame() {
             <canvas ref={canvasRef} className="w-full h-[200px]" />
             {phase === 'racing' && (
               <p className="text-center text-[11px] text-slate-500 pt-1 tabular-nums">
-                第 {Math.min(step + 1, race.months)} / {race.months} 个月…
+                {zh2hant(lang, `第 ${Math.min(step + 1, race.months)} / ${race.months} 个月…`)}
               </p>
             )}
           </div>
@@ -358,9 +372,10 @@ export default function DcaGame() {
               >
                 <p className="font-semibold">{resultText}</p>
                 <p className="text-slate-500 mt-1">
-                  本局区间：{race.startDate.slice(0, 7)} ~ {race.endDate.slice(0, 7)} · {REGIME_LABEL[race.regime]}
+                  {zh2hant(lang, '本局区间：')}
+                  {race.startDate.slice(0, 7)} ~ {race.endDate.slice(0, 7)} · {zh2hant(lang, REGIME_LABEL[race.regime])}
                   {race.fellBack && (
-                    <span>（没找到{REGIMES.find((r) => r.id === regime)?.label}窗口，随缘抽了一个）</span>
+                    <span>{zh2hant(lang, `（没找到${REGIMES.find((r) => r.id === regime)?.label}窗口，随缘抽了一个）`)}</span>
                   )}
                 </p>
               </div>
@@ -369,7 +384,7 @@ export default function DcaGame() {
                 onClick={reset}
                 className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
               >
-                再比一场
+                {zh2hant(lang, '再比一场')}
               </button>
             </>
           )}

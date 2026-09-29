@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { STOCK_LIST, findStock } from '@/lib/stockList';
 import { recordPlay } from '@/lib/gameStats';
 import { loadWatchlist, saveWatchlist } from '@/lib/watchlist';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   loadDaily,
   saveDaily,
@@ -84,6 +86,7 @@ function useBlip() {
 }
 
 export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void }) {
+  const { lang } = useLanguage();
   const [phase, setPhase] = useState<Phase>('idle');
   const [strip, setStrip] = useState<Pull[]>([]);
   const [pull, setPull] = useState<Pull | null>(null);
@@ -231,10 +234,10 @@ export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void
       {/* 头部 */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-bold text-slate-100">🎁 股票盲盒</h3>
+          <h3 className="text-base font-bold text-slate-100">{zh2hant(lang, '🎁 股票盲盒')}</h3>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            创意 💡 @icey.bulbasa · 今日剩余 <span className="text-amber-300 font-bold">{left}</span> 次
-            <span className="text-slate-500">（免费{MAX_DAILY_FREE}{bonus > 0 ? `＋认同加成${bonus}` : ''}）</span>
+            {zh2hant(lang, '创意 💡 @icey.bulbasa · 今日剩余')} <span className="text-amber-300 font-bold">{left}</span> {zh2hant(lang, '次')}
+            <span className="text-slate-500">{zh2hant(lang, '（免费')}{MAX_DAILY_FREE}{bonus > 0 ? zh2hant(lang, `＋认同加成${bonus}`) : ''}{zh2hant(lang, '）')}</span>
           </p>
         </div>
         <div className="flex gap-1.5">
@@ -242,12 +245,12 @@ export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void
             onClick={() => setShowDex((v) => !v)}
             className="text-[11px] px-2.5 py-1.5 rounded-full border border-slate-700 bg-slate-800 text-slate-300"
           >
-            图鉴 {dex.length}/{totalPool}
+            {zh2hant(lang, `图鉴 ${dex.length}/${totalPool}`)}
           </button>
           <button
             onClick={() => setMuted((v) => !v)}
             className="text-[11px] px-2.5 py-1.5 rounded-full border border-slate-700 bg-slate-800 text-slate-300"
-            aria-label="声音开关"
+            aria-label={zh2hant(lang, '声音开关')}
           >
             {muted ? '🔇' : '🔊'}
           </button>
@@ -262,7 +265,7 @@ export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void
             className="text-[10px] px-2 py-0.5 rounded-full border"
             style={{ color: t.color, borderColor: `${t.color}55`, background: `${t.color}11` }}
           >
-            {t.name} {t.weight}%
+            {zh2hant(lang, `${t.name} ${t.weight}%`)}
           </span>
         ))}
       </div>
@@ -271,7 +274,7 @@ export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void
       <div className="relative">
         <div ref={wrapRef} className="overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900/80 py-3">
           {phase === 'idle' && !pull ? (
-            <p className="text-center text-xs text-slate-500 py-4">点下方开箱，看看今天是什么命 🎲</p>
+            <p className="text-center text-xs text-slate-500 py-4">{zh2hant(lang, '点下方开箱，看看今天是什么命 🎲')}</p>
           ) : (
             <div ref={stripRef} className="flex gap-2 px-2 will-change-transform" style={{ width: 'max-content' }}>
               {strip.map((it, i) => (
@@ -305,20 +308,20 @@ export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void
           }}
         >
           <div className="text-xs font-bold tracking-widest" style={{ color: pull.tier.color }}>
-            {pull.tier.id === 'UR' ? '✨ 金色传说 ✨' : `${pull.tier.name}！`}
+            {pull.tier.id === 'UR' ? zh2hant(lang, '✨ 金色传说 ✨') : zh2hant(lang, `${pull.tier.name}！`)}
           </div>
           <div className="text-2xl font-black text-slate-50 mt-1">{pull.code}</div>
           <div className="text-sm text-slate-300">{pull.zh}</div>
           {pull.blurb && <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">{pull.blurb}</p>}
           {quote && quote.price !== null && (
             <p className="text-[11px] mt-1.5 text-slate-400">
-              现价 <span className="text-slate-200 font-bold">${quote.price}</span>
+              {zh2hant(lang, '现价')} <span className="text-slate-200 font-bold">${quote.price}</span>
               {quote.chg !== null && (
                 <span className={`font-bold ml-1 ${quote.chg >= 0 ? 'text-red-400' : 'text-green-400'}`}>
                   {quote.chg >= 0 ? '+' : ''}{(quote.chg * 100).toFixed(2)}%
                 </span>
               )}
-              <span className="text-slate-600"> · 今日</span>
+              <span className="text-slate-600">{zh2hant(lang, ' · 今日')}</span>
             </p>
           )}
           <div className="flex gap-2 justify-center mt-3 flex-wrap">
@@ -331,14 +334,14 @@ export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void
                   : 'border-amber-500/50 bg-amber-500/15 text-amber-300'
               }`}
             >
-              {inWatch ? '已在自选 ✓' : '＋ 加入自选'}
+              {inWatch ? zh2hant(lang, '已在自选 ✓') : zh2hant(lang, '＋ 加入自选')}
             </button>
             {left <= 0 && (
               <button
                 onClick={() => setPhase('idle')}
                 className="text-xs px-3 py-1.5 rounded-full border border-slate-600 bg-slate-800 text-slate-200"
               >
-                ← 返回
+                {zh2hant(lang, '← 返回')}
               </button>
             )}
             {left <= 0 && onGoEndorse && (
@@ -346,14 +349,14 @@ export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void
                 onClick={onGoEndorse}
                 className="text-xs px-3 py-1.5 rounded-full border border-amber-500/60 bg-amber-500/20 text-amber-200 font-bold"
               >
-                🤝 去认同 +5 次
+                {zh2hant(lang, '🤝 去认同 +5 次')}
               </button>
             )}
           </div>
           {/* 剩余次数倒数：揭晓时也能看到 */}
           <p className="text-center text-[11px] text-slate-500 mt-2">
-            今日剩余 <span className="text-amber-300 font-bold">{left}</span> 次
-            {left <= 0 && ' · 认同许愿可再 +5 次'}
+            {zh2hant(lang, '今日剩余')} <span className="text-amber-300 font-bold">{left}</span> {zh2hant(lang, '次')}
+            {left <= 0 && zh2hant(lang, ' · 认同许愿可再 +5 次')}
           </p>
         </div>
       )}
@@ -369,7 +372,7 @@ export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void
               : 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/20'
           }`}
         >
-          {left <= 0 ? '今日次数用完，明天再来' : pull ? '再开一次 🎁' : '开箱 🎁'}
+          {left <= 0 ? zh2hant(lang, '今日次数用完，明天再来') : pull ? zh2hant(lang, '再开一次 🎁') : zh2hant(lang, '开箱 🎁')}
         </button>
       )}
       {/* 次数用完：给出去认同的路 */}
@@ -378,22 +381,22 @@ export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void
           onClick={onGoEndorse}
           className="w-full py-2.5 rounded-2xl text-sm font-bold border border-amber-500/50 bg-amber-500/15 text-amber-300 active:scale-[0.98] transition"
         >
-          🤝 去许愿池认同，每条 +5 次
+          {zh2hant(lang, '🤝 去许愿池认同，每条 +5 次')}
         </button>
       )}
       {phase === 'spinning' && (
-        <p className="text-center text-xs text-amber-300/90 animate-pulse">开箱中……屏住呼吸</p>
+        <p className="text-center text-xs text-amber-300/90 animate-pulse">{zh2hant(lang, '开箱中……屏住呼吸')}</p>
       )}
-      {hint && <p className="text-center text-[11px] text-slate-400">{hint}</p>}
+      {hint && <p className="text-center text-[11px] text-slate-400">{zh2hant(lang, hint)}</p>}
 
       {/* 图鉴 */}
       {showDex && (
         <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-3 space-y-2">
-          <p className="text-xs font-bold text-slate-200">📖 收集图鉴 {dex.length}/{totalPool}</p>
+          <p className="text-xs font-bold text-slate-200">{zh2hant(lang, `📖 收集图鉴 ${dex.length}/${totalPool}`)}</p>
           {dexByTier.map(({ tier, got }) => (
             <div key={tier.id}>
               <div className="flex justify-between text-[10px] mb-0.5">
-                <span style={{ color: tier.color }}>{tier.name}</span>
+                <span style={{ color: tier.color }}>{zh2hant(lang, tier.name)}</span>
                 <span className="text-slate-500">{got}/{tier.codes.length}</span>
               </div>
               <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
@@ -428,7 +431,7 @@ export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void
       )}
 
       <p className="text-[10px] text-slate-600 leading-relaxed">
-        稀有度是游戏设定，与公司好坏、涨跌无关，不构成投资建议。开出的股票不代表推荐，加入自选后请去今日页看律动诊断再自己判断。
+        {zh2hant(lang, '稀有度是游戏设定，与公司好坏、涨跌无关，不构成投资建议。开出的股票不代表推荐，加入自选后请去今日页看律动诊断再自己判断。')}
       </p>
 
       <style>{`@keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }`}</style>

@@ -1,8 +1,14 @@
 'use client';
 
 import React from 'react';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 
-const htmlContent = `<!DOCTYPE html>
+const COOL30_WORDS = ['追高','梭哈','FOMO','杠杆','抄底','满仓','听消息','情绪化','All in','踏空','死扛','频繁交易','追涨','杀跌','借钱','内幕','短线','暴富','焦虑','从众'];
+
+function makeCool30Html(lang: string) {
+  const wordsJson = JSON.stringify(COOL30_WORDS.map((w) => zh2hant(lang, w)));
+  return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -38,16 +44,16 @@ const htmlContent = `<!DOCTYPE html>
 </head>
 <body>
   <div class="hud">
-    <span id="scoreText">消除障碍: 0</span>
-    <span id="timeText">剩余时间: 30s</span>
+    <span id="scoreText">${zh2hant(lang, '消除障碍: 0')}</span>
+    <span id="timeText">${zh2hant(lang, '剩余时间: 30s')}</span>
   </div>
   <canvas id="canvas" width="340" height="460"></canvas>
 
   <div class="overlay" id="overlay">
-    <div class="overlay-title">⌛ 30秒解压结束</div>
-    <div style="color: #94a3b8; font-size: 14px; margin-bottom: 5px;">成功消除风险砖块</div>
-    <div class="overlay-score" id="finalScore">0 块</div>
-    <button class="btn-retry" onclick="resetGame()">再清一次 🔄</button>
+    <div class="overlay-title">${zh2hant(lang, '⌛ 30秒解压结束')}</div>
+    <div style="color: #94a3b8; font-size: 14px; margin-bottom: 5px;">${zh2hant(lang, '成功消除风险砖块')}</div>
+    <div class="overlay-score" id="finalScore">${zh2hant(lang, '0 块')}</div>
+    <button class="btn-retry" onclick="resetGame()">${zh2hant(lang, '再清一次 🔄')}</button>
   </div>
 
   <script>
@@ -65,7 +71,7 @@ const htmlContent = `<!DOCTYPE html>
     const rows = 4, cols = 5;
     const brickW = 58, brickH = 22, padding = 8, offsetTop = 30, offsetLeft = 11;
     const ROW_COLORS = ['#ef4444', '#f59e0b', '#eab308', '#22c55e']; // 红→橙→黄→绿：从冲动到冷静
-    const WORDS20 = ['追高','梭哈','FOMO','杠杆','抄底','满仓','听消息','情绪化','All in','踏空','死扛','频繁交易','追涨','杀跌','借钱','内幕','短线','暴富','焦虑','从众'];
+    const WORDS20 = ${wordsJson};
     let bricks = [], brickWords = [], floaters = [];
 
     function shuffled(a) {
@@ -115,11 +121,11 @@ const htmlContent = `<!DOCTYPE html>
       timer = setInterval(() => {
         if (timeLeft > 0) {
           timeLeft--;
-          timeText.innerText = \`剩余时间: \${timeLeft}s\`;
+          timeText.innerText = \`${zh2hant(lang, '剩余时间: ')}\${timeLeft}s\`;
         } else {
           gameOver = true;
           clearInterval(timer);
-          finalScore.innerText = score + ' 块';
+          finalScore.innerText = score + ${JSON.stringify(zh2hant(lang, ' 块'))};
           overlay.classList.add('show');
           window.parent.postMessage({ type: 'gushenle-game-event', game: 'cool30', score: score }, '*');
         }
@@ -129,8 +135,8 @@ const htmlContent = `<!DOCTYPE html>
     function resetGame() {
       score = 0; timeLeft = 30; gameOver = false; floaters = [];
       resetBall();
-      scoreText.innerText = "消除障碍: 0";
-      timeText.innerText = "剩余时间: 30s";
+      scoreText.innerText = ${JSON.stringify(zh2hant(lang, '消除障碍: 0'))};
+      timeText.innerText = ${JSON.stringify(zh2hant(lang, '剩余时间: 30s'))};
       initBricks();
       overlay.classList.remove('show');
       startTimer();
@@ -186,7 +192,7 @@ const htmlContent = `<!DOCTYPE html>
             b.status = 0;
             score++;
             floaters.push({ x: bx + brickW / 2, y: by, born: Date.now() });
-            scoreText.innerText = \`消除障碍: \${score}\`;
+            scoreText.innerText = \`${zh2hant(lang, '消除障碍: ')}\${score}\`;
             break outer; // 一帧只处理一块，避免乱跳
           }
         }
@@ -233,7 +239,7 @@ const htmlContent = `<!DOCTYPE html>
         ctx.globalAlpha = 1 - t;
         ctx.fillStyle = '#4ade80';
         ctx.font = 'bold 12px sans-serif';
-        ctx.fillText('+1 斩心魔', f.x, f.y - t * 30);
+        ctx.fillText(${JSON.stringify(zh2hant(lang, '+1 斩心魔'))}, f.x, f.y - t * 30);
       });
       ctx.globalAlpha = 1;
     }
@@ -249,11 +255,13 @@ const htmlContent = `<!DOCTYPE html>
   </script>
 </body>
 </html>`;
+}
 
 export default function Cool30Game() {
+  const { lang } = useLanguage();
   return (
     <iframe
-      srcDoc={htmlContent}
+      srcDoc={makeCool30Html(lang)}
       className="w-full h-[520px] border-0 rounded-2xl overflow-hidden"
       title="Cool 30 Game"
     />

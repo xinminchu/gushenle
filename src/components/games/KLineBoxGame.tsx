@@ -99,9 +99,12 @@ const TIPS_ROTATE = [
 ];
 
 import { recordBank, getBanked } from '@/lib/gameStats';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function KLineBoxGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { lang } = useLanguage();
   const [phase, setPhase] = useState<Phase>('loading');
   const [round, setRound] = useState<Round | null>(null);
   const [score, setScore] = useState(0);
@@ -257,7 +260,7 @@ export default function KLineBoxGame() {
     ctx.fillStyle = '#64748b';
     ctx.font = '9px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('未来 5 日', fx + (W - padR - fx) / 2, padT - 3);
+    ctx.fillText(zh2hant(lang, '未来 5 日'), fx + (W - padR - fx) / 2, padT - 3);
 
     // 横向网格线 + 价格标签
     ctx.textAlign = 'right';
@@ -301,43 +304,43 @@ export default function KLineBoxGame() {
     ctx.textAlign = 'right';
     const lastShown = round.candles[count - 1].date;
     ctx.fillText(revealed ? shortDate(round.endDate) : shortDate(lastShown), W - padR, H - 5);
-  }, [round, phase]);
+  }, [round, phase, lang]);
 
   return (
     <div className="bg-[#0b0f19] rounded-2xl p-4 flex flex-col items-center">
-      <div className="text-lg font-bold text-amber-400">历史 K 线盲盒</div>
+      <div className="text-lg font-bold text-amber-400">{zh2hant(lang, '历史 K 线盲盒')}</div>
 
       {/* 场次信息 */}
       <div className="mt-1 text-xs text-slate-400">
         {round ? (
-          <>第 <b className="text-slate-200">{q}</b> 题 · <b className="text-slate-200">{round.symbol}</b> {round.name}</>
+          <>{zh2hant(lang, '第')} <b className="text-slate-200">{q}</b> {zh2hant(lang, '题 · ')}<b className="text-slate-200">{round.symbol}</b> {round.name}</>
         ) : (
-          '准备中…'
+          zh2hant(lang, '准备中…')
         )}
         {round?.challenge && (
           <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/40">
-            🔥 挑战模式
+            {zh2hant(lang, '🔥 挑战模式')}
           </span>
         )}
       </div>
 
       {/* HUD */}
       <div className="mt-2 text-xs text-slate-400 bg-[#10172a] border border-slate-700/60 rounded-full px-3 py-1">
-        未落袋 <b className="text-slate-100">{score}</b>
-        {' · '}已落袋 <b className="text-amber-300">{banked}</b>
-        {' · '}连击 <b className="text-slate-100">{streak}</b>
-        {best.streak > 0 && <span className="text-slate-500">（{best.streak} 连击）</span>}
+        {zh2hant(lang, '未落袋')} <b className="text-slate-100">{score}</b>
+        {zh2hant(lang, ' · 已落袋')} <b className="text-amber-300">{banked}</b>
+        {zh2hant(lang, ' · 连击')} <b className="text-slate-100">{streak}</b>
+        {best.streak > 0 && <span className="text-slate-500">{zh2hant(lang, `（${best.streak} 连击）`)}</span>}
       </div>
       {score > 0 && (
         <button
           onClick={bank}
           className="w-full mt-2 py-2 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 font-bold text-sm active:scale-95 transition"
         >
-          💰 见好就收 · 落袋为安（{score} 分）
+          {zh2hant(lang, `💰 见好就收 · 落袋为安（${score} 分）`)}
         </button>
       )}
       {bankMsg && (
-        <div className="mt-2 text-xs text-center text-amber-200">{bankMsg}</div>
+        <div className="mt-2 text-xs text-center text-amber-200">{zh2hant(lang, bankMsg)}</div>
       )}
 
       {/* K 线画布 */}
@@ -349,7 +352,7 @@ export default function KLineBoxGame() {
       />
 
       {phase === 'loading' && (
-        <div className="mt-3 text-sm text-slate-400">正在抽取真实 K 线…</div>
+        <div className="mt-3 text-sm text-slate-400">{zh2hant(lang, '正在抽取真实 K 线…')}</div>
       )}
 
       {/* 作答按钮 */}
@@ -358,22 +361,22 @@ export default function KLineBoxGame() {
           {phase === 'ready' ? (
             <>
               <div className="text-center text-xs text-slate-500 mb-2">
-                {round?.challenge
+                {zh2hant(lang, round?.challenge
                   ? '只给你看 15 根 K 线，盲猜未来 5 个交易日相对最后一根收盘是涨是跌'
-                  : '盲猜未来 5 个交易日相对最后一根收盘是涨是跌'}
+                  : '盲猜未来 5 个交易日相对最后一根收盘是涨是跌')}
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => guess(true)}
                   className="flex-1 py-3 rounded-xl bg-green-500 font-bold text-white text-[15px] active:scale-95 transition"
                 >
-                  📈 看涨
+                  {zh2hant(lang, '📈 看涨')}
                 </button>
                 <button
                   onClick={() => guess(false)}
                   className="flex-1 py-3 rounded-xl bg-red-500 font-bold text-white text-[15px] active:scale-95 transition"
                 >
-                  📉 看跌
+                  {zh2hant(lang, '📉 看跌')}
                 </button>
               </div>
             </>
@@ -382,25 +385,25 @@ export default function KLineBoxGame() {
               <div
                 className={`text-center text-[15px] font-bold ${resultGood ? 'text-green-400' : 'text-red-400'}`}
               >
-                {resultText}
+                {zh2hant(lang, resultText)}
               </div>
               {round && (
                 <div className="text-center text-xs text-slate-400 mt-1 leading-relaxed">
-                  这是 <b className="text-slate-200">{round.symbol}</b> {round.name}
+                  {zh2hant(lang, '这是')} <b className="text-slate-200">{round.symbol}</b> {round.name}
                   <br />
-                  {round.startDate} ~ {round.endDate} 这段真实走势
+                  {round.startDate} ~ {round.endDate} {zh2hant(lang, '这段真实走势')}
                 </div>
               )}
               {tip && (
                 <div className="mt-2 text-xs leading-relaxed text-amber-200/90 bg-amber-500/10 border border-amber-500/25 rounded-xl px-3 py-2">
-                  {tip}
+                  {zh2hant(lang, tip)}
                 </div>
               )}
               <button
                 onClick={() => newRound(streak)}
                 className="w-full mt-3 py-3 rounded-xl bg-blue-500 font-bold text-white text-[15px] active:scale-95 transition"
               >
-                下一题 🔄
+                {zh2hant(lang, '下一题 🔄')}
               </button>
             </>
           )}
@@ -408,7 +411,7 @@ export default function KLineBoxGame() {
       )}
 
       <div className="mt-2 text-[10px] text-slate-600">
-        猜对 +100 分，连击≥2 每次多 +50；猜错连击清零 · 3 连击进入挑战模式
+        {zh2hant(lang, '猜对 +100 分，连击≥2 每次多 +50；猜错连击清零 · 3 连击进入挑战模式')}
       </div>
     </div>
   );

@@ -2,6 +2,8 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   CHART_PATTERNS,
   CHART_THEMES,
@@ -34,6 +36,7 @@ function buildItem(p: ChartPattern, pool: ChartPattern[]): QuizItem {
 const DIFF_STARS = ['★☆☆', '★★☆', '★★★'];
 
 export default function ChartQuizGame() {
+  const { lang } = useLanguage();
   const [view, setView] = useState<'home' | 'quiz'>('home');
   const [theme, setTheme] = useState<ChartThemeKey | 'all'>('all');
 
@@ -93,7 +96,7 @@ export default function ChartQuizGame() {
 
   const addScore = (pts: number) => {
     setGained(pts);
-    setPraise(PRAISES[Math.floor(Math.random() * PRAISES.length)]);
+    setPraise(zh2hant(lang, PRAISES[Math.floor(Math.random() * PRAISES.length)]));
     setSessionScore((s) => {
       const n = s + pts;
       sessionScoreRef.current = n;
@@ -138,15 +141,15 @@ export default function ChartQuizGame() {
       <div className="w-full m-auto">
         <div className="text-center mb-4">
           <p className="text-3xl mb-2">🖼️</p>
-          <p className="text-sm font-bold text-slate-200">股民必备手册 · 看图识图</p>
+          <p className="text-sm font-bold text-slate-200">{zh2hant(lang, '股民必备手册 · 看图识图')}</p>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-            随机抽一张图，从 4 个选项里认出它是谁
+            {zh2hant(lang, '随机抽一张图，从 4 个选项里认出它是谁')}
             <br />
-            K线 / 均线 / 形态 / 量价分时，认图如认人
+            {zh2hant(lang, 'K线 / 均线 / 形态 / 量价分时，认图如认人')}
           </p>
         </div>
 
-        <p className="text-xs text-slate-400 mb-2">选个图鉴开刷</p>
+        <p className="text-xs text-slate-400 mb-2">{zh2hant(lang, '选个图鉴开刷')}</p>
         <div className="grid grid-cols-2 gap-2 mb-4">
           <button
             onClick={() => setTheme('all')}
@@ -157,8 +160,8 @@ export default function ChartQuizGame() {
             }`}
           >
             <div className="text-xl mb-1">🖼️</div>
-            <div className="text-xs font-bold text-slate-200">全部图鉴</div>
-            <div className="text-[10px] text-slate-500 mt-0.5">{CHART_PATTERNS.length} 张图</div>
+            <div className="text-xs font-bold text-slate-200">{zh2hant(lang, '全部图鉴')}</div>
+            <div className="text-[10px] text-slate-500 mt-0.5">{zh2hant(lang, `${CHART_PATTERNS.length} 张图`)}</div>
           </button>
           {CHART_THEMES.map((t) => {
             const n = CHART_PATTERNS.filter((x) => x.theme === t.key).length;
@@ -174,9 +177,9 @@ export default function ChartQuizGame() {
                 }`}
               >
                 <div className="text-xl mb-1">{t.emoji}</div>
-                <div className="text-xs font-bold text-slate-200">{t.name}</div>
+                <div className="text-xs font-bold text-slate-200">{zh2hant(lang, t.name)}</div>
                 <div className="text-[10px] text-slate-500 mt-0.5">
-                  {n} 张图 · {t.desc}
+                  {zh2hant(lang, `${n} 张图 · ${t.desc}`)}
                 </div>
               </button>
             );
@@ -187,14 +190,14 @@ export default function ChartQuizGame() {
           onClick={startQuiz}
           className="w-full py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold text-sm active:scale-[0.98] transition-transform"
         >
-          开始认图（共 {pool.length} 张）
+          {zh2hant(lang, `开始认图（共 ${pool.length} 张）`)}
         </button>
         <p className="text-[11px] text-slate-500 text-center leading-relaxed mt-3">
-          一次答对 +10 分，第二次答对 +5 分
+          {zh2hant(lang, '一次答对 +10 分，第二次答对 +5 分')}
           <br />
-          第一次答错可以再试，第二次才公布答案 · 刷完一轮自动洗牌
+          {zh2hant(lang, '第一次答错可以再试，第二次才公布答案 · 刷完一轮自动洗牌')}
           <br />
-          <span className="text-slate-600">仅供学习交流，不构成任何投资建议</span>
+          <span className="text-slate-600">{zh2hant(lang, '仅供学习交流，不构成任何投资建议')}</span>
         </p>
       </div>
     );
@@ -210,31 +213,31 @@ export default function ChartQuizGame() {
           onClick={() => setView('home')}
           className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200"
         >
-          <ArrowLeft className="w-4 h-4" /> 换图鉴
+          <ArrowLeft className="w-4 h-4" /> {zh2hant(lang, '换图鉴')}
         </button>
         <div className="text-[11px] text-slate-500">
-          第 {qi + 1} / {queue.length} 题 · 答对 {correctCount}/{answeredCount}
+          {zh2hant(lang, `第 ${qi + 1} / ${queue.length} 题 · 答对 ${correctCount}/${answeredCount}`)}
         </div>
         <div className="text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-lg px-2 py-1">
-          {sessionScore} 分
+          {zh2hant(lang, `${sessionScore} 分`)}
         </div>
       </div>
 
       {reshuffleToast && (
         <div className="mb-2 text-center text-[11px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-lg py-1.5">
-          ♻️ 一轮刷完，已重新洗牌继续
+          {zh2hant(lang, '♻️ 一轮刷完，已重新洗牌继续')}
         </div>
       )}
 
       <div className="bg-slate-800/60 border border-slate-700 rounded-2xl p-4">
         <div className="flex items-center gap-1.5 mb-3">
           <span className="text-[11px] text-slate-300 bg-slate-700/70 rounded-md px-1.5 py-0.5">
-            {pTheme?.emoji} {pTheme?.name}
+            {pTheme?.emoji} {pTheme ? zh2hant(lang, pTheme.name) : ''}
           </span>
           <span className="text-[10px] text-amber-400">{DIFF_STARS[pattern.difficulty - 1]}</span>
         </div>
 
-        <p className="text-[15px] text-slate-100 font-medium mb-3">下面这张图是什么？</p>
+        <p className="text-[15px] text-slate-100 font-medium mb-3">{zh2hant(lang, '下面这张图是什么？')}</p>
 
         {/* 题干：图 */}
         <div className="mb-4">
@@ -270,7 +273,7 @@ export default function ChartQuizGame() {
                 >
                   {LETTERS[i]}
                 </span>
-                <span className="text-slate-200 font-medium">{opt}</span>
+                <span className="text-slate-200 font-medium">{zh2hant(lang, opt)}</span>
               </button>
             );
           })}
@@ -278,7 +281,7 @@ export default function ChartQuizGame() {
 
         {phase === 'answering' && wrong === 1 && (
           <div className="mt-3 text-center text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl py-2">
-            不对，再仔细看看图 💪 还有一次机会
+            {zh2hant(lang, '不对，再仔细看看图 💪 还有一次机会')}
           </div>
         )}
 
@@ -293,15 +296,15 @@ export default function ChartQuizGame() {
             >
               {wasCorrect ? (
                 <>
-                  {praise} <span className="text-amber-300">+{gained} 分</span>
+                  {praise} <span className="text-amber-300">{zh2hant(lang, `+${gained} 分`)}</span>
                 </>
               ) : (
-                <>正确答案：{item.options[item.answer]}</>
+                <>{zh2hant(lang, '正确答案：')}{zh2hant(lang, item.options[item.answer])}</>
               )}
             </div>
             <div className="text-[13px] leading-relaxed text-slate-300 bg-slate-800 border border-slate-700 rounded-xl p-3">
-              <span className="text-slate-500">💡 解析：</span>
-              {pattern.explanation}
+              <span className="text-slate-500">{zh2hant(lang, '💡 解析：')}</span>
+              {zh2hant(lang, pattern.explanation)}
             </div>
           </div>
         )}
@@ -311,7 +314,7 @@ export default function ChartQuizGame() {
             onClick={nextQuestion}
             className="w-full mt-3 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-1"
           >
-            下一张 <ChevronRight className="w-4 h-4" />
+            {zh2hant(lang, '下一张')} <ChevronRight className="w-4 h-4" />
           </button>
         )}
       </div>

@@ -10,6 +10,8 @@ import {
   type Candle,
 } from './gameUtils';
 import { recordPlay, recordSession } from '@/lib/gameStats';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 
 type Phase = 'setup' | 'loading' | 'ready' | 'spinning' | 'landed' | 'reveal';
 
@@ -31,6 +33,7 @@ const TIPS = [
 ];
 
 export default function WheelGame() {
+  const { lang } = useLanguage();
   const [phase, setPhase] = useState<Phase>('setup');
   const [stocks, setStocks] = useState<WheelStock[]>([]);
   const [dayLabel, setDayLabel] = useState('');
@@ -220,52 +223,51 @@ export default function WheelGame() {
   return (
     <div className="w-full max-w-[340px] p-3 space-y-3">
       <div className="text-center">
-        <div className="text-base font-bold text-slate-200">🎡 转转盘买股</div>
+        <div className="text-base font-bold text-slate-200">{zh2hant(lang, '🎡 转转盘买股')}</div>
         <div className="text-sm text-slate-500 mt-0.5">
-          真实历史行情 · 随缘选股挑战 · 本局 {score} 分
+          {zh2hant(lang, `真实历史行情 · 随缘选股挑战 · 本局 ${score} 分`)}
         </div>
       </div>
 
       {phase === 'setup' && (
         <div className="space-y-3">
           <p className="text-sm text-slate-300 leading-relaxed bg-slate-800/60 border border-slate-700 rounded-xl p-3">
-            《漫步华尔街》说：
-            <span className="text-slate-100 font-semibold">蒙眼扔飞镖选的股票，不输华尔街专家</span>
-            。今天换个玩法——自选股摆上转盘，转到哪只就"买入"哪只，再看它后 5
-            天能不能跑赢大盘。
+            {zh2hant(lang, '《漫步华尔街》说：')}
+            <span className="text-slate-100 font-semibold">{zh2hant(lang, '蒙眼扔飞镖选的股票，不输华尔街专家')}</span>
+            {zh2hant(lang, '。今天换个玩法——自选股摆上转盘，转到哪只就"买入"哪只，再看它后 5 天能不能跑赢大盘。')}
           </p>
           <p className="text-sm text-slate-500 leading-relaxed px-1">
-            小说明：用历史上的某一天当"买入日"，这样才能揭晓后 5 天的真实走势。
-            <span className="text-violet-300/80">💡 创意：@vipdongxia</span>
+            {zh2hant(lang, '小说明：用历史上的某一天当"买入日"，这样才能揭晓后 5 天的真实走势。')}
+            <span className="text-violet-300/80">{zh2hant(lang, '💡 创意：@vipdongxia')}</span>
           </p>
-          {err && <p className="text-xs text-rose-300 px-1">{err}</p>}
+          {err && <p className="text-xs text-rose-300 px-1">{zh2hant(lang, err)}</p>}
           <div className="sticky bottom-0 -mx-3 px-3 pt-2 pb-2 bg-slate-900/95 backdrop-blur-sm border-t border-slate-800/60">
             <button
               onClick={start}
               className="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-base font-bold shadow-lg"
             >
-              开始转转盘
+              {zh2hant(lang, '开始转转盘')}
             </button>
           </div>
         </div>
       )}
 
       {phase === 'loading' && (
-        <p className="text-center text-sm text-slate-400 py-10">正在准备转盘…🎡</p>
+        <p className="text-center text-sm text-slate-400 py-10">{zh2hant(lang, '正在准备转盘…🎡')}</p>
       )}
 
       {(phase === 'ready' || phase === 'spinning') && (
         <div className="space-y-2">
           {wheel}
           <p className="text-center text-sm text-slate-500">
-            买入日 {dayLabel} · 扇区颜色 = 前一交易日涨跌
+            {zh2hant(lang, `买入日 ${dayLabel} · 扇区颜色 = 前一交易日涨跌`)}
           </p>
           <button
             onClick={spin}
             disabled={phase !== 'ready'}
             className="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-base font-bold"
           >
-            {phase === 'ready' ? '🎡 转动！' : '转盘转动中…'}
+            {phase === 'ready' ? zh2hant(lang, '🎡 转动！') : zh2hant(lang, '转盘转动中…')}
           </button>
         </div>
       )}
@@ -275,18 +277,18 @@ export default function WheelGame() {
           {wheel}
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center">
             <p className="text-base font-bold text-slate-100">
-              🎡 转到了！{hit.name}（{hit.symbol}）
+              {zh2hant(lang, '🎡 转到了！')}{hit.name}（{hit.symbol}）
             </p>
             <p className="text-sm text-slate-400 mt-1">
-              前一日涨跌 <span style={{ color: hit.pct >= 0 ? up : down }}>{fmtPct(hit.pct)}</span>
-              ，已"买入"
+              {zh2hant(lang, '前一日涨跌')} <span style={{ color: hit.pct >= 0 ? up : down }}>{fmtPct(hit.pct)}</span>
+              {zh2hant(lang, '，已"买入"')}
             </p>
           </div>
           <button
             onClick={reveal}
             className="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-base font-bold"
           >
-            揭晓后 5 天走势
+            {zh2hant(lang, '揭晓后 5 天走势')}
           </button>
         </div>
       )}
@@ -300,20 +302,20 @@ export default function WheelGame() {
                 : 'bg-slate-500/10 border-slate-600/40 text-slate-300'
             }`}
           >
-            <p className="font-semibold text-base">{win ? '🚀 缘分赢了！+100 分' : '📉 这次大盘更稳'}</p>
+            <p className="font-semibold text-base">{win ? zh2hant(lang, '🚀 缘分赢了！+100 分') : zh2hant(lang, '📉 这次大盘更稳')}</p>
             <p className="mt-1 tabular-nums">
-              {hit.name} 后 5 天{' '}
+              {hit.name} {zh2hant(lang, '后 5 天')}{' '}
               <span style={{ color: hit.next5 >= 0 ? up : down }}>{fmtPct(hit.next5)}</span>
-              {' · '}大盘 QQQ{' '}
+              {' · '}{zh2hant(lang, '大盘 QQQ')}{' '}
               <span style={{ color: qqq5 >= 0 ? up : down }}>{fmtPct(qqq5)}</span>
             </p>
           </div>
-          <p className="text-sm text-slate-400 leading-relaxed px-1">{tip}</p>
+          <p className="text-sm text-slate-400 leading-relaxed px-1">{zh2hant(lang, tip)}</p>
           <button
             onClick={again}
             className="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-base font-bold"
           >
-            再转一次
+            {zh2hant(lang, '再转一次')}
           </button>
         </div>
       )}

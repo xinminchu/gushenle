@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 
 /* ---------- 数据源：自选列表 ---------- */
 const WATCH_KEY = 'gushenle:watchlist:v1';
@@ -114,9 +116,9 @@ function readWatchlist(): { symbol: string; name: string }[] {
   }
 }
 
-type StockPayload = { symbol: string; name: string; sector: string; color: string; facts: string[] };
+type StockPayload = { symbol: string; name: string; sector: string; sectorDisplay: string; color: string; facts: string[] };
 
-function buildPayload(): StockPayload[] {
+function buildPayload(lang: string): StockPayload[] {
   const list = readWatchlist();
   const picked = list.slice(0, 8).map((it) => ({ ...it }));
   // 不足 8 只用默认补齐
@@ -130,13 +132,15 @@ function buildPayload(): StockPayload[] {
       symbol: it.symbol,
       name: it.name,
       sector,
+      sectorDisplay: zh2hant(lang, sector),
       color: SECTOR_COLOR[sector],
-      facts: FACTS[it.symbol] || GENERIC_FACTS,
+      facts: (FACTS[it.symbol] || GENERIC_FACTS).map((f) => zh2hant(lang, f)),
     };
   });
 }
 
 export default function BigTechGame() {
+  const { lang } = useLanguage();
   const [level, setLevel] = useState(5); // 5 | 7 | 9
   const htmlContent = useMemo(() => {
     const n = level;
@@ -148,7 +152,7 @@ export default function BigTechGame() {
     const nmFs = 13, secFs = 9;
     const starFs = n === 9 ? 13 : 20, lkFs = n === 9 ? 7 : 10;
     const score = pairs * 10; // 通关得分随难度走
-    const stocks = buildPayload();
+    const stocks = buildPayload(lang);
     const stocksJson = JSON.stringify(stocks);
     return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -204,11 +208,11 @@ export default function BigTechGame() {
 </head>
 <body>
 <div class="wrap">
-  <div class="title">美股巨头 ${n}x${n} 配对消除</div>
+  <div class="title">${zh2hant(lang, `美股巨头 ${n}x${n} 配对消除`)}</div>
   <div class="hud" id="hud"></div>
   <div class="grid" id="grid"></div>
-  <div class="fact-box" id="factBox">💡 配对消除两个相同股票，解锁冷知识！</div>
-  <button class="btn-restart" onclick="initGame()">重新开始 🔄</button>
+  <div class="fact-box" id="factBox">${zh2hant(lang, '💡 配对消除两个相同股票，解锁冷知识！')}</div>
+  <button class="btn-restart" onclick="initGame()">${zh2hant(lang, '重新开始 🔄')}</button>
 </div>
 
   <script>
@@ -221,20 +225,16 @@ export default function BigTechGame() {
     var hudEl = document.getElementById('hud');
     var PAIRS = ${pairs};
     var ROUND_SCORE = ${score};
-    var LUCKY_MSGS = [
-      '幸运卡直接消除！运气也是实力的一部分~',
-      '★ 天选之卡！这种好运，留一半给明天的行情吧。',
-      '幸运卡翻开！少记一张牌，多一分从容。',
-    ];
+    var LUCKY_MSGS = ${JSON.stringify(['幸运卡直接消除！运气也是实力的一部分~', '★ 天选之卡！这种好运，留一半给明天的行情吧。', '幸运卡翻开！少记一张牌，多一分从容。'].map((s) => zh2hant(lang, s)))};
 
     function updateHud() {
       var pct = attempts === 0 ? 100 : Math.round((matched / attempts) * 100);
-      hudEl.innerHTML = '第 <b>' + round + '</b> 轮 · 尝试 <b>' + attempts + '</b> 次 · 成功率 <b>' + pct + '%</b>';
+      hudEl.innerHTML = '${zh2hant(lang, '第')} <b>' + round + '</b> ${zh2hant(lang, '轮 · 尝试')} <b>' + attempts + '</b> ${zh2hant(lang, '次 · 成功率')} <b>' + pct + '%</b>';
     }
 
     function checkWin() {
       if (cards.length > 0 && cards.every(function (c) { return c.done; })) {
-        factBox.innerHTML = '🎉 <b style="color:#4ade80">第 ' + round + ' 轮通关！</b> 新一轮即将开始…';
+        factBox.innerHTML = '🎉 <b style="color:#4ade80">${zh2hant(lang, '第')} ' + round + ' ${zh2hant(lang, '轮通关！')}</b> ${zh2hant(lang, '新一轮即将开始…')}';
         window.parent.postMessage({ type: 'gushenle-game-event', game: 'bigtech', score: ROUND_SCORE }, '*');
         setTimeout(function () {
           round++;
@@ -256,7 +256,7 @@ export default function BigTechGame() {
       }
       cards.push({ lucky: true, done: false });
       cards.sort(function () { return Math.random() - 0.5; });
-      factBox.innerText = '💡 配对消除两个相同股票，解锁冷知识！金色★是幸运卡，点开即消除~';
+      factBox.innerText = ${JSON.stringify(zh2hant(lang, '💡 配对消除两个相同股票，解锁冷知识！金色★是幸运卡，点开即消除~'))};
       updateHud();
       render();
     }
@@ -269,12 +269,12 @@ export default function BigTechGame() {
         if (!c.lucky) div.style.background = c.s.color;
         div.style.visibility = c.done ? 'hidden' : 'visible';
         if (c.lucky) {
-          div.innerHTML = '<div class="star">★</div><div class="lk">幸运卡</div>';
+          div.innerHTML = '<div class="star">★</div><div class="lk">${zh2hant(lang, '幸运卡')}</div>';
         } else {
           div.innerHTML =
             '<div class="sym">' + c.s.symbol + '</div>' +
             '<div class="nm">' + c.s.name + '</div>' +
-            '<div class="sec">' + c.s.sector + '</div>';
+            '<div class="sec">' + c.s.sectorDisplay + '</div>';
         }
         div.onclick = function () { handleClick(index); };
         gridEl.appendChild(div);
@@ -330,7 +330,7 @@ export default function BigTechGame() {
   </script>
 </body>
 </html>`;
-  }, [level]);
+  }, [level, lang]);
 
   const LEVELS = [
     { n: 5, label: '轻松' },
@@ -341,7 +341,7 @@ export default function BigTechGame() {
   return (
     <div>
       <div className="flex items-center justify-center gap-2 pb-1">
-        <span className="text-[11px] text-slate-400">难度</span>
+        <span className="text-[11px] text-slate-400">{zh2hant(lang, '难度')}</span>
         {LEVELS.map((lv) => (
           <button
             key={lv.n}
@@ -352,14 +352,14 @@ export default function BigTechGame() {
                 : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
             }`}
           >
-            {lv.n}x{lv.n} · {lv.label}
+            {lv.n}x{lv.n} · {zh2hant(lang, lv.label)}
           </button>
         ))}
       </div>
       <iframe
         srcDoc={htmlContent}
         className="w-full h-[580px] border-0 rounded-2xl overflow-hidden"
-        title="美股巨头大乱斗"
+        title={zh2hant(lang, '美股巨头大乱斗')}
       />
     </div>
   );

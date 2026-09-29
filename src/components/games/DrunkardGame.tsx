@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 import { fillPicks, prepareBuyRevealResilient, fmtPct, type BuyRevealItem } from './gameUtils';
 import { recordPlay } from '@/lib/gameStats';
 
@@ -21,6 +23,7 @@ interface Pos {
 }
 
 export default function DrunkardGame() {
+  const { lang } = useLanguage();
   const [phase, setPhase] = useState<Phase>('setup');
   const [candidates] = useState(() => fillPicks(N * N));
   const [stocks, setStocks] = useState<BuyRevealItem[]>([]);
@@ -49,7 +52,7 @@ export default function DrunkardGame() {
     setErr('');
     const r = await prepareBuyRevealResilient(candidates);
     if (!r) {
-      setErr('行情数据没拉全，换个网络再试一次');
+      setErr(zh2hant(lang, '行情数据没拉全，换个网络再试一次'));
       setPhase('setup');
       return;
     }
@@ -103,7 +106,7 @@ export default function DrunkardGame() {
 
   const reveal = () => {
     if (win) setScore((v) => v + 100);
-    setTip(TIPS[Math.floor(Math.random() * TIPS.length)]);
+    setTip(zh2hant(lang, TIPS[Math.floor(Math.random() * TIPS.length)]));
     setPhase('reveal');
   };
 
@@ -139,23 +142,24 @@ export default function DrunkardGame() {
   return (
     <div className="w-full max-w-[340px] p-3 space-y-3">
       <div className="text-center">
-        <div className="text-sm font-bold text-slate-200">🥴 酒鬼走位买股</div>
+        <div className="text-sm font-bold text-slate-200">{zh2hant(lang, '🥴 酒鬼走位买股')}</div>
         <div className="text-[11px] text-slate-500 mt-0.5">
-          真实历史行情 · 随机游走挑战 · 本局 {score} 分
+          {zh2hant(lang, `真实历史行情 · 随机游走挑战 · 本局 ${score} 分`)}
         </div>
       </div>
 
       {phase === 'setup' && (
         <div className="space-y-3">
           <p className="text-xs text-slate-300 leading-relaxed bg-slate-800/60 border border-slate-700 rounded-xl p-3">
-            诺奖得主说股价就是<span className="text-slate-100 font-semibold">酒鬼走位</span>：
-            25 只股票摆成 5×5，酒鬼从中间出发随机游走 20 步，
-            <span className="text-slate-100 font-semibold">晕倒在哪只就"买入"哪只</span>，
-            再看它后 5 天能不能跑赢大盘。
+            {zh2hant(lang, '诺奖得主说股价就是')}
+            <span className="text-slate-100 font-semibold">{zh2hant(lang, '酒鬼走位')}</span>
+            {zh2hant(lang, '：25 只股票摆成 5×5，酒鬼从中间出发随机游走 20 步，')}
+            <span className="text-slate-100 font-semibold">{zh2hant(lang, '晕倒在哪只就"买入"哪只')}</span>
+            {zh2hant(lang, '，再看它后 5 天能不能跑赢大盘。')}
           </p>
           <p className="text-[11px] text-slate-500 leading-relaxed px-1">
-            小说明：用历史上的某一天当"昨日"，这样才能揭晓后 5 天的真实走势。
-            <span className="text-violet-300/80">💡 创意来自 @vipdongxia</span>
+            {zh2hant(lang, '小说明：用历史上的某一天当"昨日"，这样才能揭晓后 5 天的真实走势。')}
+            <span className="text-violet-300/80">{zh2hant(lang, '💡 创意来自')} @vipdongxia</span>
           </p>
           {err && <p className="text-[11px] text-rose-300 px-1">{err}</p>}
           <div className="sticky bottom-0 -mx-3 px-3 pt-2 pb-2 bg-slate-900/95 backdrop-blur-sm border-t border-slate-800/60">
@@ -163,14 +167,14 @@ export default function DrunkardGame() {
               onClick={start}
               className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold shadow-lg"
             >
-              酒鬼就位
+              {zh2hant(lang, '酒鬼就位')}
             </button>
           </div>
         </div>
       )}
 
       {phase === 'loading' && (
-        <p className="text-center text-xs text-slate-400 py-10">酒鬼正在热身…🥴</p>
+        <p className="text-center text-xs text-slate-400 py-10">{zh2hant(lang, '酒鬼正在热身…🥴')}</p>
       )}
 
       {(phase === 'ready' || phase === 'walking') && (
@@ -179,15 +183,17 @@ export default function DrunkardGame() {
             {stocks.map((_, i) => cell(i))}
           </div>
           <p className="text-center text-[11px] text-slate-500">
-            "昨日"（{dayLabel}）·{" "}
-            {phase === 'ready' ? '酒鬼已就位，点开始让他走' : `走位中…还剩 ${stepsLeft} 步`}
+            {zh2hant(lang, '"昨日"（')}
+            {dayLabel}
+            {zh2hant(lang, '）· ')}
+            {phase === 'ready' ? zh2hant(lang, '酒鬼已就位，点开始让他走') : zh2hant(lang, `走位中…还剩 ${stepsLeft} 步`)}
           </p>
           <button
             onClick={walk}
             disabled={phase !== 'ready'}
             className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-bold"
           >
-            {phase === 'ready' ? '🥴 开走！' : '酒鬼走位中…'}
+            {phase === 'ready' ? zh2hant(lang, '🥴 开走！') : zh2hant(lang, '酒鬼走位中…')}
           </button>
         </div>
       )}
@@ -199,17 +205,20 @@ export default function DrunkardGame() {
           </div>
           <div className="bg-violet-500/10 border border-violet-500/30 rounded-xl p-3 text-center">
             <p className="text-sm font-bold text-slate-100">
-              🥴 酒鬼晕倒在 {pick.name}（{pick.symbol}）
+              {zh2hant(lang, '🥴 酒鬼晕倒在 ')}
+              {pick.name}（{pick.symbol}）
             </p>
             <p className="text-xs text-slate-400 mt-1">
-              "昨日"涨幅 {fmtPct(pick.pct)}，已"买入"——愿天意保佑他
+              {zh2hant(lang, '"昨日"涨幅 ')}
+              {fmtPct(pick.pct)}
+              {zh2hant(lang, '，已"买入"——愿天意保佑他')}
             </p>
           </div>
           <button
             onClick={reveal}
             className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
           >
-            揭晓后 5 天走势
+            {zh2hant(lang, '揭晓后 5 天走势')}
           </button>
         </div>
       )}
@@ -224,10 +233,10 @@ export default function DrunkardGame() {
             }`}
           >
             <p className="font-semibold text-sm">
-              {win ? '🚀 酒鬼赢了！+100 分' : '📉 这次大盘更稳'}
+              {win ? zh2hant(lang, '🚀 酒鬼赢了！+100 分') : zh2hant(lang, '📉 这次大盘更稳')}
             </p>
             <p className="mt-1 tabular-nums">
-              {pick.name} 后 5 天 {fmtPct(pick.next5)} · 大盘 QQQ {fmtPct(qqq5)}
+              {pick.name} {zh2hant(lang, '后 5 天')} {fmtPct(pick.next5)} {zh2hant(lang, '· 大盘 QQQ')} {fmtPct(qqq5)}
             </p>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed px-1">{tip}</p>
@@ -235,7 +244,7 @@ export default function DrunkardGame() {
             onClick={start}
             className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold"
           >
-            再走一次
+            {zh2hant(lang, '再走一次')}
           </button>
         </div>
       )}

@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { recordPlay } from '@/lib/gameStats';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 
 const HOLES = 9;
 const DURATION = 45; // 秒
@@ -36,6 +38,7 @@ const TIPS = [
 const pick = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
 
 export default function MoleGame() {
+  const { lang } = useLanguage();
   const [holes, setHoles] = useState<(Mole | null)[]>(() => Array(HOLES).fill(null));
   const [floaters, setFloaters] = useState<Floater[]>([]);
   const [score, setScore] = useState(0);
@@ -137,15 +140,15 @@ export default function MoleGame() {
       `}</style>
 
       <div className="text-center">
-        <div className="text-sm font-bold text-slate-200">🔨 高管打地鼠</div>
+        <div className="text-sm font-bold text-slate-200">{zh2hant(lang, '🔨 高管打地鼠')}</div>
         <div className="text-[11px] text-slate-500 mt-0.5">
           {phase === 'playing' ? (
             <span className="tabular-nums">
-              得分 <span className="text-amber-300 font-bold">{score}</span> · 剩余{' '}
+              {zh2hant(lang, '得分')} <span className="text-amber-300 font-bold">{score}</span> {zh2hant(lang, '· 剩余')}{' '}
               <span className="text-sky-300 font-bold">{timeLeft}s</span>
             </span>
           ) : (
-            '45 秒 · 见高管就打，见利空就忍'
+            zh2hant(lang, '45 秒 · 见高管就打，见利空就忍')
           )}
         </div>
       </div>
@@ -154,27 +157,27 @@ export default function MoleGame() {
         <div className="space-y-3">
           <div className="text-xs text-slate-300 leading-relaxed bg-slate-800/60 border border-slate-700 rounded-xl p-3 space-y-1.5">
             <p>
-              🤵 <span className="text-slate-100 font-semibold">高管地鼠</span>冒头就打，
-              <span className="text-amber-300 font-semibold">+10 分</span>
+              🤵 <span className="text-slate-100 font-semibold">{zh2hant(lang, '高管地鼠')}</span>{zh2hant(lang, '冒头就打，')}
+              <span className="text-amber-300 font-semibold">{zh2hant(lang, '+10 分')}</span>
             </p>
             <p>
-              👺 <span className="text-rose-300 font-semibold">利空地鼠</span>（红色）千万别打，
-              打中 <span className="text-rose-300 font-semibold">−5 分</span>——练的就是"忍住别追利空"
+              👺 <span className="text-rose-300 font-semibold">{zh2hant(lang, '利空地鼠')}</span>{zh2hant(lang, '（红色）千万别打，打中 ')}
+              <span className="text-rose-300 font-semibold">{zh2hant(lang, '−5 分')}</span>{zh2hant(lang, '——练的就是"忍住别追利空"')}
             </p>
             <p>
-              🤴 <span className="text-amber-300 font-semibold">金地鼠</span>稀有，
-              <span className="text-amber-300 font-semibold">+30 分</span>，好机会不常有
+              🤴 <span className="text-amber-300 font-semibold">{zh2hant(lang, '金地鼠')}</span>{zh2hant(lang, '稀有，')}
+              <span className="text-amber-300 font-semibold">{zh2hant(lang, '+30 分')}</span>{zh2hant(lang, '，好机会不常有')}
             </p>
           </div>
           <p className="text-[11px] text-slate-500 leading-relaxed px-1">
-            小说明：真人高管头像有肖像权风险，这里的高管全是卡通形象，不对应任何真人。
-            <span className="text-violet-300/80">💡 创意来自 @麻牛</span>
+            {zh2hant(lang, '小说明：真人高管头像有肖像权风险，这里的高管全是卡通形象，不对应任何真人。')}
+            <span className="text-violet-300/80">{zh2hant(lang, '💡 创意来自 @麻牛')}</span>
           </p>
           <button
             onClick={start}
             className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold"
           >
-            开打！🔨
+            {zh2hant(lang, '开打！🔨')}
           </button>
         </div>
       )}
@@ -219,7 +222,7 @@ export default function MoleGame() {
                       f.good ? 'text-emerald-300' : 'text-rose-300'
                     }`}
                   >
-                    {f.text}
+                    {zh2hant(lang, f.text)}
                   </span>
                 ))}
             </div>
@@ -231,15 +234,15 @@ export default function MoleGame() {
         <div className="space-y-2">
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center">
             <p className="text-sm font-bold text-slate-100">
-              🔨 时间到！本局 <span className="text-amber-300">{score}</span> 分
+              {zh2hant(lang, '🔨 时间到！本局')} <span className="text-amber-300">{score}</span> {zh2hant(lang, '分')}
             </p>
           </div>
-          <p className="text-[11px] text-slate-400 leading-relaxed px-1">{tip}</p>
+          <p className="text-[11px] text-slate-400 leading-relaxed px-1">{zh2hant(lang, tip)}</p>
           <button
             onClick={start}
             className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold"
           >
-            再打一局
+            {zh2hant(lang, '再打一局')}
           </button>
         </div>
       )}

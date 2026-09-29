@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   readWatchlist,
   fetchSeries,
@@ -38,6 +40,7 @@ const polar = (theta: number, r: number) => ({
 });
 
 export default function DartGame() {
+  const { lang } = useLanguage();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [phase, setPhase] = useState<Phase>('setup');
   const [list] = useState(readWatchlist);
@@ -147,7 +150,7 @@ export default function DartGame() {
   const prepare = useCallback(async (): Promise<boolean> => {
     const wl = readWatchlist().slice(0, 8);
     if (wl.length < 3) {
-      setErr(`自选只有 ${wl.length} 只股票，至少 3 只才能摆飞镖盘，去今日页「管理自选」加点吧`);
+      setErr(zh2hant(lang, `自选只有 ${wl.length} 只股票，至少 3 只才能摆飞镖盘，去今日页「管理自选」加点吧`));
       return false;
     }
     const all = await Promise.all([...wl.map((w) => fetchSeries(w.symbol)), fetchSeries('QQQ')]);
@@ -157,7 +160,7 @@ export default function DartGame() {
       if (all[i] && all[i]!.length >= 40) items.push({ w, s: all[i]! });
     });
     if (items.length < 3 || !qqqSeries || qqqSeries.length < 40) {
-      setErr('行情数据没拉全，换个网络再试一次');
+      setErr(zh2hant(lang, '行情数据没拉全，换个网络再试一次'));
       return false;
     }
     const maps = items.map(({ s }) => {
@@ -194,7 +197,7 @@ export default function DartGame() {
       setErr('');
       return true;
     }
-    setErr('没找到合适的历史日期，重试一次');
+    setErr(zh2hant(lang, '没找到合适的历史日期，重试一次'));
     return false;
   }, []);
 
@@ -246,7 +249,7 @@ export default function DartGame() {
 
   const reveal = () => {
     if (win) setScore((v) => v + 100);
-    setTip(TIPS[Math.floor(Math.random() * TIPS.length)]);
+    setTip(zh2hant(lang, TIPS[Math.floor(Math.random() * TIPS.length)]));
     setPhase('reveal');
   };
 
@@ -259,21 +262,22 @@ export default function DartGame() {
   return (
     <div className="w-full max-w-[340px] p-3 space-y-3">
       <div className="text-center">
-        <div className="text-sm font-bold text-slate-200">🎯 飞镖选股</div>
+        <div className="text-sm font-bold text-slate-200">{zh2hant(lang, '🎯 飞镖选股')}</div>
         <div className="text-[11px] text-slate-500 mt-0.5">
-          真实历史行情 · 蒙眼选股挑战 · 本局 {score} 分
+          {zh2hant(lang, `真实历史行情 · 蒙眼选股挑战 · 本局 ${score} 分`)}
         </div>
       </div>
 
       {phase === 'setup' && (
         <div className="space-y-3">
           <p className="text-xs text-slate-300 leading-relaxed bg-slate-800/60 border border-slate-700 rounded-xl p-3">
-            《漫步华尔街》说：<span className="text-slate-100 font-semibold">蒙眼扔飞镖选的股票，不输华尔街专家</span>。
-            今天你就是那只手——自选股按"昨日"涨幅摆上飞镖盘（涨得越猛离靶心越远），扔中哪只就"买入"哪只，再看它后 5 天能不能跑赢大盘。
+            {zh2hant(lang, '《漫步华尔街》说：')}
+            <span className="text-slate-100 font-semibold">{zh2hant(lang, '蒙眼扔飞镖选的股票，不输华尔街专家')}</span>
+            {zh2hant(lang, '。今天你就是那只手——自选股按"昨日"涨幅摆上飞镖盘（涨得越猛离靶心越远），扔中哪只就"买入"哪只，再看它后 5 天能不能跑赢大盘。')}
           </p>
           <p className="text-[11px] text-slate-500 leading-relaxed px-1">
-            小说明：用历史上的某一天当"昨日"，这样才能揭晓后 5 天的真实走势。
-            <span className="text-violet-300/80">💡 创意来自 @大西洋龙虾</span>
+            {zh2hant(lang, '小说明：用历史上的某一天当"昨日"，这样才能揭晓后 5 天的真实走势。')}
+            <span className="text-violet-300/80">{zh2hant(lang, '💡 创意来自')} @大西洋龙虾</span>
           </p>
           {err && <p className="text-[11px] text-rose-300 px-1">{err}</p>}
           <div className="sticky bottom-0 -mx-3 px-3 pt-2 pb-2 bg-slate-900/95 backdrop-blur-sm border-t border-slate-800/60">
@@ -281,28 +285,28 @@ export default function DartGame() {
               onClick={start}
               className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold shadow-lg"
             >
-              摆好飞镖盘
+              {zh2hant(lang, '摆好飞镖盘')}
             </button>
           </div>
         </div>
       )}
 
       {phase === 'loading' && (
-        <p className="text-center text-xs text-slate-400 py-10">正在摆飞镖盘…🎯</p>
+        <p className="text-center text-xs text-slate-400 py-10">{zh2hant(lang, '正在摆飞镖盘…🎯')}</p>
       )}
 
       {(phase === 'aim' || phase === 'flying') && (
         <div className="space-y-2">
           <canvas ref={canvasRef} width={SIZE} height={SIZE} className="w-full aspect-square" />
           <p className="text-center text-[11px] text-slate-500">
-            "昨日"（{dayLabel}）涨幅决定站位，离靶心越远涨得越猛
+            {zh2hant(lang, '"昨日"（')}{dayLabel}{zh2hant(lang, '）涨幅决定站位，离靶心越远涨得越猛')}
           </p>
           <button
             onClick={throwDart}
             disabled={phase !== 'aim'}
             className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-sm font-bold"
           >
-            {phase === 'aim' ? '🎯 扔飞镖！' : '飞镖飞行中…'}
+            {phase === 'aim' ? zh2hant(lang, '🎯 扔飞镖！') : zh2hant(lang, '飞镖飞行中…')}
           </button>
         </div>
       )}
@@ -312,15 +316,15 @@ export default function DartGame() {
           <canvas ref={canvasRef} width={SIZE} height={SIZE} className="w-full aspect-square" />
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center">
             <p className="text-sm font-bold text-slate-100">
-              🎯 命中！{hit.name}（{hit.symbol}）
+              {zh2hant(lang, '🎯 命中！')}{hit.name}（{hit.symbol}）
             </p>
-            <p className="text-xs text-slate-400 mt-1">"昨日"涨幅 {fmtPct(hit.pct)}，已"买入"</p>
+            <p className="text-xs text-slate-400 mt-1">{zh2hant(lang, '"昨日"涨幅 ')}{fmtPct(hit.pct)}{zh2hant(lang, '，已"买入"')}</p>
           </div>
           <button
             onClick={reveal}
             className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
           >
-            揭晓后 5 天走势
+            {zh2hant(lang, '揭晓后 5 天走势')}
           </button>
         </div>
       )}
@@ -335,10 +339,10 @@ export default function DartGame() {
             }`}
           >
             <p className="font-semibold text-sm">
-              {win ? '🚀 飞镖赢了！+100 分' : '📉 这次大盘更稳'}
+              {win ? zh2hant(lang, '🚀 飞镖赢了！+100 分') : zh2hant(lang, '📉 这次大盘更稳')}
             </p>
             <p className="mt-1 tabular-nums">
-              {hit.name} 后 5 天 {fmtPct(hit.next5)} · 大盘 QQQ {fmtPct(qqq5)}
+              {hit.name} {zh2hant(lang, '后 5 天')} {fmtPct(hit.next5)} {zh2hant(lang, '· 大盘 QQQ')} {fmtPct(qqq5)}
             </p>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed px-1">{tip}</p>
@@ -346,7 +350,7 @@ export default function DartGame() {
             onClick={again}
             className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
           >
-            再扔一次
+            {zh2hant(lang, '再扔一次')}
           </button>
         </div>
       )}

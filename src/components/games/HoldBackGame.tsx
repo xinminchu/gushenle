@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { recordPlay } from '@/lib/gameStats';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 
 type Phase = 'idle' | 'running' | 'done';
 
@@ -24,6 +26,7 @@ interface Trade {
 
 export default function HoldBackGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { lang } = useLanguage();
   const [phase, setPhase] = useState<Phase>('idle');
   const [left, setLeft] = useState(DURATION);
   const [tempt, setTempt] = useState('');
@@ -260,17 +263,17 @@ export default function HoldBackGame() {
   return (
     <div className="w-full max-w-[340px] p-3 space-y-3">
       <div className="text-center">
-        <div className="text-sm font-bold text-slate-200">🚫 忍住别追高</div>
-        <div className="text-[11px] text-slate-500 mt-0.5">追高模拟器：买入可能赚，拿着可能崩</div>
+        <div className="text-sm font-bold text-slate-200">{zh2hant(lang, '🚫 忍住别追高')}</div>
+        <div className="text-[11px] text-slate-500 mt-0.5">{zh2hant(lang, '追高模拟器：买入可能赚，拿着可能崩')}</div>
       </div>
 
       <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-2 relative">
         <div className="flex items-baseline justify-between px-1 pb-1">
-          <span className="text-xs font-semibold text-slate-300">某妖股分时图</span>
+          <span className="text-xs font-semibold text-slate-300">{zh2hant(lang, '某妖股分时图')}</span>
           <span className="flex items-center gap-2">
             {holding !== null && (
               <span className={`text-xs font-bold tabular-nums ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                浮盈 {pnl >= 0 ? '+' : ''}{pnl.toFixed(1)}%
+                {zh2hant(lang, `浮盈 ${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}%`)}
               </span>
             )}
             {phase === 'running' && (
@@ -282,13 +285,13 @@ export default function HoldBackGame() {
         {crashFlash && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="bg-rose-600/95 text-white text-sm font-black px-4 py-2 rounded-xl animate-bounce">
-              ⚡ 闪崩！被套了…
+              {zh2hant(lang, '⚡ 闪崩！被套了…')}
             </div>
           </div>
         )}
         {tempt && phase === 'running' && holding === null && !crashFlash && (
           <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-rose-600/90 text-white text-[11px] font-bold px-3 py-1.5 rounded-full animate-bounce whitespace-nowrap">
-            {tempt}
+            {zh2hant(lang, tempt)}
           </div>
         )}
       </div>
@@ -296,15 +299,15 @@ export default function HoldBackGame() {
       {phase === 'idle' && (
         <div className="text-center space-y-2">
           <p className="text-xs text-slate-400 leading-relaxed px-2">
-            规则变了：<span className="text-slate-200 font-semibold">买入真的可能赚钱</span>——但拿得越久，闪崩概率越高。
+            {zh2hant(lang, '规则变了：')}<span className="text-slate-200 font-semibold">{zh2hant(lang, '买入真的可能赚钱')}</span>{zh2hant(lang, '——但拿得越久，闪崩概率越高。')}
             <br />
-            赚了就跑还是贪到被埋？60 秒见分晓。不出手也行，+80 分。
+            {zh2hant(lang, '赚了就跑还是贪到被埋？60 秒见分晓。不出手也行，+80 分。')}
           </p>
           <button
             onClick={start}
             className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
           >
-            开始挑战
+            {zh2hant(lang, '开始挑战')}
           </button>
         </div>
       )}
@@ -316,18 +319,18 @@ export default function HoldBackGame() {
               onClick={buy}
               className="w-full py-4 rounded-xl bg-rose-600 text-white text-lg font-black animate-pulse shadow-lg shadow-rose-900/50"
             >
-              🤑 点我追高，马上起飞！
+              {zh2hant(lang, '🤑 点我追高，马上起飞！')}
             </button>
           ) : (
             <button
               onClick={sell}
               className="w-full py-4 rounded-xl bg-emerald-600 text-white text-lg font-black shadow-lg shadow-emerald-900/50"
             >
-              💰 落袋为安（{pnl >= 0 ? '+' : ''}{pnl.toFixed(1)}%）
+              {zh2hant(lang, `💰 落袋为安（${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}%）`)}
             </button>
           )}
           <p className="text-center text-[11px] text-slate-500">
-            本局 {score} 分 · 已交易 {trades.length} 次
+            {zh2hant(lang, `本局 ${score} 分 · 已交易 ${trades.length} 次`)}
           </p>
         </div>
       )}
@@ -335,26 +338,26 @@ export default function HoldBackGame() {
       {phase === 'done' && (
         <div className="space-y-2">
           <div className="rounded-xl p-3 text-center text-xs leading-relaxed border bg-slate-500/10 border-slate-600/40 text-slate-200">
-            <p className="font-semibold">{endText}</p>
-            <p className="text-amber-300 font-bold mt-1">本局 {score} 分</p>
+            <p className="font-semibold">{zh2hant(lang, endText)}</p>
+            <p className="text-amber-300 font-bold mt-1">{zh2hant(lang, `本局 ${score} 分`)}</p>
           </div>
           {trades.length > 0 && (
             <div className="text-[11px] text-slate-500 space-y-0.5 px-1">
               {trades.map((t, i) => (
                 <p key={i}>
-                  第{i + 1}笔：{t.crashed ? '⚡闪崩被埋' : `${t.pct >= 0 ? '+' : ''}${(t.pct * 100).toFixed(1)}%`}
+                  {zh2hant(lang, `第${i + 1}笔：`)}{t.crashed ? zh2hant(lang, '⚡闪崩被埋') : `${t.pct >= 0 ? '+' : ''}${(t.pct * 100).toFixed(1)}%`}
                 </p>
               ))}
             </div>
           )}
           <p className="text-[11px] text-slate-400 leading-relaxed px-1">
-            💡 追高最毒的地方：它真的会让你先赚几次。赚的那几次不是技术，是运气在收门票。
+            {zh2hant(lang, '💡 追高最毒的地方：它真的会让你先赚几次。赚的那几次不是技术，是运气在收门票。')}
           </p>
           <button
             onClick={start}
             className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
           >
-            再来一局
+            {zh2hant(lang, '再来一局')}
           </button>
         </div>
       )}

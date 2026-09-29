@@ -31,7 +31,9 @@ import {
   toggleFavorite,
 } from '@/lib/encyclopedia';
 import { recordPlay } from '@/lib/gameStats';
+import { zh2hant } from '@/lib/hant';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { useNickname } from '@/hooks/useNickname';
 
 type View = 'home' | 'quiz';
@@ -45,6 +47,7 @@ function themeOf(q: EncyclopediaQuestion) {
 
 export default function EncyclopediaGame() {
   const { user } = useAuth();
+  const { lang } = useLanguage();
   const nickname = useNickname(user?.email);
 
   const [view, setView] = useState<View>('home');
@@ -206,7 +209,7 @@ export default function EncyclopediaGame() {
                 : 'bg-slate-800 text-slate-400 border border-slate-700'
             }`}
           >
-            📖 刷题
+            📖 {zh2hant(lang, '刷题')}
           </button>
           <button
             onClick={() => setHomeTab('shelf')}
@@ -216,14 +219,14 @@ export default function EncyclopediaGame() {
                 : 'bg-slate-800 text-slate-400 border border-slate-700'
             }`}
           >
-            ⭐ 知识库{favorites.length > 0 && `（${favorites.length}）`}
+            ⭐ {zh2hant(lang, '知识库')}{favorites.length > 0 && zh2hant(lang, `（${favorites.length}）`)}
           </button>
         </div>
 
         {homeTab === 'quiz' ? (
           <div className="space-y-4">
             <div>
-              <p className="text-xs text-slate-400 mb-2">选个主题开刷</p>
+              <p className="text-xs text-slate-400 mb-2">{zh2hant(lang, '选个主题开刷')}</p>
               <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={() => setTheme('all')}
@@ -234,9 +237,9 @@ export default function EncyclopediaGame() {
                   }`}
                 >
                   <div className="text-xl mb-1">📚</div>
-                  <div className="text-xs font-bold text-slate-200">全部主题</div>
+                  <div className="text-xs font-bold text-slate-200">{zh2hant(lang, '全部主题')}</div>
                   <div className="text-[10px] text-slate-500 mt-0.5">
-                    {ENCYCLOPEDIA_QUESTIONS.length} 题
+                    {zh2hant(lang, `${ENCYCLOPEDIA_QUESTIONS.length} 题`)}
                   </div>
                 </button>
                 {ENCYCLOPEDIA_THEMES.map((t) => {
@@ -254,7 +257,7 @@ export default function EncyclopediaGame() {
                     >
                       <div className="text-xl mb-1">{t.emoji}</div>
                       <div className="text-xs font-bold text-slate-200">{t.name}</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">{n} 题</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{zh2hant(lang, `${n} 题`)}</div>
                     </button>
                   );
                 })}
@@ -262,7 +265,7 @@ export default function EncyclopediaGame() {
             </div>
 
             <div>
-              <p className="text-xs text-slate-400 mb-2">难度口味</p>
+              <p className="text-xs text-slate-400 mb-2">{zh2hant(lang, '难度口味')}</p>
               <div className="flex gap-2">
                 {(['all', 'beginner', 'intermediate', 'advanced'] as const).map((p) => (
                   <button
@@ -274,7 +277,7 @@ export default function EncyclopediaGame() {
                         : 'border-slate-700 bg-slate-800/60 text-slate-400'
                     }`}
                   >
-                    {p === 'all' ? '都要' : ENCYCLOPEDIA_PURPOSE_LABEL[p]}
+                    {p === 'all' ? zh2hant(lang, '都要') : zh2hant(lang, ENCYCLOPEDIA_PURPOSE_LABEL[p])}
                   </button>
                 ))}
               </div>
@@ -284,12 +287,12 @@ export default function EncyclopediaGame() {
               onClick={startQuiz}
               className="w-full py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold text-sm active:scale-[0.98] transition-transform"
             >
-              开始刷题（共 {poolCount} 题）
+              {zh2hant(lang, `开始刷题（共 ${poolCount} 题）`)}
             </button>
             <p className="text-[11px] text-slate-500 text-center leading-relaxed">
-              一次答对 +10 分，第二次答对 +5 分
+              {zh2hant(lang, '一次答对 +10 分，第二次答对 +5 分')}
               <br />
-              第一次答错可以再试，第二次才公布答案 · 刷完一轮自动洗牌
+              {zh2hant(lang, '第一次答错可以再试，第二次才公布答案 · 刷完一轮自动洗牌')}
             </p>
           </div>
         ) : (
@@ -315,19 +318,19 @@ export default function EncyclopediaGame() {
           onClick={() => setView('home')}
           className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200"
         >
-          <ArrowLeft className="w-4 h-4" /> 换主题
+          <ArrowLeft className="w-4 h-4" /> {zh2hant(lang, '换主题')}
         </button>
         <div className="text-[11px] text-slate-500">
-          第 {qi + 1} / {queue.length} 题 · 答对 {correctCount}/{answeredCount}
+          {zh2hant(lang, `第 ${qi + 1} / ${queue.length} 题 · 答对 ${correctCount}/${answeredCount}`)}
         </div>
         <div className="text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-lg px-2 py-1">
-          {sessionScore} 分
+          {zh2hant(lang, `${sessionScore} 分`)}
         </div>
       </div>
 
       {reshuffleToast && (
         <div className="mb-2 text-center text-[11px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-lg py-1.5">
-          ♻️ 一轮刷完，已重新洗牌继续
+          ♻️ {zh2hant(lang, '一轮刷完，已重新洗牌继续')}
         </div>
       )}
 
@@ -336,10 +339,10 @@ export default function EncyclopediaGame() {
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] text-slate-300 bg-slate-700/70 rounded-md px-1.5 py-0.5">
-              {qTheme?.emoji} {qTheme?.name}
+              {qTheme?.emoji} {zh2hant(lang, qTheme?.name ?? '')}
             </span>
             <span className="text-[11px] text-slate-400">
-              {ENCYCLOPEDIA_PURPOSE_LABEL[q.purpose]} · {ENCYCLOPEDIA_SCENARIO_LABEL[q.scenario]}
+              {zh2hant(lang, ENCYCLOPEDIA_PURPOSE_LABEL[q.purpose])} · {zh2hant(lang, ENCYCLOPEDIA_SCENARIO_LABEL[q.scenario])}
             </span>
             <span className="text-[10px] text-amber-400">{DIFF_STARS[q.difficulty - 1]}</span>
           </div>
@@ -347,7 +350,7 @@ export default function EncyclopediaGame() {
             <button
               onClick={() => onToggleFav(q.id)}
               className="p-1.5 rounded-lg hover:bg-slate-700 transition-colors"
-              aria-label="收藏"
+              aria-label={zh2hant(lang, '收藏')}
             >
               <Star
                 className={`w-[18px] h-[18px] ${
@@ -362,17 +365,17 @@ export default function EncyclopediaGame() {
                 setSuggestOpen(true);
               }}
               className="p-1.5 rounded-lg hover:bg-slate-700 transition-colors"
-              aria-label="建议修改"
+              aria-label={zh2hant(lang, '建议修改')}
             >
               <PencilLine className="w-[18px] h-[18px] text-slate-500" />
             </button>
           </div>
         </div>
 
-        <p className="text-[15px] leading-relaxed text-slate-100 font-medium mb-1">{q.question}</p>
+        <p className="text-[15px] leading-relaxed text-slate-100 font-medium mb-1">{zh2hant(lang, q.question)}</p>
         {q.multi && (
           <p className="text-[11px] text-violet-300 mb-3">
-            多选：共 {q.answer.length} 个正确答案，选完点确认
+            {zh2hant(lang, `多选：共 ${q.answer.length} 个正确答案，选完点确认`)}
           </p>
         )}
 
@@ -407,7 +410,7 @@ export default function EncyclopediaGame() {
                 >
                   {LETTERS[i]}
                 </span>
-                <span className="text-slate-200 leading-relaxed">{opt}</span>
+                <span className="text-slate-200 leading-relaxed">{zh2hant(lang, opt)}</span>
               </button>
             );
           })}
@@ -416,7 +419,7 @@ export default function EncyclopediaGame() {
         {/* 反馈区 */}
         {phase === 'answering' && wrong === 1 && (
           <div className="mt-3 text-center text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl py-2">
-            不对，再想想 💪 还有一次机会
+            {zh2hant(lang, '不对，再想想 💪 还有一次机会')}
           </div>
         )}
 
@@ -431,15 +434,15 @@ export default function EncyclopediaGame() {
             >
               {wasCorrect ? (
                 <>
-                  {praise} <span className="text-amber-300">+{gained} 分</span>
+                  {zh2hant(lang, praise)} <span className="text-amber-300">{zh2hant(lang, `+${gained} 分`)}</span>
                 </>
               ) : (
-                <>正确答案：{answerLetters}</>
+                <>{zh2hant(lang, `正确答案：${answerLetters}`)}</>
               )}
             </div>
             <div className="text-[13px] leading-relaxed text-slate-300 bg-slate-800 border border-slate-700 rounded-xl p-3">
-              <span className="text-slate-500">💡 解析：</span>
-              {q.explanation}
+              <span className="text-slate-500">{zh2hant(lang, '💡 解析：')}</span>
+              {zh2hant(lang, q.explanation)}
             </div>
           </div>
         )}
@@ -452,7 +455,7 @@ export default function EncyclopediaGame() {
               disabled={selected.length === 0}
               className="w-full py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-all"
             >
-              确认提交（已选 {selected.length} 项）
+              {zh2hant(lang, `确认提交（已选 ${selected.length} 项）`)}
             </button>
           )}
           {phase === 'revealed' && (
@@ -460,7 +463,7 @@ export default function EncyclopediaGame() {
               onClick={nextQuestion}
               className="w-full py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-1"
             >
-              下一题 <ChevronRight className="w-4 h-4" />
+              {zh2hant(lang, '下一题')} <ChevronRight className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -473,27 +476,27 @@ export default function EncyclopediaGame() {
             {suggestDone ? (
               <div className="text-center py-4">
                 <p className="text-2xl mb-2">👀</p>
-                <p className="text-sm text-slate-200 font-bold">已收到，谢谢你的火眼金睛！</p>
+                <p className="text-sm text-slate-200 font-bold">{zh2hant(lang, '已收到，谢谢你的火眼金睛！')}</p>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  {user ? '登录用户提交的建议被采纳后会获得贡献值' : '登录后提交，被采纳可获得贡献值'}
+                  {zh2hant(lang, user ? '登录用户提交的建议被采纳后会获得贡献值' : '登录后提交，被采纳可获得贡献值')}
                 </p>
                 <button
                   onClick={() => setSuggestOpen(false)}
                   className="mt-3 px-6 py-2 rounded-xl bg-emerald-500 text-slate-950 text-sm font-bold"
                 >
-                  好的
+                  {zh2hant(lang, '好的')}
                 </button>
               </div>
             ) : (
               <>
-                <p className="text-sm font-bold text-slate-200 mb-1">✏️ 对这道题有建议？</p>
-                <p className="text-[11px] text-slate-500 mb-2 line-clamp-2">「{q.question}」</p>
+                <p className="text-sm font-bold text-slate-200 mb-1">{zh2hant(lang, '✏️ 对这道题有建议？')}</p>
+                <p className="text-[11px] text-slate-500 mb-2 line-clamp-2">「{zh2hant(lang, q.question)}」</p>
                 <textarea
                   value={suggestText}
                   onChange={(e) => setSuggestText(e.target.value)}
                   rows={4}
                   maxLength={500}
-                  placeholder="哪里写得不对 / 不够清楚 / 有更好的讲法……写下来告诉我们"
+                  placeholder={zh2hant(lang, '哪里写得不对 / 不够清楚 / 有更好的讲法……写下来告诉我们')}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500/60 resize-none"
                 />
                 <div className="flex gap-2 mt-3">
@@ -501,14 +504,14 @@ export default function EncyclopediaGame() {
                     onClick={() => setSuggestOpen(false)}
                     className="flex-1 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm text-slate-300"
                   >
-                    取消
+                    {zh2hant(lang, '取消')}
                   </button>
                   <button
                     onClick={sendSuggest}
                     disabled={suggestText.trim().length < 2 || suggestSending}
                     className="flex-1 py-2 rounded-xl bg-emerald-500 text-slate-950 text-sm font-bold disabled:opacity-40"
                   >
-                    {suggestSending ? '发送中…' : '提交建议'}
+                    {suggestSending ? zh2hant(lang, '发送中…') : zh2hant(lang, '提交建议')}
                   </button>
                 </div>
               </>
@@ -535,6 +538,7 @@ function ShelfList({
   onRemove: (id: string) => void;
   onGoQuiz: () => void;
 }) {
+  const { lang } = useLanguage();
   const questions = useMemo(
     () =>
       favorites
@@ -547,17 +551,17 @@ function ShelfList({
     return (
       <div className="text-center py-10">
         <p className="text-3xl mb-3">⭐</p>
-        <p className="text-sm text-slate-300 font-bold">还没有收藏</p>
+        <p className="text-sm text-slate-300 font-bold">{zh2hant(lang, '还没有收藏')}</p>
         <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-          刷题时点题目右上角的星星
+          {zh2hant(lang, '刷题时点题目右上角的星星')}
           <br />
-          把难啃的硬骨头留在这里慢慢啃
+          {zh2hant(lang, '把难啃的硬骨头留在这里慢慢啃')}
         </p>
         <button
           onClick={onGoQuiz}
           className="mt-4 px-6 py-2 rounded-xl bg-emerald-500 text-slate-950 text-sm font-bold"
         >
-          去刷题
+          {zh2hant(lang, '去刷题')}
         </button>
       </div>
     );
@@ -566,7 +570,7 @@ function ShelfList({
   return (
     <div className="space-y-2">
       <p className="text-[11px] text-slate-500 flex items-center gap-1">
-        <BookOpen className="w-3 h-3" /> 点题目展开看答案和解析
+        <BookOpen className="w-3 h-3" /> {zh2hant(lang, '点题目展开看答案和解析')}
       </p>
       {questions.map((x) => {
         const t = themeOf(x);
@@ -579,13 +583,13 @@ function ShelfList({
             <button onClick={() => onToggleOpen(x.id)} className="w-full text-left p-3">
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="text-[10px] text-slate-300 bg-slate-700/70 rounded px-1.5 py-0.5">
-                  {t?.emoji} {t?.name}
+                  {t?.emoji} {zh2hant(lang, t?.name ?? '')}
                 </span>
                 <span className="text-[10px] text-amber-400">{DIFF_STARS[x.difficulty - 1]}</span>
-                {x.multi && <span className="text-[10px] text-violet-300">多选</span>}
+                {x.multi && <span className="text-[10px] text-violet-300">{zh2hant(lang, '多选')}</span>}
               </div>
               <p className={`text-[13px] text-slate-200 leading-relaxed ${open ? '' : 'line-clamp-2'}`}>
-                {x.question}
+                {zh2hant(lang, x.question)}
               </p>
             </button>
             {open && (
@@ -600,18 +604,18 @@ function ShelfList({
                       >
                         {LETTERS[i]}.
                       </span>
-                      <span className={x.answer.includes(i) ? 'text-emerald-300' : ''}>{opt}</span>
+                      <span className={x.answer.includes(i) ? 'text-emerald-300' : ''}>{zh2hant(lang, opt)}</span>
                     </div>
                   ))}
                 </div>
                 <p className="text-[12px] text-slate-400 leading-relaxed bg-slate-800 rounded-lg p-2">
-                  💡 {x.explanation}
+                  💡 {zh2hant(lang, x.explanation)}
                 </p>
                 <button
                   onClick={() => onRemove(x.id)}
                   className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-red-400"
                 >
-                  <Trash2 className="w-3 h-3" /> 移出知识库
+                  <Trash2 className="w-3 h-3" /> {zh2hant(lang, '移出知识库')}
                 </button>
               </div>
             )}

@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchSeries, syntheticCandles, drawCandles, shortDate, fmtPct, type Candle } from './gameUtils';
 import { kindMeta } from '@/lib/financeCalendar';
 import { recordPlay } from '@/lib/gameStats';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 
 type Phase = 'loading' | 'ready' | 'answered';
 
@@ -68,6 +70,7 @@ interface Round {
 
 export default function NewsTrapGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { lang } = useLanguage();
   const [phase, setPhase] = useState<Phase>('loading');
   const [round, setRound] = useState<Round | null>(null);
   const [score, setScore] = useState(0);
@@ -127,31 +130,31 @@ export default function NewsTrapGame() {
     const canvas = canvasRef.current;
     if (!canvas || !round) return;
     if (phase === 'ready') {
-      drawCandles(canvas, round.candles.slice(0, 11), { markerAt: 10, markerLabel: '事件日' });
+      drawCandles(canvas, round.candles.slice(0, 11), { markerAt: 10, markerLabel: zh2hant(lang, '事件日') });
     } else if (phase === 'answered') {
       drawCandles(canvas, round.candles, {
         highlightFrom: 11,
         markerAt: 10,
-        markerLabel: '事件日',
+        markerLabel: zh2hant(lang, '事件日'),
       });
     }
-  }, [round, phase]);
+  }, [round, phase, lang]);
 
   const meta = round ? kindMeta(round.event.kind) : null;
 
   return (
     <div className="w-full max-w-[340px] p-3 space-y-3">
       <div className="text-center">
-        <div className="text-sm font-bold text-slate-200">📰 消息面陷阱</div>
+        <div className="text-sm font-bold text-slate-200">{zh2hant(lang, '📰 消息面陷阱')}</div>
         <div className="text-[11px] text-slate-500 mt-0.5">
-          真实历史大事件 · 猜大盘 5 日涨跌 · 本局 {score} 分
-          {streak >= 2 && <span className="text-orange-400"> · {streak} 连击🔥</span>}
+          {zh2hant(lang, `真实历史大事件 · 猜大盘 5 日涨跌 · 本局 ${score} 分`)}
+          {streak >= 2 && <span className="text-orange-400">{zh2hant(lang, ` · ${streak} 连击🔥`)}</span>}
         </div>
       </div>
 
       {phase === 'loading' || !round ? (
         <div className="h-[200px] flex items-center justify-center text-xs text-slate-500">
-          正在翻历史旧账…
+          {zh2hant(lang, '正在翻历史旧账…')}
         </div>
       ) : (
         <>
@@ -165,9 +168,9 @@ export default function NewsTrapGame() {
                 )}
                 <span className="text-[10px] text-slate-500">{shortDate(round.event.date)}</span>
               </div>
-              <p className="text-xs font-semibold text-slate-200">🗞️ {round.event.title}</p>
+              <p className="text-xs font-semibold text-slate-200">🗞️ {zh2hant(lang, round.event.title)}</p>
               <p className="text-[11px] text-amber-200/90 leading-relaxed bg-amber-500/10 border border-amber-500/20 rounded-lg p-2">
-                {round.event.headline}
+                {zh2hant(lang, round.event.headline)}
               </p>
             </div>
             <canvas ref={canvasRef} className="w-full h-[200px]" />
@@ -175,19 +178,19 @@ export default function NewsTrapGame() {
 
           {phase === 'ready' ? (
             <div className="bg-violet-500/10 border border-violet-500/30 rounded-xl p-3 text-center space-y-2">
-              <p className="text-sm font-bold text-slate-100">消息落地后 5 个交易日，大盘会？</p>
+              <p className="text-sm font-bold text-slate-100">{zh2hant(lang, '消息落地后 5 个交易日，大盘会？')}</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => guess(true)}
                   className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold"
                 >
-                  📈 看涨
+                  {zh2hant(lang, '📈 看涨')}
                 </button>
                 <button
                   onClick={() => guess(false)}
                   className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold"
                 >
-                  📉 看跌
+                  {zh2hant(lang, '📉 看跌')}
                 </button>
               </div>
             </div>
@@ -200,15 +203,15 @@ export default function NewsTrapGame() {
                     : 'bg-amber-500/10 border-amber-500/30 text-amber-200'
                 }`}
               >
-                <p className="font-semibold">{verdict}</p>
-                {gained > 0 && <p className="text-amber-300 font-bold mt-1">+{gained} 分</p>}
+                <p className="font-semibold">{zh2hant(lang, verdict)}</p>
+                {gained > 0 && <p className="text-amber-300 font-bold mt-1">{zh2hant(lang, `+${gained} 分`)}</p>}
               </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed px-1">💡 {lesson}</p>
+              <p className="text-[11px] text-slate-400 leading-relaxed px-1">💡 {zh2hant(lang, lesson)}</p>
               <button
                 onClick={newRound}
                 className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
               >
-                再来一局
+                {zh2hant(lang, '再来一局')}
               </button>
             </div>
           )}

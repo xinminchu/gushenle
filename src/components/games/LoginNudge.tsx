@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 
 /**
  * 🌱 登录提示横幅：只在未登录时出现在娱乐页顶部。
@@ -18,6 +20,7 @@ export function requestOpenLogin() {
 
 export default function LoginNudge() {
   const { user } = useAuth();
+  const { lang } = useLanguage();
   const [dismissed, setDismissed] = useState(false);
 
   if (user || dismissed) return null;
@@ -30,34 +33,33 @@ export default function LoginNudge() {
       </div>
       <button
         onClick={() => setDismissed(true)}
-        aria-label="关闭提示"
+        aria-label={zh2hant(lang, '关闭提示')}
         className="absolute right-2 top-2 p-1 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/60 transition-colors"
       >
         <X className="w-4 h-4" />
       </button>
 
-      <p className="text-[15px] font-bold text-emerald-200 pr-6">🌱 这棵树，差你一个名字</p>
+      <p className="text-[15px] font-bold text-emerald-200 pr-6">{zh2hant(lang, '🌱 这棵树，差你一个名字')}</p>
       <p className="text-[11px] text-slate-400 mt-1">
-        登录只要 <span className="text-slate-200 font-semibold">1 分钟</span>，3 步：点下面按钮 → 输邮箱 →
-        去邮箱点一下链接
+        {zh2hant(lang, '登录只要 ')}<span className="text-slate-200 font-semibold">{zh2hant(lang, '1 分钟')}</span>{zh2hant(lang, '，3 步：点下面按钮 → 输邮箱 → 去邮箱点一下链接')}
       </p>
 
       <ul className="mt-2.5 space-y-1.5 text-[11px] leading-relaxed text-slate-300">
         <li>
-          <span className="text-emerald-300 font-semibold">✅ 归你所有：</span>
-          你的建议、游戏战绩——全记在你名下，谁也拿不走
+          <span className="text-emerald-300 font-semibold">{zh2hant(lang, '✅ 归你所有：')}</span>
+          {zh2hant(lang, '你的建议、游戏战绩——全记在你名下，谁也拿不走')}
         </li>
         <li>
-          <span className="text-emerald-300 font-semibold">💡 小参与，大认同：</span>
-          好创意被采纳，署你的名、发贡献值，被更多人看到、用上
+          <span className="text-emerald-300 font-semibold">{zh2hant(lang, '💡 小参与，大认同：')}</span>
+          {zh2hant(lang, '好创意被采纳，署你的名、发贡献值，被更多人看到、用上')}
         </li>
         <li>
-          <span className="text-emerald-300 font-semibold">🌳 所有者回报：</span>
-          等这棵树长大了，第一批浇水的人，有所有者回报
+          <span className="text-emerald-300 font-semibold">{zh2hant(lang, '🌳 所有者回报：')}</span>
+          {zh2hant(lang, '等这棵树长大了，第一批浇水的人，有所有者回报')}
         </li>
         <li>
-          <span className="text-emerald-300 font-semibold">🔒 隐私放心：</span>
-          持仓、自选只存你本机，不上传；只有你主动发出的贡献，才会被大家看到
+          <span className="text-emerald-300 font-semibold">{zh2hant(lang, '🔒 隐私放心：')}</span>
+          {zh2hant(lang, '持仓、自选只存你本机，不上传；只有你主动发出的贡献，才会被大家看到')}
         </li>
       </ul>
 
@@ -65,10 +67,10 @@ export default function LoginNudge() {
         onClick={requestOpenLogin}
         className="mt-3 w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white text-sm font-bold transition shadow-lg shadow-emerald-900/40"
       >
-        🌱 1 分钟登录，占个位置
+        {zh2hant(lang, '🌱 1 分钟登录，占个位置')}
       </button>
       <p className="text-[10px] text-slate-500 mt-2 text-center">
-        登录后点顶栏你的名字，随时取一个好听的昵称～
+        {zh2hant(lang, '登录后点顶栏你的名字，随时取一个好听的昵称～')}
       </p>
     </div>
   );

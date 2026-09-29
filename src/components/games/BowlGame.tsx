@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 import { readWatchlist, fetchSeries, fmtPct, type Candle } from './gameUtils';
 import { findStock } from '@/lib/stockList';
 import { recordPlay } from '@/lib/gameStats';
@@ -23,6 +25,7 @@ const TIPS = [
 ];
 
 export default function BowlGame() {
+  const { lang } = useLanguage();
   const [phase, setPhase] = useState<Phase>('setup');
   const [round, setRound] = useState<BowlRound | null>(null);
   const [picked, setPicked] = useState(-1);
@@ -71,7 +74,7 @@ export default function BowlGame() {
     setErr('');
     const r = await prepare();
     if (!r) {
-      setErr('行情数据没拉全，换个网络再试一次');
+      setErr(zh2hant(lang, '行情数据没拉全，换个网络再试一次'));
       setPhase('setup');
       return;
     }
@@ -94,7 +97,7 @@ export default function BowlGame() {
   const buy = () => {
     if (!round) return;
     if (round.next5 > round.qqq5) setScore((v) => v + 20);
-    setTip(TIPS[Math.floor(Math.random() * TIPS.length)]);
+    setTip(zh2hant(lang, TIPS[Math.floor(Math.random() * TIPS.length)]));
     setPhase('reveal');
   };
 
@@ -107,10 +110,10 @@ export default function BowlGame() {
         {round.symbol} <span className="font-normal text-slate-300">{info?.zh || round.name}</span>
       </p>
       <p className="text-[11px] text-slate-400">
-        {info?.sector || ''}
-        {(info?.themes || []).length > 0 && ` · ${(info!.themes as string[]).join(' / ')}`}
+        {zh2hant(lang, info?.sector || '')}
+        {(info?.themes || []).length > 0 && ` · ${zh2hant(lang, (info!.themes as string[]).join(' / '))}`}
       </p>
-      {info?.blurb && <p className="text-[11px] text-slate-300 leading-relaxed">📇 {info.blurb}</p>}
+      {info?.blurb && <p className="text-[11px] text-slate-300 leading-relaxed">📇 {zh2hant(lang, info.blurb)}</p>}
     </div>
   );
 
@@ -157,22 +160,22 @@ export default function BowlGame() {
       `}</style>
 
       <div className="text-center">
-        <div className="text-sm font-bold text-slate-200">🥣 猜碗选股</div>
+        <div className="text-sm font-bold text-slate-200">{zh2hant(lang, '🥣 猜碗选股')}</div>
         <div className="text-[11px] text-slate-500 mt-0.5">
-          真实历史行情 · 街头猜碗进股市 · 本局 {score} 分
+          {zh2hant(lang, `真实历史行情 · 街头猜碗进股市 · 本局 ${score} 分`)}
         </div>
       </div>
 
       {phase === 'setup' && (
         <div className="space-y-3">
           <p className="text-xs text-slate-300 leading-relaxed bg-slate-800/60 border border-slate-700 rounded-xl p-3">
-            三只碗，一只股票——<span className="text-slate-100 font-semibold">猜它藏在哪只碗里</span>。
-            猜中开碗：先看它的"公司名片"，再决定买不买；买入后揭晓随后 5 天能不能跑赢大盘。
-            猜错了也别走，看看股票到底藏在哪个碗里，认识一家公司不亏。
+            {zh2hant(lang, '三只碗，一只股票——')}
+            <span className="text-slate-100 font-semibold">{zh2hant(lang, '猜它藏在哪只碗里')}</span>
+            {zh2hant(lang, '。猜中开碗：先看它的"公司名片"，再决定买不买；买入后揭晓随后 5 天能不能跑赢大盘。猜错了也别走，看看股票到底藏在哪个碗里，认识一家公司不亏。')}
           </p>
           <p className="text-[11px] text-slate-500 leading-relaxed px-1">
-            小说明：用历史上的某一天当"今天"，这样才能揭晓后 5 天的真实走势。
-            <span className="text-violet-300/80">💡 创意来自 @路过</span>
+            {zh2hant(lang, '小说明：用历史上的某一天当"今天"，这样才能揭晓后 5 天的真实走势。')}
+            <span className="text-violet-300/80">{zh2hant(lang, '💡 创意来自')} @路过</span>
           </p>
           {err && <p className="text-[11px] text-rose-300 px-1">{err}</p>}
           <div className="sticky bottom-0 -mx-3 px-3 pt-2 pb-2 bg-slate-900/95 backdrop-blur-sm border-t border-slate-800/60">
@@ -180,21 +183,21 @@ export default function BowlGame() {
               onClick={start}
               className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold shadow-lg"
             >
-              扣碗、洗牌！
+              {zh2hant(lang, '扣碗、洗牌！')}
             </button>
           </div>
         </div>
       )}
 
       {phase === 'loading' && (
-        <p className="text-center text-xs text-slate-400 py-10">正在扣碗…🥣</p>
+        <p className="text-center text-xs text-slate-400 py-10">{zh2hant(lang, '正在扣碗…🥣')}</p>
       )}
 
       {(phase === 'shuffle' || phase === 'pick') && (
         <div className="space-y-2">
           <div className="flex gap-2">{bowls}</div>
           <p className="text-center text-[11px] text-slate-500">
-            {phase === 'shuffle' ? '洗牌中…盯紧了！' : '猜：股票藏在哪只碗里？'}
+            {phase === 'shuffle' ? zh2hant(lang, '洗牌中…盯紧了！') : zh2hant(lang, '猜：股票藏在哪只碗里？')}
           </p>
         </div>
       )}
@@ -203,8 +206,8 @@ export default function BowlGame() {
         <div className="space-y-2">
           <div className="flex gap-2">{bowls}</div>
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center">
-            <p className="text-sm font-bold text-slate-100">🎉 猜中了！+10 分</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">股票就藏在这只碗里——先认识它，再决定买不买</p>
+            <p className="text-sm font-bold text-slate-100">{zh2hant(lang, '🎉 猜中了！+10 分')}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">{zh2hant(lang, '股票就藏在这只碗里——先认识它，再决定买不买')}</p>
           </div>
           {companyCard}
           <div className="flex gap-2">
@@ -212,13 +215,13 @@ export default function BowlGame() {
               onClick={buy}
               className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold"
             >
-              买入
+              {zh2hant(lang, '买入')}
             </button>
             <button
               onClick={() => start()}
               className="flex-1 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-bold"
             >
-              看看就好，再来一碗
+              {zh2hant(lang, '看看就好，再来一碗')}
             </button>
           </div>
         </div>
@@ -228,15 +231,15 @@ export default function BowlGame() {
         <div className="space-y-2">
           <div className="flex gap-2">{bowls}</div>
           <div className="bg-slate-500/10 border border-slate-600/40 rounded-xl p-3 text-center">
-            <p className="text-sm font-bold text-slate-200">🙈 猜错了，这只碗是空的</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">股票藏在金色那只碗里——认识一下，不亏</p>
+            <p className="text-sm font-bold text-slate-200">{zh2hant(lang, '🙈 猜错了，这只碗是空的')}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">{zh2hant(lang, '股票藏在金色那只碗里——认识一下，不亏')}</p>
           </div>
           {companyCard}
           <button
             onClick={() => start()}
             className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
           >
-            再来一碗
+            {zh2hant(lang, '再来一碗')}
           </button>
         </div>
       )}
@@ -252,10 +255,10 @@ export default function BowlGame() {
             }`}
           >
             <p className="font-semibold text-sm">
-              {beatQqq ? '🚀 跑赢大盘！再 +20 分' : '📉 这次大盘更稳'}
+              {beatQqq ? zh2hant(lang, '🚀 跑赢大盘！再 +20 分') : zh2hant(lang, '📉 这次大盘更稳')}
             </p>
             <p className="mt-1 tabular-nums">
-              {round.symbol} 后 5 天 {fmtPct(round.next5)} · 大盘 QQQ {fmtPct(round.qqq5)}
+              {round.symbol} {zh2hant(lang, '后 5 天')} {fmtPct(round.next5)} {zh2hant(lang, '· 大盘 QQQ')} {fmtPct(round.qqq5)}
             </p>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed px-1">{tip}</p>
@@ -263,7 +266,7 @@ export default function BowlGame() {
             onClick={() => start()}
             className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
           >
-            再来一碗
+            {zh2hant(lang, '再来一碗')}
           </button>
         </div>
       )}

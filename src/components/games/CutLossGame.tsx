@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { zh2hant } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   readWatchlist,
   fetchSeries,
@@ -31,6 +33,7 @@ const TIPS = [
 ];
 
 export default function CutLossGame() {
+  const { lang } = useLanguage();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [phase, setPhase] = useState<Phase>('loading');
   const [round, setRound] = useState<Round | null>(null);
@@ -133,8 +136,8 @@ export default function CutLossGame() {
     setScore((s) => s + pts);
     setGained(pts);
     setVerdictGood(good);
-    setVerdict(text);
-    setTip(TIPS[q % TIPS.length]);
+    setVerdict(zh2hant(lang, text));
+    setTip(zh2hant(lang, TIPS[q % TIPS.length]));
     setPhase('answered');
   };
 
@@ -145,30 +148,30 @@ export default function CutLossGame() {
     if (phase === 'ready') {
       drawCandles(canvas, round.candles.slice(0, 20), {
         markerAt: 19,
-        markerLabel: '现在',
+        markerLabel: zh2hant(lang, '现在'),
       });
     } else if (phase === 'answered') {
       drawCandles(canvas, round.candles, {
         highlightFrom: 20,
         markerAt: 19,
-        markerLabel: '决策点',
+        markerLabel: zh2hant(lang, '决策点'),
       });
     }
-  }, [round, phase, q]);
+  }, [round, phase, q, lang]);
 
   return (
     <div className="w-full max-w-[340px] p-3 space-y-3">
       <div className="text-center">
-        <div className="text-sm font-bold text-slate-200">🔪 割肉还是卧倒</div>
+        <div className="text-sm font-bold text-slate-200">{zh2hant(lang, '🔪 割肉还是卧倒')}</div>
         <div className="text-[11px] text-slate-500 mt-0.5">
-          真实历史 K 线 · 大跌中途定格 · 本局 {score} 分
-          {streak >= 2 && <span className="text-orange-400"> · {streak} 连击🔥</span>}
+          {zh2hant(lang, `真实历史 K 线 · 大跌中途定格 · 本局 ${score} 分`)}
+          {streak >= 2 && <span className="text-orange-400"> {zh2hant(lang, `· ${streak} 连击🔥`)}</span>}
         </div>
       </div>
 
       {phase === 'loading' || !round ? (
         <div className="h-[200px] flex items-center justify-center text-xs text-slate-500">
-          正在抽取一段真实历史…
+          {zh2hant(lang, '正在抽取一段真实历史…')}
         </div>
       ) : (
         <>
@@ -187,21 +190,23 @@ export default function CutLossGame() {
           {phase === 'ready' ? (
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center space-y-2">
               <p className="text-xs text-amber-200">
-                从近期高点已跌 <span className="font-bold">{fmtPct(round.dropFromHigh)}</span>，手在抖了…
+                {zh2hant(lang, '从近期高点已跌')}{' '}
+                <span className="font-bold">{fmtPct(round.dropFromHigh)}</span>
+                {zh2hant(lang, '，手在抖了…')}
               </p>
-              <p className="text-sm font-bold text-slate-100">现在，你怎么选？</p>
+              <p className="text-sm font-bold text-slate-100">{zh2hant(lang, '现在，你怎么选？')}</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => choose(false)}
                   className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold"
                 >
-                  🔪 割肉离场
+                  {zh2hant(lang, '🔪 割肉离场')}
                 </button>
                 <button
                   onClick={() => choose(true)}
                   className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold"
                 >
-                  🛏️ 卧倒装死
+                  {zh2hant(lang, '🛏️ 卧倒装死')}
                 </button>
               </div>
             </div>
@@ -215,14 +220,14 @@ export default function CutLossGame() {
                 }`}
               >
                 <p className="font-semibold">{verdict}</p>
-                {gained > 0 && <p className="text-amber-300 font-bold mt-1">+{gained} 分</p>}
+                {gained > 0 && <p className="text-amber-300 font-bold mt-1">{zh2hant(lang, `+${gained} 分`)}</p>}
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed px-1">{tip}</p>
               <button
                 onClick={newRound}
                 className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold"
               >
-                再来一局
+                {zh2hant(lang, '再来一局')}
               </button>
             </div>
           )}
