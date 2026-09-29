@@ -377,7 +377,7 @@ function IndexChip({ m }: { m: ScanMini }) {
   );
 }
 
-/** 资金异动 chip：估算净流入/流出 */
+/** 资金异动 chip：流入（估算）/流出（估算） */
 function FlowChip({ m, dir }: { m: ScanMini; dir: 1 | -1 }) {
   const { lang } = useLanguage();
   const amt = m.inflowEst != null ? fmtCompactMoney(m.symbol, Math.abs(m.inflowEst)) : '—';

@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { Flame, X, Trophy } from 'lucide-react';
 import { loadStats, recordPlay, recordSession, GAME_ICONS, type GameId, type GameStat } from '@/lib/gameStats';
 import { useLanguage } from '@/context/LanguageContext';
-import { tx } from '@/lib/hant';
+import { tx, zh2hant } from '@/lib/hant';
 import WishPool from '../games/WishPool';
 import Leaderboard from '../games/Leaderboard';
 import LoginNudge from '../games/LoginNudge';
@@ -206,7 +206,7 @@ export default function FunTab() {
 
   const getGameTitle = (id: string | null) => {
     const game = games.find((g) => g.id === id);
-    return game ? game.name : tx(lang, 'Mini game', '小游戏');
+    return game ? zh2hant(lang, game.name) : tx(lang, 'Mini game', '小游戏');
   };
 
   // 按游玩次数排序，玩得多的排前面
@@ -266,7 +266,7 @@ export default function FunTab() {
                     compact ? 'text-[10px]' : 'text-xs'
                   }`}
                 >
-                  {game.name}
+                  {zh2hant(lang, game.name)}
                 </div>
               {game.credit && (
                 <div className="text-[9px] text-violet-300/80 mt-0.5 truncate">💡 {game.credit}</div>

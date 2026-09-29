@@ -33,7 +33,7 @@ interface ScanPayload {
  * 首页「今日信号」：每天收盘后批处理扫精选池，摆三行
  * 🔥 涨得欢：冲高过热，按分从高到低前 5 —— 慎追，当心套牢（红框栏杆）
  * 👀 看一眼：离50由近到远、50上下成对比较，留近20天净流入为正者；
- *   都为正取20天净流入大者 —— 中间行名字暂定（绿框观察区）
+ *   都为正取20天流入（估算）大者 —— 中间行名字暂定（绿框观察区）
  * 🥶 跌得凶：分最低的 5 只（跌过头判定天然排最前）—— 慎割肉，慎抄底（红框栏杆）
  * 不展示律动分；连涨/连跌≥3 天在 tile 上打标（平盘打断）；点一只直接跳到它的价格走势。
  * 只展示数据 + 大白话，不做买入推荐。
@@ -184,13 +184,13 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
         asOfNote('cold'),
       )}
       <div className="mt-2 text-[10px] leading-relaxed text-slate-500">
-        {tx(lang, '📌 Hot: don\u2019t chase, beware of getting trapped; Cold: be careful about selling the bottom or catching the knife; Take a look: net inflow — all three describe conditions, you make your own calls.', '📌 涨得欢：慎追，当心套牢；跌得凶：慎割肉，慎抄底；看一眼：买入多——三行都是状态，买卖自己定。')}
+        {tx(lang, '📌 Hot: don\u2019t chase, beware of getting trapped; Cold: be careful about selling the bottom or catching the knife; Take a look: inflow (est.) — all three describe conditions, you make your own calls.', '📌 涨得欢：慎追，当心套牢；跌得凶：慎割肉，慎抄底；看一眼：买入多——三行都是状态，买卖自己定。')}
       </div>
       <div className="mt-1 text-[10px] leading-relaxed text-slate-600">
         {tx(lang, '📊 Streaks count consecutive up/down closes; shown only at 3+ days, a flat day breaks the streak.', '📊 连涨/连跌按收盘价连续天数算，满 3 天才标，平盘打断。')}
       </div>
       <div className="mt-1 text-[10px] leading-relaxed text-slate-600">
-        {tx(lang, '👀 Middle: pairs nearest to 50 above/below; keep 20-day net inflow; both positive → larger 20-day inflow wins.', '👀 中间行取法：离50由近到远、上下成对比较，留近20天买入多者；都多时取20天净流入大者。')}
+        {tx(lang, '👀 Middle: pairs nearest to 50 above/below; keep 20-day inflow (est.); both positive → larger 20-day inflow (est.) wins.', '👀 中间行取法：离50由近到远、上下成对比较，留近20天买入多者；都多时取20天流入（估算）大者。')}
       </div>
     </div>
   );
