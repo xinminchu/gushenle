@@ -61,8 +61,8 @@ export default function AppHeader() {
           <h1 className="text-xl font-bold text-slate-100 whitespace-nowrap">
             {en ? 'Gushenle' : '股神乐 Gushenle'}
           </h1>
-          {/* 右：操作行 */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* 右：操作行（窄屏允许换行折叠，保证主题按钮不被挤出屏幕） */}
+          <div className="flex items-center gap-1.5 flex-wrap justify-end min-w-0">
             {/* 登录态：未配置 Supabase 时不显示，保持游客模式干净 */}
             {configured && !loading && (
               user ? (
