@@ -98,13 +98,13 @@ export default function AppHeader() {
                         {editingNick ? (
                           <div className="p-1">
                             <p className="text-[11px] text-slate-400 mb-1.5 px-1">
-                              取一个好听的昵称
+                              {t('nickPrompt')}
                             </p>
                             <input
                               autoFocus
                               value={nickDraft}
                               onChange={(e) => setNickDraft(e.target.value.slice(0, 12))}
-                              placeholder="比如：韭菜终结者"
+                              placeholder={t('nickPlaceholder')}
                               className="w-full bg-slate-800 border border-slate-600 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500"
                             />
                             <div className="flex gap-1.5 mt-2">
@@ -112,13 +112,13 @@ export default function AppHeader() {
                                 onClick={saveNick}
                                 className="flex-1 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold active:scale-95 transition"
                               >
-                                保存
+                                {t('save')}
                               </button>
                               <button
                                 onClick={() => setEditingNick(false)}
                                 className="flex-1 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs active:scale-95 transition"
                               >
-                                取消
+                                {t('cancel')}
                               </button>
                             </div>
                           </div>
@@ -135,7 +135,7 @@ export default function AppHeader() {
                               className="w-full text-left px-2.5 py-2 rounded-lg text-xs text-slate-200 hover:bg-slate-800 flex items-center gap-2 active:scale-95 transition"
                             >
                               <Pencil className="w-3.5 h-3.5 text-slate-500" />
-                              改昵称
+                              {t('editNick')}
                             </button>
                             <button
                               onClick={() => {
@@ -145,7 +145,7 @@ export default function AppHeader() {
                               className="w-full text-left px-2.5 py-2 rounded-lg text-xs text-rose-300 hover:bg-slate-800 flex items-center gap-2 active:scale-95 transition"
                             >
                               <LogOut className="w-3.5 h-3.5 text-slate-500" />
-                              退出登录
+                              {t('logout')}
                             </button>
                           </>
                         )}

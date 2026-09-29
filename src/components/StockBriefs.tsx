@@ -5,6 +5,8 @@
 
 import { buildBrief } from '@/lib/brief';
 import type { RhythmResponse } from '@/lib/rhythm';
+import { tx } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface StockBriefsProps {
   symbols: string[];
@@ -31,11 +33,12 @@ export default function StockBriefs({
   positionSymbols,
   focusFull,
 }: StockBriefsProps) {
+  const { lang } = useLanguage();
   const rows = symbols
     .map((sym) => {
       const d = dataMap[sym];
       if (!d) return null;
-      const brief = buildBrief(sym, nameOf(sym), d);
+      const brief = buildBrief(sym, nameOf(sym), d, lang);
       return brief ? { sym, brief } : null;
     })
     .filter((r): r is { sym: string; brief: string } => r !== null);
@@ -45,8 +48,8 @@ export default function StockBriefs({
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-slate-200">一句话播报</h2>
-      <p className="text-[10px] text-slate-500 mt-0.5 mb-2">只讲事实和纪律，不预测涨跌</p>
+      <h2 className="text-sm font-semibold text-slate-200">{tx(lang, 'One-line brief', '一句话播报')}</h2>
+      <p className="text-[10px] text-slate-500 mt-0.5 mb-2">{tx(lang, 'Facts and discipline only — no price predictions', '只讲事实和纪律，不预测涨跌')}</p>
       {loading && rows.length === 0 ? (
         <div className="space-y-2">
           {symbols.slice(0, 4).map((sym) => (
@@ -74,11 +77,11 @@ export default function StockBriefs({
                       onAddFocus(sym);
                     }}
                     disabled={focusFull}
-                    title={focusFull ? '关注已满 6 只' : `＋关注 ${sym}`}
-                    aria-label={`＋关注 ${sym}`}
+                    title={focusFull ? tx(lang, 'Focus list full (6)', '关注已满 6 只') : tx(lang, `+ Follow ${sym}`, `＋关注 ${sym}`)}
+                    aria-label={tx(lang, `+ Follow ${sym}`, `＋关注 ${sym}`)}
                     className="shrink-0 text-[10px] px-2 py-1 rounded-full border border-blue-500/40 text-blue-300 hover:bg-blue-500/15 active:bg-blue-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
-                    ＋关注
+                    {tx(lang, '+ Follow', '＋关注')}
                   </button>
                 )}
               </div>

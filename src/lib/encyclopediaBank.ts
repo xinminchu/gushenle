@@ -17,6 +17,7 @@ export type EncyclopediaThemeKey =
   | 'behavior'
   | 'risk'
   | 'usMechanics'
+  | 'cnMechanics'
   | 'dividend'
 
 export type EncyclopediaPurpose = 'beginner' | 'intermediate' | 'advanced';

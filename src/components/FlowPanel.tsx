@@ -46,7 +46,7 @@ export default function FlowPanel({ symbol, lang = 'zh' }: { symbol: string; lan
         <span className="text-xs font-semibold text-slate-200">{tx(lang, 'Money flow', '资金流向')}</span>
         <span className="text-[10px] font-normal text-slate-500">{symbol}</span>
         <span className="text-[10px] font-normal text-slate-500 border border-slate-700 rounded px-1">
-          日线估算
+          {tx(lang, 'Daily estimate', '日线估算')}
         </span>
       </div>
       <p className="text-[10px] text-slate-500 mt-1 mb-2">{tx(lang, 'Last 20 days: buyers vs sellers, who pushed harder', '20天里买的人和卖的人谁更用力')}</p>

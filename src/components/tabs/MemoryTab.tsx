@@ -24,6 +24,7 @@ import { loadWatchlist } from '@/lib/watchlist';
 import { findSimilarRecord, findDuplicateGroups, type SimilarHit } from '@/lib/memoryParse';
 import PortraitPanel from '@/components/memory/PortraitPanel';
 import { useLanguage } from '@/context/LanguageContext';
+import { tx } from '@/lib/hant';
 
 interface Review { r5: number | null; r20: number | null }
 
@@ -57,6 +58,8 @@ interface SingleAdvice {
 
 export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | null }) {
   const { lang } = useLanguage();
+  // 方向标签：zh 分支走 ACTION_LABEL 原文（买入/卖出）
+  const actName = (a: OpAction) => tx(lang, a === 'buy' ? 'Buy' : 'Sell', ACTION_LABEL[a]);
   const [inputText, setInputText] = useState('');
   // 从持仓故事"补一笔"跳过来：输入框预填"买入XXX"，用户补个数和价即可
   useEffect(() => {
@@ -156,7 +159,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       const res = await fetch('/api/analyze-memory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rawText: textToAnalyze }),
+        body: JSON.stringify({ rawText: textToAnalyze, lang }),
       });
       const json = await res.json();
       if (json.success && json.intent === 'record') {
@@ -193,7 +196,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
         const groups = findDuplicateGroups(ops);
         setAuditGroups(groups);
         if (groups.length === 0) {
-          setNotice({ type: 'info', text: '查过了：操作记录里没有发现疑似重复的 ✓' });
+          setNotice({ type: 'info', text: tx(lang, 'Checked: no likely duplicates in your log ✓', '查过了：操作记录里没有发现疑似重复的 ✓') });
         }
       } else if (json.success && json.intent === 'advice') {
         if (json.symbol) {
@@ -204,13 +207,13 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       } else if (json.success && json.intent === 'correct') {
         applyCorrection(json.data);
       } else if (json.success && json.intent === 'chat') {
-        setChatReply(json.reply || '这句话记不了一笔，换个说法试试。');
+        setChatReply(json.reply || tx(lang, "That doesn't read as a trade — try rephrasing.", '这句话记不了一笔，换个说法试试。'));
       } else {
-        setNotice({ type: 'error', text: json.error || '没能理解这句话，换个说法试试' });
+        setNotice({ type: 'error', text: json.error || tx(lang, "Couldn't catch that — try rephrasing", '没能理解这句话，换个说法试试') });
       }
     } catch (err) {
       console.error(err);
-      setNotice({ type: 'error', text: '请求失败，请检查网络后重试' });
+      setNotice({ type: 'error', text: tx(lang, 'Request failed — check your connection and try again', '请求失败，请检查网络后重试') });
     } finally {
       setLoading(false);
     }
@@ -229,11 +232,11 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       if (json.success && json.single) {
         setSingleAdvice(json.single);
       } else {
-        setNotice({ type: 'info', text: json.error || '没找到这只股票的行情数据' });
+        setNotice({ type: 'info', text: json.error || tx(lang, "Couldn't find market data for this symbol", '没找到这只股票的行情数据') });
       }
     } catch (err) {
       console.error(err);
-      setNotice({ type: 'error', text: '律动诊断失败，请检查网络后重试' });
+      setNotice({ type: 'error', text: tx(lang, 'Rhythm check failed — check your connection and try again', '律动诊断失败，请检查网络后重试') });
     } finally {
       setAdviceLoading(false);
     }
@@ -258,11 +261,11 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       if (json.success) {
         setAdvice(json);
       } else {
-        setNotice({ type: 'error', text: json.error || '律动扫描失败' });
+        setNotice({ type: 'error', text: json.error || tx(lang, 'Rhythm scan failed', '律动扫描失败') });
       }
     } catch (err) {
       console.error(err);
-      setNotice({ type: 'error', text: '律动扫描失败，请检查网络后重试' });
+      setNotice({ type: 'error', text: tx(lang, 'Rhythm scan failed — check your connection and try again', '律动扫描失败，请检查网络后重试') });
     } finally {
       setAdviceLoading(false);
     }
@@ -275,7 +278,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       return;
     }
     if (!speechSupported) {
-      setNotice({ type: 'info', text: '当前浏览器不支持语音识别，请直接在输入框打字' });
+      setNotice({ type: 'info', text: tx(lang, "This browser doesn't support voice input — type it in instead", '当前浏览器不支持语音识别，请直接在输入框打字') });
       return;
     }
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -310,12 +313,12 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
     stopSpeak();
     const symbol = String(parsedResult.symbol || '').toUpperCase();
     if (!symbol || symbol === 'UNKNOWN') {
-      setNotice({ type: 'error', text: '没识别出股票代码，请说出或输入代码，例如 AAPL' });
+      setNotice({ type: 'error', text: tx(lang, "Couldn't pick up a ticker — say or type one, e.g. AAPL", '没识别出股票代码，请说出或输入代码，例如 AAPL') });
       return;
     }
     const price = parseFloat(priceEdit);
     if (!priceEdit || !(price > 0)) {
-      setNotice({ type: 'error', text: '请填写成交价格' });
+      setNotice({ type: 'error', text: tx(lang, 'Please enter the fill price', '请填写成交价格') });
       return;
     }
     const qty = qtyEdit ? parseInt(qtyEdit, 10) : undefined;
@@ -353,35 +356,38 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
     if (!dupWarning || dupWarning.kind !== 'field_diff') return;
     const patch: Partial<OperationRecord> = {};
     let label = '';
+    let labelEn = '';
     if (dupWarning.diffField === 'price') {
       const v = parseFloat(priceEdit);
       if (!(v > 0)) {
-        setNotice({ type: 'error', text: '先在下面填好正确的价格，再点「直接改上一笔」' });
+        setNotice({ type: 'error', text: tx(lang, 'Fill in the correct price below first, then hit "Edit last entry"', '先在下面填好正确的价格，再点「直接改上一笔」') });
         return;
       }
       patch.price = v;
       label = `单价改成 $${v}`;
+      labelEn = `price → $${v}`;
     } else if (dupWarning.diffField === 'qty') {
       const v = parseInt(qtyEdit, 10);
       if (!(v > 0)) {
-        setNotice({ type: 'error', text: '先在下面填好正确的数量，再点「直接改上一笔」' });
+        setNotice({ type: 'error', text: tx(lang, 'Fill in the correct quantity below first, then hit "Edit last entry"', '先在下面填好正确的数量，再点「直接改上一笔」') });
         return;
       }
       patch.qty = v;
       label = `数量改成 ${v} 股`;
+      labelEn = `qty → ${v} shares`;
     } else {
       return;
     }
     const updated = updateOperation(dupWarning.existing.id, patch);
     if (!updated) {
-      setNotice({ type: 'error', text: '没找到那条记录' });
+      setNotice({ type: 'error', text: tx(lang, "Couldn't find that entry", '没找到那条记录') });
       return;
     }
     setOps(loadOperations());
     setParsedResult(null);
     setDupWarning(null);
     setInputText('');
-    setNotice({ type: 'info', text: `已更正：${updated.symbol} ${label}，没有多记一笔 ✓` });
+    setNotice({ type: 'info', text: tx(lang, `Fixed: ${updated.symbol} ${labelEn} — no duplicate entry ✓`, `已更正：${updated.symbol} ${label}，没有多记一笔 ✓`) });
   };
 
   /** 更正意图：说错了，直接改最近一条（或点名股票的最近一条） */
@@ -391,19 +397,22 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
     symbol?: string | null;
   }) => {
     if (ops.length === 0) {
-      setNotice({ type: 'error', text: '还没有操作记录，先记一笔吧' });
+      setNotice({ type: 'error', text: tx(lang, 'No entries yet — log your first trade', '还没有操作记录，先记一笔吧') });
       return;
     }
     const sym = c.symbol ? String(c.symbol).toUpperCase() : null;
     const target = (sym ? ops.find((o) => o.symbol === sym) : undefined) || ops[0];
     const patch: Partial<OperationRecord> = {};
     let label = '';
+    let labelEn = '';
     if (c.field === 'price' && typeof c.value === 'number' && c.value > 0) {
       patch.price = c.value;
       label = `单价改成 $${c.value}`;
+      labelEn = `price → $${c.value}`;
     } else if (c.field === 'qty' && typeof c.value === 'number' && c.value > 0) {
       patch.qty = Math.round(c.value);
       label = `数量改成 ${Math.round(c.value)} 股`;
+      labelEn = `qty → ${Math.round(c.value)} shares`;
     } else if (
       c.field === 'date' &&
       typeof c.value === 'string' &&
@@ -411,26 +420,28 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
     ) {
       patch.date = c.value;
       label = `日期改成 ${c.value}`;
+      labelEn = `date → ${c.value}`;
     } else if (c.field === 'action' && (c.value === 'buy' || c.value === 'sell')) {
       patch.action = c.value;
       label = `方向改成${ACTION_LABEL[c.value]}`;
+      labelEn = `side → ${c.value === 'buy' ? 'Buy' : 'Sell'}`;
     } else {
       setNotice({
         type: 'error',
-        text: '没听清要改成什么，再说一遍吧（例如：刚才那笔单价改成 227.92）',
+        text: tx(lang, 'Didn\'t catch what to change — say it again (e.g. "change the last trade\'s price to 227.92")', '没听清要改成什么，再说一遍吧（例如：刚才那笔单价改成 227.92）'),
       });
       return;
     }
     const updated = updateOperation(target.id, patch);
     if (!updated) {
-      setNotice({ type: 'error', text: '没找到那条记录' });
+      setNotice({ type: 'error', text: tx(lang, "Couldn't find that entry", '没找到那条记录') });
       return;
     }
     setOps(loadOperations());
     setInputText('');
     setNotice({
       type: 'info',
-      text: `已更正：${target.symbol}（${target.date}）${label}`,
+      text: tx(lang, `Fixed: ${target.symbol} (${target.date}) — ${labelEn}`, `已更正：${target.symbol}（${target.date}）${label}`),
     });
     // 改了日期会影响复盘，重拉这条的 forward-return
     if (c.field === 'date') {
@@ -445,7 +456,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('删除这条操作记录？')) return;
+    if (!confirm(tx(lang, 'Delete this entry?', '删除这条操作记录？'))) return;
     deleteOperation(id);
     setOps(loadOperations());
     setReviews((prev) => {
@@ -458,7 +469,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
   const doSync = (op: OperationRecord) => {
     const qty = parseInt(syncQty, 10);
     if (!(qty > 0)) {
-      setNotice({ type: 'error', text: '请填写股数' });
+      setNotice({ type: 'error', text: tx(lang, 'Please enter the number of shares', '请填写股数') });
       return;
     }
     // 同一条记录 15 分钟内重复"同步到持仓"：多半是手滑点两次，先拦一下
@@ -466,7 +477,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
     if (prev && Date.now() - prev < SYNC_DUP_WINDOW_MS) {
       const m = Math.max(1, Math.round((Date.now() - prev) / 60000));
       if (
-        !confirm(`这条记录 ${m} 分钟前刚同步过，再同步会重复加仓。确定还要同步吗？`)
+        !confirm(tx(lang, `This entry was synced ${m} min ago — syncing again would double-count it. Sync anyway?`, `这条记录 ${m} 分钟前刚同步过，再同步会重复加仓。确定还要同步吗？`))
       )
         return;
     }
@@ -490,20 +501,22 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
     const rv = reviews[op.id];
     if (!rv) return;
     const fwd = rv.r20 ?? rv.r5;
-    const v = verdictFor(op.action, fwd);
+    const v = verdictFor(op.action, fwd, lang);
     if (!v) return;
     if (op.action === 'sell' && !v.good) summary.missSell++;
-    if (op.action === 'sell' && v.good && v.label.startsWith('卖对')) summary.goodSell++;
+    // v.good 为 true 时包含"基本持平"：只有 |fwd|>=0.05% 的真实涨跌才计入卖对/买对
+    const real = fwd != null && Math.abs(fwd) >= 0.05;
+    if (op.action === 'sell' && v.good && real) summary.goodSell++;
     if (op.action === 'buy' && !v.good) summary.highBuy++;
-    if (op.action === 'buy' && v.good && v.label.startsWith('买对')) summary.goodBuy++;
+    if (op.action === 'buy' && v.good && real) summary.goodBuy++;
   });
   const totalReviewed = summary.missSell + summary.goodSell + summary.highBuy + summary.goodBuy;
 
   return (
     <div className="p-4 space-y-6 pb-24 max-w-md mx-auto">
       <header className="pt-2">
-        <h1 className="text-xl font-bold text-slate-100">操作记忆</h1>
-        <p className="text-xs text-slate-400 mt-0.5">说一句或点一下记一笔，涨跌复盘自动算</p>
+        <h1 className="text-xl font-bold text-slate-100">{tx(lang, 'Trade Journal', '操作记忆')}</h1>
+        <p className="text-xs text-slate-400 mt-0.5">{tx(lang, 'Say it or tap it to log a trade — review is automatic', '说一句或点一下记一笔，涨跌复盘自动算')}</p>
       </header>
 
       {/* 语音与文本输入卡片 */}
@@ -512,7 +525,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="例如：今天 235 卖了 100 股苹果 AAPL…说错了讲：刚才那笔单价说错了是 227.92；查重复：有没有记重"
+            placeholder={tx(lang, 'e.g. "sold 100 AAPL at 235 today"… fix it: "that price was wrong, it\'s 227.92"; check dupes: "any duplicates"', '例如：今天 235 卖了 100 股苹果 AAPL…说错了讲：刚才那笔单价说错了是 227.92；查重复：有没有记重')}
             className="w-full h-20 bg-slate-800/60 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
           />
           <button
@@ -520,13 +533,13 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
             disabled={loading || !inputText.trim()}
             className="w-full bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-200 text-xs py-2 rounded-lg font-medium flex items-center justify-center gap-1 transition-colors"
           >
-            <Send className="w-3.5 h-3.5" /> 发送给 AI 整理
+            <Send className="w-3.5 h-3.5" /> {tx(lang, 'Send to AI', '发送给 AI 整理')}
           </button>
         </div>
 
         <div className="relative flex py-1 items-center">
           <div className="flex-grow border-t border-slate-700"></div>
-          <span className="flex-shrink mx-2 text-[10px] text-slate-500">或语音录入</span>
+          <span className="flex-shrink mx-2 text-[10px] text-slate-500">{tx(lang, 'or voice input', '或语音录入')}</span>
           <div className="flex-grow border-t border-slate-700"></div>
         </div>
 
@@ -543,10 +556,10 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
           </button>
           <p className="text-[10px] text-slate-400">
             {isRecording
-              ? '录音中... 再点击结束并自动整理'
+              ? tx(lang, 'Recording… tap again to stop and parse', '录音中... 再点击结束并自动整理')
               : speechSupported
-                ? '点击开始说话，结束自动整理'
-                : '当前浏览器不支持语音，请打字输入'}
+                ? tx(lang, 'Tap to speak — it parses when you stop', '点击开始说话，结束自动整理')
+                : tx(lang, 'Voice input not supported here — please type', '当前浏览器不支持语音，请打字输入')}
           </p>
         </div>
       </div>
@@ -554,7 +567,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       {loading && (
         <div className="flex items-center justify-center space-x-2 text-slate-400 py-6 text-xs">
           <Sparkles className="w-4 h-4 animate-spin text-emerald-400" />
-          <span>AI 正在整理...</span>
+          <span>{tx(lang, 'AI is parsing…', 'AI 正在整理...')}</span>
         </div>
       )}
 
@@ -571,7 +584,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
           <button
             onClick={() => setNotice(null)}
             className="text-slate-500 hover:text-slate-300 shrink-0"
-            aria-label="关闭提示"
+            aria-label={tx(lang, 'Dismiss', '关闭提示')}
           >
             <XCircle className="w-4 h-4" />
           </button>
@@ -582,14 +595,14 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       {chatReply && !loading && (
         <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-2">
           <div className="text-xs font-semibold text-slate-200 flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> AI 说
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> {tx(lang, 'AI says', 'AI 说')}
           </div>
           <p className="text-xs text-slate-300 leading-relaxed">{chatReply}</p>
           <button
             onClick={() => setChatReply(null)}
             className="text-[11px] text-slate-500 hover:text-slate-300"
           >
-            知道了
+            {tx(lang, 'Got it', '知道了')}
           </button>
         </div>
       )}
@@ -597,7 +610,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       {adviceLoading && (
         <div className="flex items-center justify-center space-x-2 text-slate-400 py-6 text-xs">
           <Sparkles className="w-4 h-4 animate-spin text-emerald-400" />
-          <span>正在按律动诊断…</span>
+          <span>{tx(lang, 'Checking rhythm…', '正在按律动诊断…')}</span>
         </div>
       )}
 
@@ -606,14 +619,14 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
         <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
             <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" /> 按律动，现在买不算追高的
+              <Sparkles className="w-3.5 h-3.5" /> {tx(lang, 'Per rhythm — fine to buy without chasing', '按律动，现在买不算追高的')}
             </span>
             <span className="text-[10px] text-slate-500">{advice.asOf}</span>
           </div>
 
           {advice.candidates.length === 0 ? (
             <p className="text-xs text-slate-300 leading-relaxed">
-              自选里的股票按律动现在都不适合新开仓，先不追，等回调。
+              {tx(lang, "Per rhythm, none of your watchlist stocks are good fresh entries right now — don't chase, wait for a pullback.", '自选里的股票按律动现在都不适合新开仓，先不追，等回调。')}
             </p>
           ) : (
             <div className="space-y-2">
@@ -626,13 +639,13 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
                     </span>
                     <span className="text-xs text-slate-300">
                       ${c.price.toFixed(2)} ·{' '}
-                      <span className="text-emerald-400 font-bold">{c.score}分</span>
+                      <span className="text-emerald-400 font-bold">{tx(lang, `${c.score} pts`, `${c.score}分`)}</span>
                     </span>
                   </div>
                   {c.blurb && (
                     <div className="text-[10px] text-slate-500 mb-1">🏢 {c.blurb}</div>
                   )}
-                  <div className="text-[10px] text-slate-500 mb-1">律动诊断：{c.status}</div>
+                  <div className="text-[10px] text-slate-500 mb-1">{tx(lang, 'Rhythm: ', '律动诊断：')}{c.status}</div>
                   <p className="text-[11px] text-slate-300 leading-relaxed">{c.reason}</p>
                 </div>
               ))}
@@ -641,7 +654,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
 
           {advice.excluded.length > 0 && (
             <div className="pt-1">
-              <div className="text-[10px] text-slate-500 mb-1">已排除（拦追高 / 不接飞刀）：</div>
+              <div className="text-[10px] text-slate-500 mb-1">{tx(lang, 'Excluded (no chasing / no falling knives):', '已排除（拦追高 / 不接飞刀）：')}</div>
               {advice.excluded.map((e) => (
                 <p key={e.symbol} className="text-[11px] text-slate-500 leading-relaxed">
                   · {e.symbol} {e.reason}
@@ -651,13 +664,13 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
           )}
 
           <p className="text-[10px] text-slate-600 leading-relaxed border-t border-slate-800 pt-2">
-            律动只帮你避开追高，不预测涨跌；仅供参考，不构成投资建议。
+            {tx(lang, "Rhythm only helps you avoid chasing highs — it never predicts moves. Reference only, not investment advice.", '律动只帮你避开追高，不预测涨跌；仅供参考，不构成投资建议。')}
           </p>
           <button
             onClick={() => setAdvice(null)}
             className="text-[11px] text-slate-500 hover:text-slate-300"
           >
-            收起
+            {tx(lang, 'Collapse', '收起')}
           </button>
         </div>
       )}
@@ -668,7 +681,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
           <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
             <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5" />
-              {singleAdvice.side === 'sell' ? '按律动，现在能不能卖' : '按律动，这只现在能不能买'}
+              {tx(lang, singleAdvice.side === 'sell' ? 'Per rhythm — OK to sell now?' : 'Per rhythm — OK to buy this now?', singleAdvice.side === 'sell' ? '按律动，现在能不能卖' : '按律动，这只现在能不能买')}
             </span>
           </div>
           <div className="bg-slate-800/60 border border-slate-800 rounded-lg p-3">
@@ -679,23 +692,23 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
               </span>
               <span className="text-xs text-slate-300">
                 ${singleAdvice.price.toFixed(2)} ·{' '}
-                <span className="text-emerald-400 font-bold">{singleAdvice.score}分</span>
+                <span className="text-emerald-400 font-bold">{tx(lang, `${singleAdvice.score} pts`, `${singleAdvice.score}分`)}</span>
               </span>
             </div>
             {singleAdvice.blurb && (
               <div className="text-[10px] text-slate-500 mb-1">🏢 {singleAdvice.blurb}</div>
             )}
-            <div className="text-[10px] text-slate-500 mb-1">律动诊断：{singleAdvice.status}</div>
+            <div className="text-[10px] text-slate-500 mb-1">{tx(lang, 'Rhythm: ', '律动诊断：')}{singleAdvice.status}</div>
             <p className="text-[11px] text-slate-300 leading-relaxed">{singleAdvice.verdict}</p>
           </div>
           <p className="text-[10px] text-slate-600 leading-relaxed border-t border-slate-800 pt-2">
-            律动只帮你避开追高割肉，不预测涨跌；仅供参考，不构成投资建议。
+            {tx(lang, "Rhythm only helps you avoid chasing highs and selling the bottom — it never predicts moves. Reference only, not investment advice.", '律动只帮你避开追高割肉，不预测涨跌；仅供参考，不构成投资建议。')}
           </p>
           <button
             onClick={() => setSingleAdvice(null)}
             className="text-[11px] text-slate-500 hover:text-slate-300"
           >
-            收起
+            {tx(lang, 'Collapse', '收起')}
           </button>
         </div>
       )}
@@ -705,7 +718,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
         <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
             <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" /> AI 整理结果，确认后存入
+              <Sparkles className="w-3.5 h-3.5" /> {tx(lang, 'AI parsed result — confirm to save', 'AI 整理结果，确认后存入')}
             </span>
             <div className="flex items-center gap-2">
               {ttsSupported && (
@@ -720,14 +733,14 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
                     )
                   }
                   className="text-[10px] bg-slate-700 text-slate-200 px-2 py-0.5 rounded flex items-center gap-1"
-                  title="把这笔念出来再核对一遍"
+                  title={tx(lang, 'Read this trade aloud to double-check', '把这笔念出来再核对一遍')}
                 >
-                  🔊 再听一遍
+                  {tx(lang, '🔊 Listen again', '🔊 再听一遍')}
                 </button>
               )}
               {parsedResult.emotion && (
                 <span className="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded">
-                  情绪：{parsedResult.emotion}
+                  {tx(lang, 'Mood: ', '情绪：')}{parsedResult.emotion}
                 </span>
               )}
             </div>
@@ -744,7 +757,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
 
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <div className="text-slate-500 mb-1">方向</div>
+              <div className="text-slate-500 mb-1">{tx(lang, 'Side', '方向')}</div>
               <div className="flex gap-1">
                 {(['buy', 'sell'] as OpAction[]).map((a) => (
                   <button
@@ -758,13 +771,13 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
                         : 'bg-slate-800 text-slate-400'
                     }`}
                   >
-                    {ACTION_LABEL[a]}
+                    {actName(a)}
                   </button>
                 ))}
               </div>
             </div>
             <div>
-              <div className="text-slate-500 mb-1">日期</div>
+              <div className="text-slate-500 mb-1">{tx(lang, 'Date', '日期')}</div>
               <input
                 type="date"
                 value={dateEdit}
@@ -773,24 +786,24 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
               />
             </div>
             <div>
-              <div className="text-slate-500 mb-1">价格 *</div>
+              <div className="text-slate-500 mb-1">{tx(lang, 'Price *', '价格 *')}</div>
               <input
                 type="number"
                 inputMode="decimal"
                 value={priceEdit}
                 onChange={(e) => setPriceEdit(e.target.value)}
-                placeholder="成交价"
+                placeholder={tx(lang, 'Fill price', '成交价')}
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-100 focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div>
-              <div className="text-slate-500 mb-1">数量（可选）</div>
+              <div className="text-slate-500 mb-1">{tx(lang, 'Shares (optional)', '数量（可选）')}</div>
               <input
                 type="number"
                 inputMode="numeric"
                 value={qtyEdit}
                 onChange={(e) => setQtyEdit(e.target.value)}
-                placeholder="股数"
+                placeholder={tx(lang, 'Shares', '股数')}
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-100 focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -807,39 +820,32 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
             >
               {dupWarning.kind === 'exact' ? (
                 <p>
-                  ⚠️ <span className="font-semibold">{dupWarning.minutesAgo} 分钟前</span>
-                  你刚记过一模一样的一笔（{dupWarning.existing.symbol}{' '}
-                  {ACTION_LABEL[dupWarning.existing.action]} $
-                  {dupWarning.existing.price.toFixed(2)}
-                  {dupWarning.existing.qty ? ` × ${dupWarning.existing.qty}股` : ''}）。
-                  如果是手滑说重了，点「取消」就行；真要记两笔再点「存入记忆」。
+                  ⚠️ <span className="font-semibold">{tx(lang, `${dupWarning.minutesAgo} min ago`, `${dupWarning.minutesAgo} 分钟前`)}</span>
+                  {tx(lang,
+                    ` you just logged the exact same trade (${dupWarning.existing.symbol} ${dupWarning.existing.action === 'buy' ? 'buy' : 'sell'} $${dupWarning.existing.price.toFixed(2)}${dupWarning.existing.qty ? ` × ${dupWarning.existing.qty} shares` : ''}).`,
+                    `你刚记过一模一样的一笔（${dupWarning.existing.symbol} ${ACTION_LABEL[dupWarning.existing.action]} $${dupWarning.existing.price.toFixed(2)}${dupWarning.existing.qty ? ` × ${dupWarning.existing.qty}股` : ''}）。`)}
+                  {tx(lang,
+                    ' If you repeated it by mistake, just hit "Cancel"; to log it as a separate trade, hit "Save".',
+                    '如果是手滑说重了，点「取消」就行；真要记两笔再点「存入记忆」。')}
                 </p>
               ) : (
                 <div className="space-y-2">
                   <p>
-                    💡 <span className="font-semibold">{dupWarning.minutesAgo} 分钟前</span>
-                    记了 {dupWarning.existing.symbol}{' '}
-                    {ACTION_LABEL[dupWarning.existing.action]} $
-                    {dupWarning.existing.price.toFixed(2)}
-                    {dupWarning.existing.qty ? ` × ${dupWarning.existing.qty}股` : ''}，
-                    这次
-                    {dupWarning.diffField === 'price'
-                      ? ` $${priceEdit || '？'}`
-                      : ` ${qtyEdit || '？'}股`}
-                    ——是上次{dupWarning.diffField === 'price' ? '价格' : '数量'}没说对吗？
+                    💡 <span className="font-semibold">{tx(lang, `${dupWarning.minutesAgo} min ago`, `${dupWarning.minutesAgo} 分钟前`)}</span>
+                    {tx(lang,
+                      ` logged ${dupWarning.existing.symbol} ${dupWarning.existing.action === 'buy' ? 'buy' : 'sell'} $${dupWarning.existing.price.toFixed(2)}${dupWarning.existing.qty ? ` × ${dupWarning.existing.qty} shares` : ''} — and this time ${dupWarning.diffField === 'price' ? `$${priceEdit || '?'}` : `${qtyEdit || '?'} shares`}. Was the ${dupWarning.diffField === 'price' ? 'price' : 'quantity'} wrong last time?`,
+                      `记了 ${dupWarning.existing.symbol} ${ACTION_LABEL[dupWarning.existing.action]} $${dupWarning.existing.price.toFixed(2)}${dupWarning.existing.qty ? ` × ${dupWarning.existing.qty}股` : ''}，这次${dupWarning.diffField === 'price' ? ` $${priceEdit || '？'}` : ` ${qtyEdit || '？'}股`}——是上次${dupWarning.diffField === 'price' ? '价格' : '数量'}没说对吗？`)}
                   </p>
                   <button
                     onClick={applyDupFix}
                     className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs py-2 rounded-lg font-medium transition-colors"
                   >
-                    直接改上一笔
-                    {dupWarning.diffField === 'price'
-                      ? `为 $${priceEdit || '？'}`
-                      : `为 ${qtyEdit || '？'}股`}
-                    ，不多记
+                    {tx(lang,
+                      `Edit last entry${dupWarning.diffField === 'price' ? ` to $${priceEdit || '?'}` : ` to ${qtyEdit || '?'} shares`} — no new entry`,
+                      `直接改上一笔${dupWarning.diffField === 'price' ? `为 $${priceEdit || '？'}` : `为 ${qtyEdit || '？'}股`}，不多记`)}
                   </button>
                   <p className="text-[10px] text-slate-500">
-                    不是说错、真要记两笔的话，直接点下面的「存入记忆」。
+                    {tx(lang, 'If it\'s not a mistake and you really mean two trades, hit "Save" below.', '不是说错、真要记两笔的话，直接点下面的「存入记忆」。')}
                   </p>
                 </div>
               )}
@@ -851,13 +857,13 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
               onClick={handleCancel}
               className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-1"
             >
-              <XCircle className="w-3.5 h-3.5" /> 取消
+              <XCircle className="w-3.5 h-3.5" /> {tx(lang, 'Cancel', '取消')}
             </button>
             <button
               onClick={handleSave}
               className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-1"
             >
-              <CheckCircle2 className="w-3.5 h-3.5" /> 存入记忆
+              <CheckCircle2 className="w-3.5 h-3.5" /> {tx(lang, 'Save', '存入记忆')}
             </button>
           </div>
         </div>
@@ -867,15 +873,15 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       {auditGroups && auditGroups.length > 0 && !loading && (
         <div className="bg-slate-900 border border-amber-500/30 rounded-xl p-4 space-y-3">
           <div className="text-xs font-semibold text-amber-300 border-b border-slate-700/80 pb-2">
-            🔍 疑似重复（{auditGroups.length} 组），确认多余的那条点 🗑 删掉
+            {tx(lang, `🔍 Possible duplicates (${auditGroups.length} groups) — tap 🗑 on the extra one to remove`, `🔍 疑似重复（${auditGroups.length} 组），确认多余的那条点 🗑 删掉`)}
           </div>
           {auditGroups.map((g, gi) => (
             <div key={gi} className="bg-slate-800/50 border border-slate-800 rounded-lg p-2.5 space-y-1.5">
               {g.map((o) => (
                 <div key={o.id} className="flex items-center justify-between gap-2">
                   <span className="text-xs text-slate-200">
-                    {o.symbol} {ACTION_LABEL[o.action]} ${o.price.toFixed(2)}
-                    {o.qty ? <span className="text-slate-500"> × {o.qty}股</span> : null}
+                    {o.symbol} {actName(o.action)} ${o.price.toFixed(2)}
+                    {o.qty ? <span className="text-slate-500"> × {o.qty}{tx(lang, ' shares', '股')}</span> : null}
                     <span className="text-slate-500">
                       {' '}
                       · {o.date}{' '}
@@ -892,7 +898,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
                       setAuditGroups(findDuplicateGroups(loadOperations()));
                     }}
                     className="text-slate-600 hover:text-rose-400 transition-colors shrink-0"
-                    aria-label="删除这条"
+                    aria-label={tx(lang, 'Delete this entry', '删除这条')}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -904,7 +910,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
             onClick={() => setAuditGroups(null)}
             className="text-[11px] text-slate-500 hover:text-slate-300"
           >
-            知道了
+            {tx(lang, 'Got it', '知道了')}
           </button>
         </div>
       )}
@@ -916,24 +922,24 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       {totalReviewed > 0 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
           <div className="text-xs font-semibold text-slate-200 mb-2 flex items-center gap-1">
-            <History className="w-3.5 h-3.5 text-slate-400" /> 复盘小结（{totalReviewed} 笔已出结果）
+            <History className="w-3.5 h-3.5 text-slate-400" /> {tx(lang, `Review (${totalReviewed} settled)`, `复盘小结（${totalReviewed} 笔已出结果）`)}
           </div>
           <div className="grid grid-cols-4 gap-2 text-center text-xs">
             <div className="bg-slate-800/60 rounded-lg py-2">
               <div className="text-base font-bold text-emerald-400">{summary.goodSell}</div>
-              <div className="text-[10px] text-slate-500">卖对了</div>
+              <div className="text-[10px] text-slate-500">{tx(lang, 'Sold right', '卖对了')}</div>
             </div>
             <div className="bg-slate-800/60 rounded-lg py-2">
               <div className="text-base font-bold text-amber-400">{summary.missSell}</div>
-              <div className="text-[10px] text-slate-500">卖飞了</div>
+              <div className="text-[10px] text-slate-500">{tx(lang, 'Sold too early', '卖飞了')}</div>
             </div>
             <div className="bg-slate-800/60 rounded-lg py-2">
               <div className="text-base font-bold text-emerald-400">{summary.goodBuy}</div>
-              <div className="text-[10px] text-slate-500">买对了</div>
+              <div className="text-[10px] text-slate-500">{tx(lang, 'Bought right', '买对了')}</div>
             </div>
             <div className="bg-slate-800/60 rounded-lg py-2">
               <div className="text-base font-bold text-rose-400">{summary.highBuy}</div>
-              <div className="text-[10px] text-slate-500">买高了</div>
+              <div className="text-[10px] text-slate-500">{tx(lang, 'Bought high', '买高了')}</div>
             </div>
           </div>
         </div>
@@ -941,17 +947,17 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
 
       {/* 操作记录列表 */}
       <div className="space-y-2">
-        <div className="text-sm font-semibold text-slate-200">操作记录（{ops.length}）</div>
+        <div className="text-sm font-semibold text-slate-200">{tx(lang, `Trade log (${ops.length})`, `操作记录（${ops.length}）`)}</div>
         {ops.length === 0 && (
           <div className="text-xs text-slate-500 bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
-            还没有记录。语音说一句，或在今日页点「记一笔」。
+            {tx(lang, 'Nothing logged yet. Speak a trade, or tap "Log a trade" on the Today tab.', '还没有记录。语音说一句，或在今日页点「记一笔」。')}
           </div>
         )}
         {ops.map((op) => {
           const rv = reviews[op.id];
           const fwd = rv ? (rv.r20 ?? rv.r5) : undefined;
-          const winLabel = rv && rv.r20 != null ? '20天' : rv && rv.r5 != null ? '5天' : null;
-          const v = fwd === undefined ? undefined : verdictFor(op.action, fwd);
+          const winLabel = rv && rv.r20 != null ? tx(lang, '20 days', '20天') : rv && rv.r5 != null ? tx(lang, '5 days', '5天') : null;
+          const v = fwd === undefined ? undefined : verdictFor(op.action, fwd, lang);
           return (
             <div key={op.id} className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-2">
               <div className="flex items-center justify-between">
@@ -962,38 +968,38 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
                       op.action === 'buy' ? 'bg-rose-500/15 text-rose-400' : 'bg-emerald-500/15 text-emerald-400'
                     }`}
                   >
-                    {ACTION_LABEL[op.action]}
+                    {actName(op.action)}
                   </span>
                   <span className="text-[10px] text-slate-500">{op.date}</span>
                 </div>
                 <button
                   onClick={() => handleDelete(op.id)}
                   className="text-slate-600 hover:text-rose-400 transition-colors"
-                  aria-label="删除"
+                  aria-label={tx(lang, 'Delete', '删除')}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
               <div className="text-xs text-slate-300">
                 ${op.price.toFixed(2)}
-                {op.qty ? <span className="text-slate-500"> × {op.qty}股</span> : null}
+                {op.qty ? <span className="text-slate-500"> × {op.qty}{tx(lang, ' shares', '股')}</span> : null}
                 {op.adviceSnapshot && (
-                  <span className="text-slate-500"> · 当时建议：{op.adviceSnapshot}</span>
+                  <span className="text-slate-500"> · {tx(lang, 'advice at the time: ', '当时建议：')}{op.adviceSnapshot}</span>
                 )}
               </div>
               {op.thesis && <div className="text-[11px] text-slate-500 leading-relaxed">{op.thesis}</div>}
               <div className="text-[11px] pt-0.5">
                 {v ? (
                   <span className={v.good ? 'text-emerald-400' : 'text-amber-400'}>
-                    {winLabel}后 {v.label}
+                    {tx(lang, `${rv && rv.r20 != null ? '20-day' : '5-day'} later: ${v.label}`, `${winLabel}后 ${v.label}`)}
                   </span>
                 ) : (
                   <span className="text-slate-600">
-                    {rv ? '数据不足，还没法复盘' : '复盘计算中...'}
+                    {rv ? tx(lang, 'Not enough data to review yet', '数据不足，还没法复盘') : tx(lang, 'Review calculating…', '复盘计算中...')}
                   </span>
                 )}
                 {rv && rv.r5 != null && rv.r20 != null && (
-                  <span className="text-slate-600">（5天 {rv.r5 >= 0 ? '+' : ''}{rv.r5.toFixed(1)}%）</span>
+                  <span className="text-slate-600">{tx(lang, `(5-day ${rv.r5 >= 0 ? '+' : ''}${rv.r5.toFixed(1)}%)`, `（5天 ${rv.r5 >= 0 ? '+' : ''}${rv.r5.toFixed(1)}%）`)}</span>
                 )}
               </div>
               {/* 同步到持仓：记忆是流水，持仓是余额 */}
@@ -1005,20 +1011,20 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
                       inputMode="numeric"
                       value={syncQty}
                       onChange={(e) => setSyncQty(e.target.value)}
-                      placeholder="股数"
+                      placeholder={tx(lang, 'Shares', '股数')}
                       className="w-24 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
                     />
                     <button
                       onClick={() => doSync(op)}
                       className="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium"
                     >
-                      确认同步
+                      {tx(lang, 'Confirm sync', '确认同步')}
                     </button>
                     <button
                       onClick={() => setSyncingId(null)}
                       className="text-slate-500 hover:text-slate-300 text-[11px] px-2 py-1.5"
                     >
-                      取消
+                      {tx(lang, 'Cancel', '取消')}
                     </button>
                   </div>
                 ) : (
@@ -1029,7 +1035,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
                     }}
                     className="text-[11px] text-blue-400/90 hover:text-blue-300 border border-blue-500/30 hover:border-blue-500/50 rounded-lg px-2.5 py-1 transition-colors"
                   >
-                    同步到持仓
+                    {tx(lang, 'Sync to holdings', '同步到持仓')}
                   </button>
                 )}
               </div>

@@ -133,17 +133,84 @@ const KIND_META: Record<CalKind, { label: string; icon: string; chip: string }> 
   earnings: { label: '财报', icon: '📢', chip: 'bg-violet-500/15 text-violet-300 border-violet-500/30' },
 };
 
-export function kindMeta(kind: CalKind) {
-  return KIND_META[kind];
+const KIND_LABEL_EN: Record<CalKind, string> = {
+  fomc: 'Rate decision',
+  cpi: 'CPI',
+  nonfarm: 'Payrolls',
+  holiday: 'Closed',
+  buffett: 'Meeting',
+  jacksonhole: 'Summit',
+  earnings: 'Earnings',
+};
+
+export function kindMeta(kind: CalKind, lang: Lang = 'zh') {
+  const m = KIND_META[kind];
+  return { ...m, label: lang === 'en' ? KIND_LABEL_EN[kind] : m.label };
 }
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+const WEEKDAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const MONTHS_EN_LIST = MONTHS_EN;
 
-/** YYYY-MM-DD → "9月24日 周四" */
-export function formatDateCN(dateStr: string): string {
+/** YYYY-MM-DD → "9月24日 周四"（en: "Sep 24, Thu"） */
+export function formatDateCN(dateStr: string, lang: Lang = 'zh'): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   const dt = new Date(y, m - 1, d);
+  if (lang === 'en') return `${MONTHS_EN[m - 1]} ${d}, ${WEEKDAYS_EN[dt.getDay()]}`;
   return `${m}月${d}日 周${WEEKDAYS[dt.getDay()]}`;
+}
+
+/** 事件标题的英文版：按 kind 确定性映射（数据层只存中文原文） */
+export function calEventTitle(e: CalEvent, lang: Lang = 'zh'): string {
+  if (lang !== 'en') return e.title;
+  switch (e.kind) {
+    case 'fomc':
+      return e.title.includes('含点阵图') ? 'Fed rate decision (with dot plot)' : 'Fed rate decision';
+    case 'cpi': {
+      const m = e.title.match(/（(\d+)月）/);
+      return m ? `US CPI release (${MONTHS_EN[parseInt(m[1], 10) - 1]})` : 'US CPI release';
+    }
+    case 'nonfarm':
+      return 'US jobs report (NFP)';
+    case 'holiday': {
+      const reason = e.title.replace(/^.*：/, '');
+      const map: Record<string, string> = {
+        '感恩节': 'Thanksgiving',
+        '圣诞节': 'Christmas',
+        '元旦': "New Year's Day",
+        '马丁·路德·金日': 'MLK Day',
+        '总统日': "Presidents' Day",
+        '耶稣受难日': 'Good Friday',
+        '阵亡将士纪念日': 'Memorial Day',
+        '六月节': 'Juneteenth',
+        '独立日': 'Independence Day',
+        '劳工节': 'Labor Day',
+      };
+      let en = map[reason.replace(/（调休）$/, '')] ?? reason;
+      if (reason.endsWith('（调休）')) en += ' (observed)';
+      return `US market closed: ${en}`;
+    }
+    case 'buffett':
+      return 'Berkshire shareholder meeting';
+    case 'jacksonhole':
+      return 'Jackson Hole central bank symposium';
+    case 'earnings':
+      return 'Earnings release';
+  }
+}
+
+/** 事件备注的英文版 */
+export function calEventNote(e: CalEvent, lang: Lang = 'zh'): string | undefined {
+  if (lang !== 'en' || !e.note) return e.note;
+  const map: Record<string, string> = {
+    '美东14:00公布': '2:00 PM ET',
+    '美东14:00公布·含点阵图': '2:00 PM ET · with dot plot',
+    '美东8:30': '8:30 AM ET',
+    '奥马哈': 'Omaha',
+    '约8月下旬': 'late August',
+  };
+  return map[e.note] ?? e.note;
 }
 
 /** 今天（用户时区）的 YYYY-MM-DD */

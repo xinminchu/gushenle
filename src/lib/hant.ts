@@ -22,6 +22,29 @@ for (const line of `一冲性子	一沖性子\n一出剧	一齣劇\n一出子	�
   if (tab > 0) phraseMap.set(line.slice(0, tab), line.slice(tab + 1));
 }
 
+/**
+ * 人工覆盖（2026-09-29 真机验证补漏）：一简对多繁按现代台港日常/金融语境取常用义，
+ * 优先级高于上面的默认表。
+ * - 稳→穩 / 连→連：默认单字表本就正确，显式锁定防回归
+ * - 着→著：默认单字表缺失；作语气/动态助词时一律著（拿着/别急着/标志着…）
+ * - 佣→傭：默认单字表缺失；金融语境"佣金"繁体作傭金
+ * 另：词组目标里残留的简体"着"（短语匹配优先于单字回退，只靠单字覆盖修不到）一并正为"著"；
+ * 同理"佣"在"佣金/回佣"等词组目标里残留，一并正为"傭"。
+ */
+const CHAR_OVERRIDE: Array<[string, string]> = [
+  ['稳', '穩'],
+  ['着', '著'],
+  ['连', '連'],
+  ['佣', '傭'],
+];
+for (const [cs, ct] of CHAR_OVERRIDE) charMap.set(cs, ct);
+for (const [k, v] of phraseMap) {
+  let fixed = v;
+  if (fixed.indexOf('着') >= 0) fixed = fixed.replace(/着/g, '著');
+  if (fixed.indexOf('佣') >= 0) fixed = fixed.replace(/佣/g, '傭');
+  if (fixed !== v) phraseMap.set(k, fixed);
+}
+
 const MAX_PHRASE = 15;
 
 /** 简体中文 -> 繁体中文（贪心最长词组匹配，失败回退单字映射；按码点迭代） */

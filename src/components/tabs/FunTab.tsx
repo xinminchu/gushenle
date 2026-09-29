@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Flame, X, Trophy } from 'lucide-react';
 import { loadStats, recordPlay, recordSession, GAME_ICONS, type GameId, type GameStat } from '@/lib/gameStats';
+import { useLanguage } from '@/context/LanguageContext';
+import { tx } from '@/lib/hant';
 import WishPool from '../games/WishPool';
 import Leaderboard from '../games/Leaderboard';
 import LoginNudge from '../games/LoginNudge';
@@ -28,6 +30,7 @@ const DrunkardGame = dynamic(() => import('../games/DrunkardGame'), { ssr: false
 const ChartQuizGame = dynamic(() => import('../games/ChartQuizGame'), { ssr: false });
 
 export default function FunTab() {
+  const { lang } = useLanguage();
   const [activeGame, setActiveGame] = useState<string | null>(null);
   const [stats, setStats] = useState<Record<GameId, GameStat> | null>(null);
   const wishPoolRef = useRef<HTMLDivElement>(null);
@@ -203,7 +206,7 @@ export default function FunTab() {
 
   const getGameTitle = (id: string | null) => {
     const game = games.find((g) => g.id === id);
-    return game ? game.name : '小游戏';
+    return game ? game.name : tx(lang, 'Mini game', '小游戏');
   };
 
   // 按游玩次数排序，玩得多的排前面
@@ -218,9 +221,9 @@ export default function FunTab() {
   return (
     <div className="p-4 space-y-5 pb-24 max-w-md mx-auto relative">
       <header className="pt-2">
-        <h1 className="text-xl font-bold text-slate-100">娱乐乐 Fun Play</h1>
+        <h1 className="text-xl font-bold text-slate-100">{tx(lang, 'Fun Play', '娱乐乐 Fun Play')}</h1>
         <p className="text-xs text-slate-400 mt-0.5">
-          随时想解压、想玩盲盒时点进来，建立理性投资心态
+          {tx(lang, 'Drop in anytime to unwind or try a blind box — build a calmer investing mindset', '随时想解压、想玩盲盒时点进来，建立理性投资心态')}
         </p>
       </header>
 
@@ -253,7 +256,7 @@ export default function FunTab() {
               </span>
               {game.hot && (
                 <span className="absolute top-1 right-1 z-10 bg-amber-500/25 text-amber-300 text-[9px] px-1 py-px rounded flex items-center gap-0.5">
-                  <Flame className="w-2.5 h-2.5" /> 热门
+                  <Flame className="w-2.5 h-2.5" /> {tx(lang, 'HOT', '热门')}
                 </span>
               )}
               {/* 前景文字：预留徽标条，名称一行显示完 */}
@@ -273,18 +276,18 @@ export default function FunTab() {
                   compact ? (
                     <span className="flex items-center gap-0.5">
                       <Trophy className="w-2.5 h-2.5 text-amber-400 shrink-0" />
-                      {st.plays} 次
+                      {tx(lang, `${st.plays} plays`, `${st.plays} 次`)}
                     </span>
                   ) : (
                     <span className="flex items-center gap-1">
                       <Trophy className="w-3 h-3 text-amber-400 shrink-0" />
-                      玩了 {st.plays} 次 · {st.totalScore} 分
+                      {tx(lang, `${st.plays} plays · ${st.totalScore} pts`, `玩了 ${st.plays} 次 · ${st.totalScore} 分`)}
                     </span>
                   )
                 ) : compact ? (
                   <span className="text-emerald-400/80">NEW</span>
                 ) : (
-                  '还没玩过，来试试'
+                  tx(lang, 'Not played yet — give it a try', '还没玩过，来试试')
                 )}
               </div>
               </div>
@@ -295,8 +298,8 @@ export default function FunTab() {
 
       {/* 敬请期待 */}
       <div className="border border-dashed border-slate-700 rounded-xl py-4 px-3 text-center">
-        <p className="text-xs text-slate-400">🌊 一大波精彩股票主题游戏正在赶来……</p>
-        <p className="text-[10px] text-slate-600 mt-1">等不及？去下面的许愿池点一个，我们优先开发</p>
+        <p className="text-xs text-slate-400">{tx(lang, '🌊 A wave of stock-themed games is on its way…', '🌊 一大波精彩股票主题游戏正在赶来……')}</p>
+        <p className="text-[10px] text-slate-600 mt-1">{tx(lang, "Can't wait? Suggest one in the wish pool below — we build those first", '等不及？去下面的许愿池点一个，我们优先开发')}</p>
       </div>
 
       {/* 游戏许愿池 */}

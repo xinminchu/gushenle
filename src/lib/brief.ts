@@ -3,7 +3,7 @@
 // 口径：只讲事实和纪律（拦追高、拦割肉），不预测涨跌。
 
 import type { RhythmResponse, RhythmPoint } from './rhythm';
-import { STATUS_LABELS } from './rhythm';
+import { statusLabel } from './rhythm';
 import type { Lang } from '@/lib/i18n';
 import { tx } from '@/lib/hant';
 
@@ -18,6 +18,17 @@ const ACTION_TIP: Record<string, string> = {
   bottomUp: '跌不动了，别急着割',
   weakLow: '还在跌，别接飞刀',
   oversoldBottom: '别急着割肉',
+};
+
+/** 行动提示英文版：商量式语气 */
+const ACTION_TIP_EN: Record<string, string> = {
+  overheated: 'Careful chasing',
+  hotStrong: 'Fine to hold, skip the chase',
+  risingAccel: "Picking up speed — don't chase",
+  sideways: 'Wait and see',
+  bottomUp: 'Selling pressure easing — no rush to cut',
+  weakLow: "Still falling — don't catch the knife",
+  oversoldBottom: 'No rush to cut losses',
 };
 
 /** 序列的实际最高 / 最低（用 high/low，没有就用 close） */
@@ -40,7 +51,7 @@ export function actualHighLow(series: RhythmPoint[]): { high: number; low: numbe
  * 模拟数据兜底的股票返回 null（不生成播报，跟单只咨询拒掉模拟数据的口径一致）。
  * 期望传入 1Y 区间的数据：判断锚定近 3 月（服务端已保证），高低点按年内算。
  */
-export function buildBrief(symbol: string, name: string, d: RhythmResponse): string | null {
+export function buildBrief(symbol: string, name: string, d: RhythmResponse, lang: Lang = 'zh'): string | null {
   if (d.source === 'simulated') return null;
   const s = d.series;
   if (s.length < 2) return null;
@@ -51,8 +62,8 @@ export function buildBrief(symbol: string, name: string, d: RhythmResponse): str
   const chg = prev.close > 0 ? ((last.close - prev.close) / prev.close) * 100 : 0;
 
   let moveTxt: string;
-  if (chg >= 3) moveTxt = `大涨 ${chg.toFixed(1)}%`;
-  else if (chg <= -3) moveTxt = `大跌 ${Math.abs(chg).toFixed(1)}%`;
+  if (chg >= 3) moveTxt = tx(lang, `Up big ${chg.toFixed(1)}%`, `大涨 ${chg.toFixed(1)}%`);
+  else if (chg <= -3) moveTxt = tx(lang, `Down big ${Math.abs(chg).toFixed(1)}%`, `大跌 ${Math.abs(chg).toFixed(1)}%`);
   else moveTxt = chg >= 0 ? `+${chg.toFixed(1)}%` : `${chg.toFixed(1)}%`;
 
   // 放量：最后一根成交量 >= 前 20 根均量的 1.5 倍
@@ -62,7 +73,7 @@ export function buildBrief(symbol: string, name: string, d: RhythmResponse): str
     .filter((v): v is number => v != null && v > 0);
   if (last.volume && last.volume > 0 && vols.length >= 10) {
     const avg = vols.reduce((a, b) => a + b, 0) / vols.length;
-    if (avg > 0 && last.volume >= avg * 1.5) moveTxt += ' 放量';
+    if (avg > 0 && last.volume >= avg * 1.5) moveTxt += tx(lang, ' on heavy volume', ' 放量');
   }
 
   // 位置：距年内实际高低点
@@ -72,19 +83,22 @@ export function buildBrief(symbol: string, name: string, d: RhythmResponse): str
   if (hl) {
     const distHigh = ((hl.high - price) / hl.high) * 100;
     const distLow = ((price - hl.low) / hl.low) * 100;
-    if (distHigh <= 3) posTxt = '接近年内高点';
-    else if (distLow <= 3) posTxt = '接近年内低点';
-    else posTxt = `距年内高点 ${distHigh.toFixed(0)}%`;
+    if (distHigh <= 3) posTxt = tx(lang, 'Near the 1-year high', '接近年内高点');
+    else if (distLow <= 3) posTxt = tx(lang, 'Near the 1-year low', '接近年内低点');
+    else posTxt = tx(lang, `${distHigh.toFixed(0)}% below the 1-year high`, `距年内高点 ${distHigh.toFixed(0)}%`);
   }
 
   // 律动 + 行动提示
   const j = d.judgment;
-  const rhythmTxt = j.statusKey ? `律动 ${j.score} 分${STATUS_LABELS[j.statusKey]}` : '律动数据不足';
-  const tip = (j.statusKey && ACTION_TIP[j.statusKey]) || '';
+  const rhythmTxt = j.statusKey
+    ? tx(lang, `Rhythm ${j.score} — ${statusLabel(j.statusKey, 'en')}`, `律动 ${j.score} 分${statusLabel(j.statusKey, 'zh')}`)
+    : tx(lang, 'Not enough rhythm data', '律动数据不足');
+  const tip = (j.statusKey && (lang === 'en' ? ACTION_TIP_EN[j.statusKey] : ACTION_TIP[j.statusKey])) || '';
 
   const label = name && name !== symbol ? `${symbol} ${name}` : symbol;
-  const tail = [posTxt, rhythmTxt, tip].filter(Boolean).join('，');
-  return `${label} ${moveTxt}，${tail}`;
+  const sep = tx(lang, ', ', '，');
+  const tail = [posTxt, rhythmTxt, tip].filter(Boolean).join(sep);
+  return `${label} ${moveTxt}${sep}${tail}`;
 }
 
 /* ---------------- 诊断卡多空一句话 ---------------- */

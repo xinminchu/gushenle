@@ -5,13 +5,16 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  scoreAt, volatilityAt, thresholdsFor, judgeFromScore, STATUS_LABELS,
+  scoreAt, volatilityAt, thresholdsFor, judgeFromScore, statusLabel,
   type RhythmPoint, type RhythmResponse,
 } from '@/lib/rhythm';
 import { loadOperations, type OperationRecord } from '@/lib/operations';
 import { findStock } from '@/lib/stockList';
 import { computePortrait, PORTRAIT_MIN_SAMPLE } from '@/lib/portrait';
 import { fmtMoney } from '@/lib/currency';
+import { useLanguage } from '@/context/LanguageContext';
+import { tx } from '@/lib/hant';
+import type { Lang } from '@/lib/i18n';
 
 interface Review { r5: number | null; r20: number | null }
 
@@ -26,6 +29,7 @@ export function judgmentAt(
   series: RhythmPoint[] | undefined,
   dateStr: string,
   simulated: boolean,
+  lang: Lang = 'zh',
 ): Snapshot | null {
   if (!series || series.length === 0 || simulated) return null;
   let idx = -1;
@@ -39,12 +43,14 @@ export function judgmentAt(
   if (!s) return null;
   const th = thresholdsFor(volatilityAt(closes, closes.length - 1));
   const j = judgeFromScore(s.score, s.trend, s.vel, th);
-  return { score: s.score, statusKey: j.statusKey, status: STATUS_LABELS[j.statusKey] };
+  return { score: s.score, statusKey: j.statusKey, status: statusLabel(j.statusKey, lang) };
 }
 
-function fmtDay(d: string): string {
+function fmtDay(d: string, lang: Lang): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
-  return m ? `${parseInt(m[2], 10)}月${parseInt(m[3], 10)}日` : d;
+  if (!m) return d;
+  if (lang === 'en') return `${parseInt(m[2], 10)}/${parseInt(m[3], 10)}`;
+  return `${parseInt(m[2], 10)}月${parseInt(m[3], 10)}日`;
 }
 
 export default function StockStory({
@@ -56,6 +62,7 @@ export default function StockStory({
   quote: RhythmResponse | null;
   onGoMemory?: (symbol: string) => void;
 }) {
+  const { lang } = useLanguage();
   const ops = useMemo(
     () => loadOperations().filter((o) => o.symbol === symbol).sort((a, b) => (a.date < b.date ? 1 : -1)),
     [symbol],
@@ -82,7 +89,7 @@ export default function StockStory({
   const snapshots = useMemo(() => {
     const map: Record<string, Snapshot | null> = {};
     for (const op of ops) {
-      if (op.action === 'buy') map[op.id] = judgmentAt(quote?.series, op.date, !!simulated);
+      if (op.action === 'buy') map[op.id] = judgmentAt(quote?.series, op.date, !!simulated, lang);
     }
     return map;
   }, [ops, quote, simulated]);
@@ -93,30 +100,30 @@ export default function StockStory({
       <div className="mt-3 pt-3 border-t border-slate-700/60 text-[11px] text-slate-500 space-y-1.5" onClick={(e) => e.stopPropagation()}>
         {blurb && <div className="leading-relaxed">🏢 {blurb}</div>}
         <div>
-          📖 这只还没有操作记录，
+          {tx(lang, '📖 No trades recorded for this one yet — ', '📖 这只还没有操作记录，')}
           {onGoMemory ? (
             <button
               onClick={() => onGoMemory(symbol)}
               className="text-blue-400 hover:text-blue-300 underline underline-offset-2"
             >
-              去记忆页记一笔
+              {tx(lang, 'log one in Memory', '去记忆页记一笔')}
             </button>
           ) : (
-            '去记忆页记一笔'
+            tx(lang, 'log one in Memory', '去记忆页记一笔')
           )}
-          ，故事就从这里开始。
+          {tx(lang, ', and the story starts here.', '，故事就从这里开始。')}
         </div>
       </div>
     );
   }
 
   const bits: string[] = [];
-  if (p.sell.total >= PORTRAIT_MIN_SAMPLE && p.sell.bad > 0) bits.push(`卖飞过 ${p.sell.bad} 次`);
-  if (p.buy.total >= PORTRAIT_MIN_SAMPLE && p.buy.bad > 0) bits.push(`买高过 ${p.buy.bad} 次`);
+  if (p.sell.total >= PORTRAIT_MIN_SAMPLE && p.sell.bad > 0) bits.push(tx(lang, `sold too early ${p.sell.bad} times`, `卖飞过 ${p.sell.bad} 次`));
+  if (p.buy.total >= PORTRAIT_MIN_SAMPLE && p.buy.bad > 0) bits.push(tx(lang, `bought too high ${p.buy.bad} times`, `买高过 ${p.buy.bad} 次`));
 
   return (
     <div className="mt-3 pt-3 border-t border-slate-700/60 space-y-2.5" onClick={(e) => e.stopPropagation()}>
-      <div className="text-[11px] font-semibold text-slate-300">📖 我的持仓故事</div>
+      <div className="text-[11px] font-semibold text-slate-300">{tx(lang, '📖 My position story', '📖 我的持仓故事')}</div>
       {findStock(symbol)?.blurb && (
         <div className="text-[11px] text-slate-500 leading-relaxed">🏢 {findStock(symbol)?.blurb}</div>
       )}
@@ -128,49 +135,49 @@ export default function StockStory({
           const hot = snap?.statusKey === 'overheated';
           return (
             <div key={op.id} className="text-[11px] text-slate-400 leading-relaxed">
-              <span className="text-slate-500">{fmtDay(op.date)}</span>{' '}
+              <span className="text-slate-500">{fmtDay(op.date, lang)}</span>{' '}
               <span className={op.action === 'buy' ? 'text-emerald-400' : 'text-amber-400'}>
-                {op.action === 'buy' ? '买入' : '卖出'}
+                {op.action === 'buy' ? tx(lang, 'Buy', '买入') : tx(lang, 'Sell', '卖出')}
               </span>{' '}
-              {op.qty ? `${op.qty}股` : ''} {op.price ? `@ ${fmtMoney(symbol, op.price)}` : ''}
+              {op.qty ? tx(lang, `${op.qty} shares`, `${op.qty}股`) : ''} {op.price ? `@ ${fmtMoney(symbol, op.price)}` : ''}
               {snap && (
                 <span className={hot ? 'text-sky-300' : 'text-slate-500'}>
-                  {' '}· 当时{snap.status}（{snap.score}分）{hot ? ' 🧊' : ''}
+                  {tx(lang, ` · then ${snap.status} (${snap.score} pts)`, ` · 当时${snap.status}（${snap.score}分）`)}{hot ? ' 🧊' : ''}
                 </span>
               )}
               {op.action === 'buy' && !snap && !simulated && (
-                <span className="text-slate-600"> · 当时数据不足</span>
+                <span className="text-slate-600">{tx(lang, ' · not enough data then', ' · 当时数据不足')}</span>
               )}
             </div>
           );
         })}
         {ops.length > 6 && (
-          <div className="text-[10px] text-slate-600">还有 {ops.length - 6} 笔，去记忆页看完整流水</div>
+          <div className="text-[10px] text-slate-600">{tx(lang, `${ops.length - 6} more — see the full history in Memory`, `还有 ${ops.length - 6} 笔，去记忆页看完整流水`)}</div>
         )}
       </div>
 
       {/* 专属胜率：只摆事实 */}
       {bits.length > 0 ? (
         <div className="text-[11px] text-amber-300/90">
-          🪞 在 {symbol} 上：{bits.join('，')}
+          {tx(lang, `🪞 On ${symbol}: `, `🪞 在 ${symbol} 上：`)}{bits.join(tx(lang, ', ', '，'))}
           {p.sell.worst && p.sell.bad > 0 && (
             <span className="text-slate-500">
-              {' '}· 最可惜 {fmtDay(p.sell.worst.op.date)}那笔，之后涨了 {p.sell.worst.pct.toFixed(1)}%
+              {tx(lang, ` · biggest miss: the ${fmtDay(p.sell.worst.op.date, lang)} trade, up ${p.sell.worst.pct.toFixed(1)}% after`, ` · 最可惜 ${fmtDay(p.sell.worst.op.date, lang)}那笔，之后涨了 ${p.sell.worst.pct.toFixed(1)}%`)}
             </span>
           )}
           {p.buy.worst && p.buy.bad > 0 && (
             <span className="text-slate-500">
-              {' '}· 最惨 {fmtDay(p.buy.worst.op.date)}那笔，之后跌了 {Math.abs(p.buy.worst.pct).toFixed(1)}%
+              {tx(lang, ` · worst buy: the ${fmtDay(p.buy.worst.op.date, lang)} trade, down ${Math.abs(p.buy.worst.pct).toFixed(1)}% after`, ` · 最惨 ${fmtDay(p.buy.worst.op.date, lang)}那笔，之后跌了 ${Math.abs(p.buy.worst.pct).toFixed(1)}%`)}
             </span>
           )}
         </div>
       ) : (
         <div className="text-[10px] text-slate-600">
-          在 {symbol} 上的专属复盘养成中（{Math.max(p.sell.total, p.buy.total)}/{PORTRAIT_MIN_SAMPLE} 笔有结果）
+          {tx(lang, `Building your personal review for ${symbol} (${Math.max(p.sell.total, p.buy.total)}/${PORTRAIT_MIN_SAMPLE} trades with results)`, `在 ${symbol} 上的专属复盘养成中（${Math.max(p.sell.total, p.buy.total)}/${PORTRAIT_MIN_SAMPLE} 笔有结果）`)}
         </div>
       )}
       {simulated && (
-        <div className="text-[10px] text-slate-600">⚠️ 该股暂无真实行情，快照与复盘仅供参考</div>
+        <div className="text-[10px] text-slate-600">{tx(lang, '⚠️ No real quote data for this stock — snapshots and reviews are for reference only', '⚠️ 该股暂无真实行情，快照与复盘仅供参考')}</div>
       )}
     </div>
   );

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { buildJudgment, STATUS_LABELS, type StatusKey } from '@/lib/rhythm';
+import { buildJudgment, statusLabel, type StatusKey } from '@/lib/rhythm';
 import { getFullSeries } from '@/lib/marketData';
 import { symbolToName } from '@/lib/stockAliases';
 import { findStock } from '@/lib/stockList';
 import type { Lang } from '@/lib/i18n';
-import { toHantDeep } from '@/lib/hant';
+import { toHantDeep, tx } from '@/lib/hant';
 
 /**
  * 按谷峰律动给"买什么"建议。
@@ -37,29 +37,53 @@ function candidateReason(
   statusKey: StatusKey,
   score: number,
   hot: number,
+  lang: Lang,
 ): string {
   const s = Math.round(score);
+  const label = statusLabel(statusKey, lang);
+  if (lang === 'en') {
+    switch (statusKey) {
+      case 'risingAccel':
+        return `Rhythm ${s} — ${label}, still below the overheat line (${hot}), so buying now isn't chasing.`;
+      case 'bottomUp':
+        return `Rhythm ${s} — ${label}. Downward momentum is fading and the level is modest — worth watching, in batches.`;
+      case 'sideways':
+        return `Rhythm ${s} — ${label}. Direction is unclear but the level is mid-range: don't chase, don't bottom-fish.`;
+      case 'oversoldBottom':
+        return `Rhythm ${s} — ${label}. Only small batches — an oversold bounce can keep falling. Keep it light.`;
+      case 'hotStrong':
+        return `Rhythm ${s} — ${label}. Trend looks healthy but the level is high; small batches only if you really want in.`;
+      default:
+        return `Rhythm ${s} — ${label}.`;
+    }
+  }
   switch (statusKey) {
     case 'risingAccel':
-      return `律动 ${s} 分，${STATUS_LABELS[statusKey]}，离过热线（${hot} 分）还有距离，现在介入不算追高。`;
+      return `律动 ${s} 分，${label}，离过热线（${hot} 分）还有距离，现在介入不算追高。`;
     case 'bottomUp':
-      return `律动 ${s} 分，${STATUS_LABELS[statusKey]}，下跌动能衰竭，位置不高，适合分批留意。`;
+      return `律动 ${s} 分，${label}，下跌动能衰竭，位置不高，适合分批留意。`;
     case 'sideways':
-      return `律动 ${s} 分，${STATUS_LABELS[statusKey]}，方向不明但位置适中，慎追高、慎抄底的心态参与。`;
+      return `律动 ${s} 分，${label}，方向不明但位置适中，慎追高、慎抄底的心态参与。`;
     case 'oversoldBottom':
-      return `律动 ${s} 分，${STATUS_LABELS[statusKey]}，只适合小仓位分批试，跌过头也可能继续跌，别重仓。`;
+      return `律动 ${s} 分，${label}，只适合小仓位分批试，跌过头也可能继续跌，别重仓。`;
     case 'hotStrong':
-      return `律动 ${s} 分，${STATUS_LABELS[statusKey]}，趋势健康但位置偏高，真要买只适合小仓位分批。`;
+      return `律动 ${s} 分，${label}，趋势健康但位置偏高，真要买只适合小仓位分批。`;
     default:
-      return `律动 ${s} 分，${STATUS_LABELS[statusKey]}。`;
+      return `律动 ${s} 分，${label}。`;
   }
 }
 
-function excludedReason(statusKey: StatusKey, score: number): string {
+function excludedReason(statusKey: StatusKey, score: number, lang: Lang): string {
   const s = Math.round(score);
-  if (statusKey === 'overheated') return `律动 ${s} 分，${STATUS_LABELS[statusKey]}，现在买就是追高，已排除。`;
-  if (statusKey === 'weakLow') return `律动 ${s} 分，${STATUS_LABELS[statusKey]}，下跌趋势中不接飞刀，已排除。`;
-  return `律动 ${s} 分，${STATUS_LABELS[statusKey]}，已排除。`;
+  const label = statusLabel(statusKey, lang);
+  if (lang === 'en') {
+    if (statusKey === 'overheated') return `Rhythm ${s} — ${label}. Buying now would be chasing the top; excluded.`;
+    if (statusKey === 'weakLow') return `Rhythm ${s} — ${label}. No catching falling knives in a downtrend; excluded.`;
+    return `Rhythm ${s} — ${label}; excluded.`;
+  }
+  if (statusKey === 'overheated') return `律动 ${s} 分，${label}，现在买就是追高，已排除。`;
+  if (statusKey === 'weakLow') return `律动 ${s} 分，${label}，下跌趋势中不接飞刀，已排除。`;
+  return `律动 ${s} 分，${label}，已排除。`;
 }
 
 /**
@@ -70,9 +94,48 @@ function singleVerdict(
   side: 'buy' | 'sell',
   statusKey: StatusKey,
   score: number,
+  lang: Lang,
 ): string {
   const s = Math.round(score);
-  const label = STATUS_LABELS[statusKey];
+  const label = statusLabel(statusKey, lang);
+  if (lang === 'en') {
+    if (side === 'sell') {
+      switch (statusKey) {
+        case 'overheated':
+          return `Rhythm ${s} — ${label}. Selling now is taking profit, not selling too early; you could also scale out in batches instead of clearing all at once.`;
+        case 'hotStrong':
+          return `Rhythm ${s} — ${label}; the trend still looks healthy. If you don't need the cash, hold with a take-profit line in mind; if you do sell, go in batches.`;
+        case 'risingAccel':
+          return `Rhythm ${s} — ${label}, the uptrend just got going. Selling now may leave money on the table — hold a little longer if you're not in a hurry.`;
+        case 'sideways':
+          return `Rhythm ${s} — ${label}. Selling or not, neither is wrong — it mainly depends on whether you have a better place for the money.`;
+        case 'bottomUp':
+          return `Rhythm ${s} — ${label}, stabilizing. Selling now risks selling at the floor — consider waiting.`;
+        case 'oversoldBottom':
+          return `Rhythm ${s} — ${label}. Cutting now would likely mean cutting at the very bottom — holding you back here.`;
+        case 'weakLow':
+          return `Rhythm ${s} — ${label}. Selling now means cutting mid-fall; unless you need the cash, wait until it stops dropping.`;
+      }
+    } else {
+      switch (statusKey) {
+        case 'overheated':
+          return `Rhythm ${s} — ${label}. Buying now would be chasing — holding you back.`;
+        case 'hotStrong':
+          return `Rhythm ${s} — ${label}. Trend is healthy but the level is high; small batches only if you really want in.`;
+        case 'risingAccel':
+          return `Rhythm ${s} — ${label}, still below the overheat line — buying now isn't chasing.`;
+        case 'sideways':
+          return `Rhythm ${s} — ${label}. May grind sideways for a while — keep the position small.`;
+        case 'bottomUp':
+          return `Rhythm ${s} — ${label}. Downward momentum is fading; small batches if you want to dip in.`;
+        case 'oversoldBottom':
+          return `Rhythm ${s} — ${label}. The oversold signal hasn't been reliable historically — be careful; small batches at most.`;
+        case 'weakLow':
+          return `Rhythm ${s} — ${label}. Don't catch a falling knife — wait until it stops dropping.`;
+      }
+    }
+    return `Rhythm ${s} — ${label}.`;
+  }
   if (side === 'sell') {
     switch (statusKey) {
       case 'overheated':
@@ -111,11 +174,11 @@ function singleVerdict(
   return `律动 ${s} 分，${label}。`;
 }
 
-async function judgeOne(symbol: string) {
+async function judgeOne(symbol: string, lang: Lang) {
   const { series, source } = await getFullSeries(symbol);
   const closes = series.map((p) => p.close);
   if (closes.length === 0) return null;
-  const j = buildJudgment(closes);
+  const j = buildJudgment(closes, lang);
   return {
     price: closes[closes.length - 1],
     score: j.score,
@@ -128,12 +191,13 @@ async function judgeOne(symbol: string) {
 
 export async function POST(req: NextRequest) {
   // 繁体：中文链路照常生成，输出前整包转繁体（键名不动）
+  // 英文：直接生成英文（不走繁体转换）
   let lang: Lang = 'zh';
   const out = (d: unknown, status?: number) =>
     NextResponse.json(lang === 'hant' ? toHantDeep(d) : d, status ? { status } : undefined);
   try {
     const body = await req.json();
-    lang = body.lang === 'hant' ? 'hant' : 'zh';
+    lang = body.lang === 'en' ? 'en' : body.lang === 'hant' ? 'hant' : 'zh';
 
     // 单只咨询模式：问"今天可以卖IBM吗"这种
     if (body.mode === 'single' && typeof body.symbol === 'string' && body.symbol.trim()) {
@@ -144,13 +208,13 @@ export async function POST(req: NextRequest) {
         : symbolToName(symbol);
       let judged: Awaited<ReturnType<typeof judgeOne>>;
       try {
-        judged = await judgeOne(symbol);
+        judged = await judgeOne(symbol, lang);
       } catch {
         judged = null;
       }
       if (!judged || !judged.statusKey || judged.simulated) {
         return out(
-          { error: `没找到 ${symbol} 的行情数据，检查下代码对不对` },
+          { error: tx(lang, `Couldn't find market data for ${symbol} — check the code`, `没找到 ${symbol} 的行情数据，检查下代码对不对`) },
           404,
         );
       }
@@ -163,7 +227,7 @@ export async function POST(req: NextRequest) {
           score: Math.round(judged.score),
           status: judged.status,
           side,
-          verdict: singleVerdict(side, judged.statusKey, judged.score),
+          verdict: singleVerdict(side, judged.statusKey, judged.score, lang),
           blurb: findStock(symbol)?.blurb ?? null,
         },
         asOf: new Date().toISOString().slice(0, 10),
@@ -186,7 +250,7 @@ export async function POST(req: NextRequest) {
       }));
 
     if (list.length === 0) {
-      return out({ error: '没有可评估的股票' }, 400);
+      return out({ error: tx(lang, 'No stocks to evaluate', '没有可评估的股票') }, 400);
     }
 
     const judged = await Promise.all(
@@ -195,7 +259,7 @@ export async function POST(req: NextRequest) {
           const { series } = await getFullSeries(symbol);
           const closes = series.map((p) => p.close);
           if (closes.length === 0) return { symbol, name, ok: false as const };
-          const j = buildJudgment(closes);
+          const j = buildJudgment(closes, lang);
           return {
             symbol,
             name,
@@ -229,7 +293,7 @@ export async function POST(req: NextRequest) {
         price: Number(r.price.toFixed(2)),
         score: Math.round(r.score),
         status: r.status,
-        reason: r.statusKey ? excludedReason(r.statusKey, r.score) : '数据不足，无法判断。',
+        reason: r.statusKey ? excludedReason(r.statusKey, r.score, lang) : tx(lang, 'Not enough data to judge.', '数据不足，无法判断。'),
         blurb: findStock(r.symbol)?.blurb ?? null,
       }));
 
@@ -248,7 +312,7 @@ export async function POST(req: NextRequest) {
         price: Number(r.price.toFixed(2)),
         score: Math.round(r.score),
         status: r.status,
-        reason: candidateReason(r.statusKey as StatusKey, r.score, r.hot),
+        reason: candidateReason(r.statusKey as StatusKey, r.score, r.hot, lang),
         blurb: findStock(r.symbol)?.blurb ?? null,
       }));
 
@@ -261,6 +325,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('advise 失败:', error);
-    return out({ error: '律动扫描失败，稍后再试' }, 500);
+    return out({ error: tx(lang, 'Rhythm scan failed — try again later', '律动扫描失败，稍后再试') }, 500);
   }
 }

@@ -10,6 +10,9 @@ import {
   kindMeta,
   formatDateCN,
   todayStr,
+  calEventTitle,
+  calEventNote,
+  MONTHS_EN_LIST,
   type CalEvent,
   sessionLabel,
 } from '@/lib/financeCalendar';
@@ -91,7 +94,8 @@ export default function FamilyNews() {
             title: '发布财报',
             kind: 'earnings' as const,
             symbol: e.symbol,
-            note: sessionLabel(e.session ?? '', 'zh'),
+            // note 存财报时段的规范 key（pre/after/during/tbd），渲染时按语言映射
+            note: e.session ?? '',
           }));
         }
       } catch {
@@ -140,7 +144,7 @@ export default function FamilyNews() {
       <section className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
-            <Newspaper className="w-3.5 h-3.5 text-sky-400" /> 今日大事
+            <Newspaper className="w-3.5 h-3.5 text-sky-400" /> {tx(lang, "Today's events", '今日大事')}
           </div>
           <div className="flex items-center gap-2">
             <div className="flex bg-slate-800 rounded-full p-0.5 text-[10px]">
@@ -154,7 +158,7 @@ export default function FamilyNews() {
                       : 'text-slate-500 hover:text-slate-300'
                   }`}
                 >
-                  {m === 'us' ? '🇺🇸 美股' : '🇨🇳 国内'}
+                  {m === 'us' ? tx(lang, '🇺🇸 US', '🇺🇸 美股') : tx(lang, '🇨🇳 China', '🇨🇳 国内')}
                 </button>
               ))}
             </div>
@@ -162,14 +166,14 @@ export default function FamilyNews() {
               onClick={() => loadNews(market)}
               className="text-slate-500 hover:text-slate-300 flex items-center gap-1 text-[10px]"
             >
-              <RefreshCw className={`w-3 h-3 ${newsLoading ? 'animate-spin' : ''}`} /> 刷新
+              <RefreshCw className={`w-3 h-3 ${newsLoading ? 'animate-spin' : ''}`} /> {tx(lang, 'Refresh', '刷新')}
             </button>
           </div>
         </div>
         {newsLoading ? (
-          <p className="text-[11px] text-slate-500 py-2">快讯加载中…</p>
+          <p className="text-[11px] text-slate-500 py-2">{tx(lang, 'Loading news…', '快讯加载中…')}</p>
         ) : newsErr ? (
-          <p className="text-[11px] text-slate-500 py-2">快讯暂时拿不到，稍后再来。</p>
+          <p className="text-[11px] text-slate-500 py-2">{tx(lang, "Couldn't load the news — try again later.", '快讯暂时拿不到，稍后再来。')}</p>
         ) : (
           <>
             <div className="space-y-2.5">
@@ -212,7 +216,7 @@ export default function FamilyNews() {
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-0.5 text-[10px] text-sky-400 hover:text-sky-300"
                             >
-                              查看原文 <ExternalLink className="w-3 h-3" />
+                              {tx(lang, 'View source', '查看原文')} <ExternalLink className="w-3 h-3" />
                             </a>
                           )}
                         </div>
@@ -227,7 +231,9 @@ export default function FamilyNews() {
                 onClick={() => setNewsOpen(!newsOpen)}
                 className="w-full flex items-center justify-center gap-1 text-[11px] text-slate-500 hover:text-slate-300 py-1"
               >
-                {newsOpen ? '收起' : `展开更多（${news.length - 6}条）`}
+                {newsOpen
+                  ? tx(lang, 'Collapse', '收起')
+                  : tx(lang, `Show more (${news.length - 6})`, `展开更多（${news.length - 6}条）`)}
                 <ChevronDown className={`w-3 h-3 transition-transform ${newsOpen ? 'rotate-180' : ''}`} />
               </button>
             )}
@@ -238,22 +244,22 @@ export default function FamilyNews() {
       {/* 未来7天 */}
       <section className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
-          <CalendarDays className="w-3.5 h-3.5 text-amber-400" /> 未来7天
-          <span className="text-[10px] text-slate-500 font-normal">大事发生前，心里先有数</span>
+          <CalendarDays className="w-3.5 h-3.5 text-amber-400" /> {tx(lang, 'Next 7 days', '未来7天')}
+          <span className="text-[10px] text-slate-500 font-normal">{tx(lang, "Know what's coming, before it happens", '大事发生前，心里先有数')}</span>
         </div>
         {dayGroups.size === 0 ? (
-          <p className="text-[11px] text-slate-500 py-1">未来7天没有重要日程，可以安心看律动。</p>
+          <p className="text-[11px] text-slate-500 py-1">{tx(lang, 'Nothing major in the next 7 days — just follow the rhythm.', '未来7天没有重要日程，可以安心看律动。')}</p>
         ) : (          <div className="space-y-2.5">
             {[...dayGroups.entries()].map(([date, evts]) => (
               <div key={date} className="flex gap-2.5">
                 <div className="shrink-0 w-20 pt-0.5">
                   <p className={`text-[11px] font-semibold ${date === today ? 'text-emerald-400' : 'text-slate-300'}`}>
-                    {date === today ? '今天' : formatDateCN(date)}
+                    {date === today ? tx(lang, 'Today', '今天') : formatDateCN(date, lang)}
                   </p>
                 </div>
                 <div className="space-y-1.5 min-w-0 flex-1">
                   {evts.map((e, i) => {
-                    const meta = kindMeta(e.kind);
+                    const meta = kindMeta(e.kind, lang);
                     const rKey = `${e.date}-${e.symbol ?? ''}`;
                     const r = e.kind === 'earnings' && e.symbol ? reactions[e.symbol] : undefined;
                     const showR = r && r.past.length > 0;
@@ -267,9 +273,13 @@ export default function FamilyNews() {
                           </span>
                           <span className="text-[11px] text-slate-300">
                             {e.symbol && <span className="font-bold text-slate-100">{e.symbol} </span>}
-                            {e.title}
+                            {calEventTitle(e, lang)}
                           </span>
-                          {e.note && <span className="text-[10px] text-slate-500">{e.note}</span>}
+                          {e.note && (
+                            <span className="text-[10px] text-slate-500">
+                              {e.kind === 'earnings' ? sessionLabel(e.note, lang) : calEventNote(e, lang)}
+                            </span>
+                          )}
                         </div>
                         {showR && (
                           <div className="pl-0.5 -mt-0.5">
@@ -337,7 +347,7 @@ export default function FamilyNews() {
           </div>
         )}
         <p className="text-[10px] text-slate-600 pt-1">
-          📊 自选股财报日：在「今日」页管理自选后，有财报的日子会自动列在这里。
+          📊 {tx(lang, "Earnings days for your watchlist: manage your watchlist on the 'Today' tab and earnings days will show up here.", '自选股财报日：在「今日」页管理自选后，有财报的日子会自动列在这里。')}
         </p>
         {/* 全年大事记 */}
         <div className="pt-1 border-t border-slate-800">
@@ -345,30 +355,30 @@ export default function FamilyNews() {
             onClick={() => setYearOpen(!yearOpen)}
             className="w-full flex items-center justify-center gap-1 text-[11px] text-slate-500 hover:text-slate-300 py-1.5"
           >
-            <Landmark className="w-3 h-3" /> {year}年大事记
+            <Landmark className="w-3 h-3" /> {tx(lang, `${year} key events`, `${year}年大事记`)}
             <ChevronDown className={`w-3 h-3 transition-transform ${yearOpen ? 'rotate-180' : ''}`} />
           </button>
           {yearOpen && (
             <div className="space-y-3 pt-1">
               {[...monthGroups.entries()].map(([m, evts]) => (
                 <div key={m}>
-                  <p className="text-[10px] font-semibold text-slate-500 mb-1">{Number(m)}月</p>
+                  <p className="text-[10px] font-semibold text-slate-500 mb-1">{lang === 'en' ? MONTHS_EN_LIST[Number(m) - 1] : `${Number(m)}月`}</p>
                   <div className="space-y-1">
                     {evts.map((e, i) => {
-                      const meta = kindMeta(e.kind);
+                      const meta = kindMeta(e.kind, lang);
                       const past = e.date < today;
                       return (
                         <div key={i} className={`flex items-center gap-1.5 text-[11px] ${past ? 'opacity-40' : ''}`}>
                           <span className="text-slate-500 w-14 shrink-0">{e.date.slice(5).replace('-', '/')}</span>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded border ${meta.chip}`}>{meta.label}</span>
-                          <span className="text-slate-300 truncate">{e.title}</span>
+                          <span className="text-slate-300 truncate">{calEventTitle(e, lang)}</span>
                         </div>
                       );
                     })}
                   </div>
                 </div>
               ))}
-              <p className="text-[10px] text-slate-600 pt-1">FOMC 与 CPI 日期来自美联储/BLS 官方日程，每年更新一次。</p>
+              <p className="text-[10px] text-slate-600 pt-1">{tx(lang, 'FOMC and CPI dates come from the Fed/BLS official schedules, updated yearly.', 'FOMC 与 CPI 日期来自美联储/BLS 官方日程，每年更新一次。')}</p>
             </div>
           )}
         </div>

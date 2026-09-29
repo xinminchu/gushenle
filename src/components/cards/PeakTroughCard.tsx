@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
+import { tx } from '@/lib/hant';
 
 interface PeakTroughData {
   index: number;
@@ -9,6 +11,7 @@ interface PeakTroughData {
 }
 
 export default function PeakTroughCard() {
+  const { lang } = useLanguage();
   const [prices, setPrices] = useState<number[]>([]);
   const [points, setPoints] = useState<PeakTroughData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +42,7 @@ export default function PeakTroughCard() {
   if (loading) {
     return (
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs text-slate-400 text-center animate-pulse">
-        加载波峰波谷分析数据中...
+        {tx(lang, 'Loading swing high/low analysis…', '加载波峰波谷分析数据中...')}
       </div>
     );
   }
@@ -51,33 +54,33 @@ export default function PeakTroughCard() {
     <div className="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-xl p-4 mt-4 text-white shadow-lg">
       <div className="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
         <h3 className="text-sm font-bold text-slate-200 flex items-center gap-1.5">
-          📈 波峰波谷决策卡片
+          {tx(lang, '📈 Swing High/Low Decision Card', '📈 波峰波谷决策卡片')}
         </h3>
         <span className="text-[10px] bg-slate-800 text-emerald-400 px-2 py-0.5 rounded border border-slate-700">
-          极值智能识别
+          {tx(lang, 'Smart extrema detection', '极值智能识别')}
         </span>
       </div>
 
       <div className="grid grid-cols-2 gap-3 text-xs mb-3">
         <div className="bg-slate-950 p-2.5 rounded-lg border border-red-500/20">
-          <div className="text-slate-400 text-[10px]">近期阻力波峰 (Peak)</div>
+          <div className="text-slate-400 text-[10px]">{tx(lang, 'Recent resistance peak', '近期阻力波峰 (Peak)')}</div>
           <div className="text-base font-bold text-red-400 mt-0.5">
-            {latestPeak ? `$${latestPeak.price}` : '计算中...'}
+            {latestPeak ? `$${latestPeak.price}` : tx(lang, 'Calculating…', '计算中...')}
           </div>
         </div>
         <div className="bg-slate-950 p-2.5 rounded-lg border border-emerald-500/20">
-          <div className="text-slate-400 text-[10px]">近期支撑波谷 (Trough)</div>
+          <div className="text-slate-400 text-[10px]">{tx(lang, 'Recent support trough', '近期支撑波谷 (Trough)')}</div>
           <div className="text-base font-bold text-emerald-400 mt-0.5">
-            {latestTrough ? `$${latestTrough.price}` : '计算中...'}
+            {latestTrough ? `$${latestTrough.price}` : tx(lang, 'Calculating…', '计算中...')}
           </div>
         </div>
       </div>
 
       {/* 近期价格走势简明预览 */}
       <div className="text-[11px] text-slate-400">
-        最新检测到 <span className="text-slate-200 font-semibold">{points.length}</span> 个关键转向点。结合情绪调节：
+        {tx(lang, 'Latest scan found', '最新检测到')} <span className="text-slate-200 font-semibold">{points.length}</span> {tx(lang, 'key turning points. Adjust with sentiment:', '个关键转向点。结合情绪调节：')}
         <p className="text-[10px] text-emerald-400/90 mt-1">
-          💡 “波峰不追高，波谷不恐慌，冷静操作是第一准则。”
+          {tx(lang, "💡 \"Don't chase peaks, don't panic at troughs — calm moves come first.\"", '💡 “波峰不追高，波谷不恐慌，冷静操作是第一准则。”')}
         </p>
       </div>
     </div>

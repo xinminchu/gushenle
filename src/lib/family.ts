@@ -140,6 +140,17 @@ export const SURVEY_LABEL: Record<SurveyChoice, string> = {
   no: '不愿意',
 };
 
+const SURVEY_LABEL_EN: Record<SurveyChoice, string> = {
+  yes: 'Yes',
+  maybe: 'Depends',
+  no: 'No',
+};
+
+/** 调查选项标签：组件里用这个按语言取，SURVEY_LABEL 保留给旧引用 */
+export function surveyLabel(choice: SurveyChoice, lang: 'zh' | 'hant' | 'en' = 'zh'): string {
+  return lang === 'en' ? SURVEY_LABEL_EN[choice] : SURVEY_LABEL[choice];
+}
+
 export interface SurveyState {
   counts: Record<SurveyChoice, number>;
   total: number;
@@ -200,17 +211,18 @@ export async function setSurveyVote(id: VoterIdentity, choice: SurveyChoice): Pr
   if (insErr) throw insErr;
 }
 
-/** x分钟前 / x小时前 / x天前 */
-export function relativeTime(iso: string): string {
+/** x分钟前 / x小时前 / x天前（en: "N min ago / N hrs ago / N days ago"） */
+export function relativeTime(iso: string, lang: 'zh' | 'hant' | 'en' = 'zh'): string {
   const t = new Date(iso).getTime();
   const diff = Date.now() - t;
-  if (diff < 0) return '刚刚';
+  const justNow = lang === 'en' ? 'just now' : '刚刚';
+  if (diff < 0) return justNow;
   const m = Math.floor(diff / 60000);
-  if (m < 1) return '刚刚';
-  if (m < 60) return `${m}分钟前`;
+  if (m < 1) return justNow;
+  if (m < 60) return lang === 'en' ? `${m} min ago` : `${m}分钟前`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}小时前`;
+  if (h < 24) return lang === 'en' ? `${h} hr${h > 1 ? 's' : ''} ago` : `${h}小时前`;
   const d = Math.floor(h / 24);
-  if (d < 30) return `${d}天前`;
+  if (d < 30) return lang === 'en' ? `${d} day${d > 1 ? 's' : ''} ago` : `${d}天前`;
   return new Date(t).toISOString().slice(0, 10);
 }

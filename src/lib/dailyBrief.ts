@@ -1,5 +1,7 @@
-import { STATUS_LABELS, type StatusKey } from './rhythm';
-import type { CalEvent } from './financeCalendar';
+import { statusLabel, type StatusKey } from './rhythm';
+import { calEventTitle, calEventNote, sessionLabel, type CalEvent } from './financeCalendar';
+import type { Lang } from '@/lib/i18n';
+import { tx } from './hant';
 
 export interface BriefStock {
   symbol: string;
@@ -99,6 +101,7 @@ export function buildPreBrief(
   stocks: BriefStock[],
   eventsToday: CalEvent[],
   market?: MarketScanSummary | null,
+  lang: Lang = 'zh',
 ): PreBrief {
   const sorted = [...stocks].sort(byChange);
   const ups = sorted.filter((s) => (s.changePct ?? 0) > 0).slice(0, 2);
@@ -106,12 +109,21 @@ export function buildPreBrief(
   let line: string;
   if (eventsToday.length > 0) {
     const titles = eventsToday
-      .map((e) => `${e.title}${e.note ? `（${e.note}）` : ''}${e.symbol ? ` · ${e.symbol}` : ''}`)
+      .map((e) => {
+        // 财报事件的 note 是时段规范 key（pre/after/during/tbd），渲染时才按语言映射
+        const noteText = e.note ? (e.kind === 'earnings' ? sessionLabel(e.note, lang) : calEventNote(e, lang)) : '';
+        const notePart = noteText ? (lang === 'en' ? ` (${noteText})` : `（${noteText}）`) : '';
+        return `${calEventTitle(e, lang)}${notePart}${e.symbol ? ` · ${e.symbol}` : ''}`;
+      })
       .slice(0, 3)
-      .join('；');
-    line = `今天 ${eventsToday.length} 件事：${titles}${eventsToday.length > 3 ? '…' : ''}，小心波动`;
+      .join(lang === 'en' ? '; ' : '；');
+    line = tx(
+      lang,
+      `Today's ${eventsToday.length} events: ${titles}${eventsToday.length > 3 ? '…' : ''} — watch for volatility`,
+      `今天 ${eventsToday.length} 件事：${titles}${eventsToday.length > 3 ? '…' : ''}，小心波动`,
+    );
   } else {
-    line = '今日无重磅日程，安心看盘';
+    line = tx(lang, 'No big events today — watch the market calmly', '今日无重磅日程，安心看盘');
   }
   return { eventsToday, ups, downs, line, market: market ?? null };
 }
@@ -120,22 +132,27 @@ export function buildPostBrief(
   stocks: BriefStock[],
   changes: SignalChange[],
   market?: MarketScanSummary | null,
+  lang: Lang = 'zh',
 ): PostBrief {
   const sorted = [...stocks].sort(byChange);
   const ups = sorted.filter((s) => (s.changePct ?? 0) > 0).slice(0, 3);
   const downs = sorted.filter((s) => (s.changePct ?? 0) < 0).slice(-3);
-  let line = '今日信号平稳，按计划来';
+  let line = tx(lang, 'Signals steady today — stick to the plan', '今日信号平稳，按计划来');
   const hot = changes.filter((c) => c.toKey === 'overheated');
   const cold = changes.filter((c) => c.toKey === 'oversoldBottom');
   const weak = changes.filter((c) => c.toKey === 'weakLow');
   if (hot.length > 0) {
-    line = `${hot.map((c) => c.symbol).join('、')}刚变成"涨太猛了"，别追`;
+    const names = hot.map((c) => c.symbol).join('、');
+    line = tx(lang, `${names} just turned "Running too hot" — don't chase`, `${names}刚变成"涨太猛了"，别追`);
   } else if (cold.length > 0) {
-    line = `${cold.map((c) => c.symbol).join('、')}刚"跌过头了"，别割在地板上`;
+    const names = cold.map((c) => c.symbol).join('、');
+    line = tx(lang, `${names} just hit "Oversold" — don't sell at the bottom`, `${names}刚"跌过头了"，别割在地板上`);
   } else if (weak.length > 0) {
-    line = `${weak.map((c) => c.symbol).join('、')}还在往下跌，不接飞刀`;
+    const names = weak.map((c) => c.symbol).join('、');
+    line = tx(lang, `${names} is still sliding — don't catch the falling knife`, `${names}还在往下跌，不接飞刀`);
   }
   return { ups, downs, changes, line, market: market ?? null };
 }
 
-export const zhStatus = (k: StatusKey | ''): string => (k ? STATUS_LABELS[k] : '—');
+export const zhStatus = (k: StatusKey | '', lang: Lang = 'zh'): string =>
+  k ? statusLabel(k, lang) : '—';

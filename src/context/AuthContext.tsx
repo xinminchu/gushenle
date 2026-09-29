@@ -67,9 +67,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // 邮件链接总是在新标签页打开：用户切回本页面时自动刷新登录态
   useEffect(() => {
     if (!supabase) return;
+    const sb = supabase; // 闭包内 TS 无法保持上行的非空收窄，抓一个局部常量
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
-        supabase.auth.getSession().then(({ data }) => {
+        sb.auth.getSession().then(({ data }) => {
           setUser(data.session?.user ?? null);
         });
       }

@@ -88,18 +88,20 @@ export const ACTION_LABEL: Record<OpAction, string> = { buy: '买入', sell: '�
 export function verdictFor(
   action: OpAction,
   fwdPct: number | null,
+  lang: 'zh' | 'hant' | 'en' = 'zh',
 ): { label: string; good: boolean } | null {
   if (fwdPct == null || !isFinite(fwdPct)) return null;
+  const en = lang === 'en';
   const p = Math.abs(fwdPct) < 0.05 ? 0 : fwdPct; // 0.05% 以内算持平
   if (action === 'sell') {
-    if (p > 0) return { label: `卖飞了 +${p.toFixed(1)}%`, good: false };
-    if (p < 0) return { label: `卖对了，躲开 ${p.toFixed(1)}%`, good: true };
-    return { label: '卖出后基本持平', good: true };
+    if (p > 0) return { label: en ? `Sold too early +${p.toFixed(1)}%` : `卖飞了 +${p.toFixed(1)}%`, good: false };
+    if (p < 0) return { label: en ? `Sold well, dodged ${p.toFixed(1)}%` : `卖对了，躲开 ${p.toFixed(1)}%`, good: true };
+    return { label: en ? 'Roughly flat after selling' : '卖出后基本持平', good: true };
   }
   // buy
-  if (p > 0) return { label: `买对了 +${p.toFixed(1)}%`, good: true };
-  if (p < 0) return { label: `买高了 ${p.toFixed(1)}%`, good: false };
-  return { label: '买入后基本持平', good: true };
+  if (p > 0) return { label: en ? `Bought well +${p.toFixed(1)}%` : `买对了 +${p.toFixed(1)}%`, good: true };
+  if (p < 0) return { label: en ? `Bought too high ${p.toFixed(1)}%` : `买高了 ${p.toFixed(1)}%`, good: false };
+  return { label: en ? 'Roughly flat after buying' : '买入后基本持平', good: true };
 }
 
 export function todayStr(): string {

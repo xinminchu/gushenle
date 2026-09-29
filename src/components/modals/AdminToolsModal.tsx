@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { REPLY_DRAFTS } from '@/lib/replyDrafts';
+import { tx } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface MigStatus {
   version: string;
@@ -36,6 +38,7 @@ type Tab = 'migrate' | 'reply' | 'scan' | 'claims';
 
 /** 站长专属工具箱：数据库迁移 + Mas 回复草稿轮盘 + 市场扫描 + 认领审核 */
 export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
+  const { lang } = useLanguage();
   const [tab, setTab] = useState<Tab>('migrate');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -50,7 +53,7 @@ export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
               }`}
             >
               <Database className="w-4 h-4 text-emerald-400" />
-              数据库迁移
+              {tx(lang, 'DB migrations', '数据库迁移')}
             </button>
             <button
               onClick={() => setTab('reply')}
@@ -59,7 +62,7 @@ export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
               }`}
             >
               <Sparkles className="w-4 h-4 text-sky-400" />
-              回复草稿
+              {tx(lang, 'Reply drafts', '回复草稿')}
             </button>
             <button
               onClick={() => setTab('scan')}
@@ -68,7 +71,7 @@ export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
               }`}
             >
               <Radar className="w-4 h-4 text-amber-400" />
-              市场扫描
+              {tx(lang, 'Market scan', '市场扫描')}
             </button>
             <button
               onClick={() => setTab('claims')}
@@ -77,7 +80,7 @@ export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
               }`}
             >
               <UserCheck className="w-4 h-4 text-violet-400" />
-              认领审核
+              {tx(lang, 'Claim review', '认领审核')}
             </button>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-300 p-1">
@@ -104,6 +107,7 @@ export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
 /* ---------------- 数据库迁移 ---------------- */
 
 function MigratePane() {
+  const { lang } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -127,7 +131,7 @@ function MigratePane() {
         headers: { Authorization: `Bearer ${await token()}` },
       });
       const j = await res.json().catch(() => null);
-      if (!res.ok || !j) throw new Error((j && j.error) || `读取失败（${res.status}）`);
+      if (!res.ok || !j) throw new Error((j && j.error) || tx(lang, `Failed to load (${res.status})`, `读取失败（${res.status}）`));
       setConfigured(j.configured !== false);
       setHint(j.hint || '');
       setList(j.migrations || []);
@@ -154,7 +158,7 @@ function MigratePane() {
         headers: { Authorization: `Bearer ${await token()}` },
       });
       const j = await res.json().catch(() => null);
-      if (!res.ok || !j) throw new Error((j && j.error) || `执行失败（${res.status}）`);
+      if (!res.ok || !j) throw new Error((j && j.error) || tx(lang, `Run failed (${res.status})`, `执行失败（${res.status}）`));
       setResults(j.results || []);
       await refresh();
     } catch (e) {
@@ -173,27 +177,27 @@ function MigratePane() {
 
   return (
     <>
-      {loading && <p className="text-slate-400 text-sm py-4 text-center">读取迁移状态…</p>}
+      {loading && <p className="text-slate-400 text-sm py-4 text-center">{tx(lang, 'Loading migration status…', '读取迁移状态…')}</p>}
 
       {!loading && !configured && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200 leading-relaxed">
           <div className="font-semibold mb-1 flex items-center gap-1">
-            <AlertTriangle className="w-3.5 h-3.5" /> 还差一步配置
+            <AlertTriangle className="w-3.5 h-3.5" /> {tx(lang, 'One config step left', '还差一步配置')}
           </div>
-          {hint || '服务端未配置数据库连接串。'}
+          {hint || tx(lang, 'Server database connection string not configured.', '服务端未配置数据库连接串。')}
         </div>
       )}
 
       {!loading && loadFailed && (
         <div>
           <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-xs text-red-300 leading-relaxed break-words mb-3">
-            {error || '读取迁移状态失败'}
+            {error || tx(lang, 'Failed to load migration status', '读取迁移状态失败')}
           </div>
           <button
             onClick={refresh}
             className="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-semibold rounded-xl py-2.5 active:scale-[0.98] transition"
           >
-            重试
+            {tx(lang, 'Retry', '重试')}
           </button>
         </div>
       )}
@@ -214,17 +218,17 @@ function MigratePane() {
                 <span className="text-slate-300 font-mono">{m.version}</span>
                 <span className="text-slate-400 truncate">{m.name}</span>
                 <span className={`ml-auto shrink-0 ${m.applied ? 'text-emerald-400' : 'text-slate-500'}`}>
-                  {m.applied ? '已执行' : '待执行'}
+                  {m.applied ? tx(lang, 'Applied', '已执行') : tx(lang, 'Pending', '待执行')}
                 </span>
               </div>
             ))}
             {statusKnown && visibleMigrations.length === 0 && (
-              <p className="text-xs text-emerald-400 text-center py-2">✓ 全部迁移已是最新</p>
+              <p className="text-xs text-emerald-400 text-center py-2">{tx(lang, '✓ All migrations up to date', '✓ 全部迁移已是最新')}</p>
             )}
           </div>
           {statusKnown && appliedCount > 0 && (
             <p className="text-[11px] text-slate-500 text-center mb-3">
-              ✓ 已执行 {appliedCount} 个迁移
+              {tx(lang, `✓ ${appliedCount} migrations applied`, `✓ 已执行 ${appliedCount} 个迁移`)}
             </p>
           )}
 
@@ -242,7 +246,7 @@ function MigratePane() {
                   }`}
                 >
                   <span className="font-mono">{r.version}</span> {r.name}：
-                  {r.status === 'applied' ? '执行成功' : r.status === 'skipped' ? '已跳过' : '失败'}
+                  {r.status === 'applied' ? tx(lang, 'Applied', '执行成功') : r.status === 'skipped' ? tx(lang, 'Skipped', '已跳过') : tx(lang, 'Failed', '失败')}
                   {r.error && <div className="mt-1 break-words opacity-80">{r.error}</div>}
                 </div>
               ))}
@@ -262,15 +266,15 @@ function MigratePane() {
           >
             <Play className="w-4 h-4" />
             {running
-              ? '执行中…'
+              ? tx(lang, 'Running…', '执行中…')
               : loadFailed
-                ? '状态读取失败，重试'
+                ? tx(lang, 'Status load failed — retry', '状态读取失败，重试')
                 : pending === 0
-                  ? '全部已是最新'
-                  : `一键运行（${pending} 条待执行）`}
+                  ? tx(lang, 'All up to date', '全部已是最新')
+                  : tx(lang, `Run all (${pending} pending)`, `一键运行（${pending} 条待执行）`)}
           </button>
           <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-            只执行仓库自带的迁移脚本，按顺序逐条跑，出错即停。每条成功后会记账，下次不再重复跑。
+            {tx(lang, 'Only runs the migrations bundled with the repo, in order, stopping on the first error. Each success is recorded so it will not run again.', '只执行仓库自带的迁移脚本，按顺序逐条跑，出错即停。每条成功后会记账，下次不再重复跑。')}
           </p>
         </>
       )}
@@ -281,11 +285,12 @@ function MigratePane() {
 /* ---------------- Mas 回复草稿轮盘 ---------------- */
 
 function ReplyDraftsPane() {
+  const { lang } = useLanguage();
   // 草稿被清空后（全部已用完），不渲染空轮盘
   if (REPLY_DRAFTS.length === 0) {
     return (
       <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-4 text-center">
-        <p className="text-xs text-slate-500">暂无回复草稿，有新的再补进来。</p>
+        <p className="text-xs text-slate-500">{tx(lang, 'No reply drafts yet — new ones will be added here.', '暂无回复草稿，有新的再补进来。')}</p>
       </div>
     );
   }
@@ -297,7 +302,7 @@ function ReplyDraftsPane() {
 
   function pick(i: number) {
     if (i === idx) return;
-    if (edited && !window.confirm('换一条草稿？当前已修改的内容会被替换。')) return;
+    if (edited && !window.confirm(tx(lang, 'Switch drafts? Your current edits will be replaced.', '换一条草稿？当前已修改的内容会被替换。'))) return;
     setIdx(i);
     setText(REPLY_DRAFTS[i].text);
     setCopied(false);
@@ -336,7 +341,7 @@ function ReplyDraftsPane() {
           onClick={() => pick((idx + REPLY_DRAFTS.length - 1) % REPLY_DRAFTS.length)}
           className="flex items-center gap-0.5 text-[11px] text-slate-400 px-2 py-1.5 rounded-lg border border-slate-700 active:bg-slate-800"
         >
-          <ChevronLeft className="w-3.5 h-3.5" /> 上一条
+          <ChevronLeft className="w-3.5 h-3.5" /> {tx(lang, 'Previous', '上一条')}
         </button>
         <div className="flex gap-1.5">
           {REPLY_DRAFTS.map((d, i) => (
@@ -354,7 +359,7 @@ function ReplyDraftsPane() {
           onClick={() => pick((idx + 1) % REPLY_DRAFTS.length)}
           className="flex items-center gap-0.5 text-[11px] text-slate-400 px-2 py-1.5 rounded-lg border border-slate-700 active:bg-slate-800"
         >
-          下一条 <ChevronRight className="w-3.5 h-3.5" />
+          {tx(lang, 'Next', '下一条')} <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
@@ -367,7 +372,7 @@ function ReplyDraftsPane() {
         }}
         rows={5}
         maxLength={500}
-        placeholder="选中草稿后可在这里修改…"
+        placeholder={tx(lang, 'Select a draft, then edit it here…', '选中草稿后可在这里修改…')}
         className="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-slate-200 placeholder:text-slate-600 outline-none focus:border-sky-400 resize-none leading-relaxed"
       />
 
@@ -377,10 +382,10 @@ function ReplyDraftsPane() {
         className="w-full bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-semibold rounded-xl py-2.5 flex items-center justify-center gap-2 active:scale-[0.98] transition"
       >
         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-        {copied ? '已复制，去粘贴吧' : '复制这条回复'}
+        {copied ? tx(lang, 'Copied — go paste it', '已复制，去粘贴吧') : tx(lang, 'Copy this reply', '复制这条回复')}
       </button>
       <p className="text-[11px] text-slate-500 leading-relaxed">
-        复制后去娱乐页许愿池，点对应留言下的「回复」粘贴发布。草稿不会自动发出，发哪条、发不发都由你亲手决定。
+        {tx(lang, 'After copying, go to the wish pool on the Play tab, hit "Reply" under the right comment and paste. Drafts never send themselves — you decide what goes out and what stays.', '复制后去娱乐页许愿池，点对应留言下的「回复」粘贴发布。草稿不会自动发出，发哪条、发不发都由你亲手决定。')}
       </p>
     </div>
   );
@@ -393,6 +398,7 @@ function ReplyDraftsPane() {
  * 这里是手动补跑/立即刷新用。分片循环调用直到 done。
  */
 function ScanPane() {
+  const { lang } = useLanguage();
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState('');
   const [result, setResult] = useState('');
@@ -402,7 +408,7 @@ function ScanPane() {
     setRunning(true);
     setResult('');
     setError('');
-    setProgress('开始…');
+    setProgress(tx(lang, 'Starting…', '开始…'));
     try {
       const { data } = await supabase!.auth.getSession();
       const tk = data.session?.access_token ?? '';
@@ -419,16 +425,16 @@ function ScanPane() {
           body: JSON.stringify({ offset, limit: 8 }),
         });
         const j = await res.json().catch(() => null);
-        if (!res.ok || !j?.ok) throw new Error((j && j.error) || `扫描失败（${res.status}）`);
+        if (!res.ok || !j?.ok) throw new Error((j && j.error) || tx(lang, `Scan failed (${res.status})`, `扫描失败（${res.status}）`));
         total = j.total;
         scanned += j.scanned;
         offset += j.limit;
-        setProgress(`已扫 ${scanned}/${total} 只…`);
+        setProgress(tx(lang, `${scanned}/${total} scanned…`, `已扫 ${scanned}/${total} 只…`));
         if (j.done) break;
         await new Promise((r) => setTimeout(r, 1200));
       }
       setProgress('');
-      setResult(`✓ 扫描完成，共 ${scanned}/${total} 只，首页「今日信号」已更新`);
+      setResult(tx(lang, `✓ Scan done: ${scanned}/${total} — home "Today's signals" updated`, `✓ 扫描完成，共 ${scanned}/${total} 只，首页「今日信号」已更新`));
     } catch (e) {
       setProgress('');
       setError(e instanceof Error ? e.message : String(e));
@@ -440,8 +446,7 @@ function ScanPane() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-slate-400 leading-relaxed">
-        每天美股收盘后自动扫描精选池（律动分/信号/涨跌/昨日估算资金流），
-        结果供首页「今日信号」和盘前盘后两报使用。这里可手动立即跑一次。
+        {tx(lang, 'After each US market close, the watch pool is auto-scanned (momentum score, signals, moves, estimated fund flow). Results feed the home "Today\'s signals" and the pre/post-market briefs. You can also run it manually here.', '每天美股收盘后自动扫描精选池（律动分/信号/涨跌/昨日估算资金流），结果供首页「今日信号」和盘前盘后两报使用。这里可手动立即跑一次。')}
       </p>
       {progress && <p className="text-xs text-sky-300 text-center py-2">{progress}</p>}
       {result && (
@@ -460,10 +465,10 @@ function ScanPane() {
         className="w-full bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-semibold rounded-xl py-2.5 flex items-center justify-center gap-2 active:scale-[0.98] transition"
       >
         <Play className="w-4 h-4" />
-        {running ? '扫描中…' : '运行一次全市场扫描'}
+        {running ? tx(lang, 'Scanning…', '扫描中…') : tx(lang, 'Run one full market scan', '运行一次全市场扫描')}
       </button>
       <p className="text-[11px] text-slate-500 leading-relaxed">
-        约 200 只股票，分片依次扫描，需要几分钟，请勿关闭弹窗。
+        {tx(lang, 'About 200 stocks, scanned in batches — takes a few minutes. Keep this dialog open.', '约 200 只股票，分片依次扫描，需要几分钟，请勿关闭弹窗。')}
       </p>
     </div>
   );
@@ -481,6 +486,7 @@ interface Claim {
 }
 
 function ClaimsPane() {
+  const { lang } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -498,7 +504,7 @@ function ClaimsPane() {
     try {
       const res = await fetch('/api/wish-claim?status=pending');
       const j = await res.json();
-      if (!res.ok || !j.ok) throw new Error(j.error || '加载失败');
+      if (!res.ok || !j.ok) throw new Error(j.error || tx(lang, 'Load failed', '加载失败'));
       const list: Claim[] = j.claims || [];
       setClaims(list);
       // 每个昵称下可认领的留言数
@@ -513,7 +519,7 @@ function ClaimsPane() {
       }
       setCounts(m);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '加载失败');
+      setError(e instanceof Error ? e.message : tx(lang, 'Load failed', '加载失败'));
     } finally {
       setLoading(false);
     }
@@ -536,23 +542,22 @@ function ClaimsPane() {
         body: JSON.stringify({ claim_id: id, action }),
       });
       const j = await res.json();
-      if (!res.ok || !j.ok) throw new Error(j.error || '操作失败');
+      if (!res.ok || !j.ok) throw new Error(j.error || tx(lang, 'Operation failed', '操作失败'));
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : '操作失败');
+      setError(e instanceof Error ? e.message : tx(lang, 'Operation failed', '操作失败'));
     } finally {
       setBusy(null);
     }
   }
 
   if (loading) {
-    return <p className="text-xs text-slate-500 text-center py-6">加载中…</p>;
+    return <p className="text-xs text-slate-500 text-center py-6">{tx(lang, 'Loading…', '加载中…')}</p>;
   }
   return (
     <div className="space-y-3">
       <p className="text-xs text-slate-400 leading-relaxed">
-        匿名留言的认领申请：通过后，该昵称下所有未认领留言归到认领人名下，
-        贡献值自动重算。冒领风险请人工掂量——看看留言内容像不像同一个人。
+        {tx(lang, 'Claims for anonymous comments: once approved, all unclaimed comments under that nickname move to the claimant, and contribution points are recalculated. Watch out for impersonation — check whether the comments sound like the same person.', '匿名留言的认领申请：通过后，该昵称下所有未认领留言归到认领人名下，贡献值自动重算。冒领风险请人工掂量——看看留言内容像不像同一个人。')}
       </p>
       {error && (
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-xs text-red-300 break-words">
@@ -560,22 +565,22 @@ function ClaimsPane() {
         </div>
       )}
       {claims.length === 0 && !error && (
-        <p className="text-xs text-slate-600 text-center py-6">没有待审的认领申请 🎉</p>
+        <p className="text-xs text-slate-600 text-center py-6">{tx(lang, 'No pending claims 🎉', '没有待审的认领申请 🎉')}</p>
       )}
       {claims.map((c) => (
         <div key={c.id} className="bg-slate-800/60 border border-slate-700 rounded-xl p-3 space-y-1.5">
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-slate-100">「{c.nickname}」</span>
             <span className="text-[10px] text-slate-500">
-              {counts[c.nickname] ?? '…'} 条留言待归属
+              {tx(lang, `${counts[c.nickname] ?? '…'} comments awaiting assignment`, `${counts[c.nickname] ?? '…'} 条留言待归属`)}
             </span>
           </div>
           <p className="text-[11px] text-slate-400">
-            认领人快照：{c.claimer_nickname || '（无历史留言）'}
+            {tx(lang, `Claimant snapshot: ${c.claimer_nickname || tx(lang, '(no comment history)', '（无历史留言）')}`, `认领人快照：${c.claimer_nickname || tx(lang, '(no comment history)', '（无历史留言）')}`)}
             <span className="text-slate-600"> · {c.claimer_user_id.slice(0, 8)}</span>
           </p>
           <p className="text-[10px] text-slate-600">
-            申请于 {new Date(c.created_at).toLocaleString('zh-CN', { hour12: false })}
+            {tx(lang, 'Applied: ', '申请于 ')}{new Date(c.created_at).toLocaleString('zh-CN', { hour12: false })}
           </p>
           <div className="flex gap-2 pt-1">
             <button
@@ -583,14 +588,14 @@ function ClaimsPane() {
               disabled={busy === c.id}
               className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold rounded-lg py-1.5"
             >
-              {busy === c.id ? '处理中…' : '通过'}
+              {busy === c.id ? tx(lang, 'Working…', '处理中…') : tx(lang, 'Approve', '通过')}
             </button>
             <button
               onClick={() => decide(c.id, 'reject')}
               disabled={busy === c.id}
               className="flex-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-200 text-xs font-bold rounded-lg py-1.5"
             >
-              拒绝
+              {tx(lang, 'Reject', '拒绝')}
             </button>
           </div>
         </div>

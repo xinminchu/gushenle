@@ -3,6 +3,8 @@
 // （verdictFor：卖出后涨了=卖飞，买入后跌了=买高；20 天优先、5 天兜底）。
 
 import { verdictFor, type OperationRecord } from './operations';
+import type { Lang } from './i18n';
+import { tx } from './hant';
 
 export interface PortraitWorst {
   op: OperationRecord;
@@ -58,29 +60,29 @@ export function computePortrait(
 }
 
 /** 一句话人话总结：只陈述事实，不贴人格标签 */
-export function portraitSummary(p: Portrait): string | null {
+export function portraitSummary(p: Portrait, lang: Lang = 'zh'): string | null {
   const { sell, buy } = p;
   if (sell.rate == null && buy.rate == null) return null;
   const bits: string[] = [];
   if (sell.rate != null) {
     bits.push(
       sell.rate >= 0.5
-        ? `卖飞率 ${Math.round(sell.rate * 100)}%，一半以上的卖出卖早了`
+        ? tx(lang, `Sell-too-early rate ${Math.round(sell.rate * 100)}% — more than half of your sells were too early`, `卖飞率 ${Math.round(sell.rate * 100)}%，一半以上的卖出卖早了`)
         : sell.rate === 0
-          ? '卖出时机把握得不错，还没卖飞过'
-          : `卖飞率 ${Math.round(sell.rate * 100)}%，卖出节奏基本靠谱`,
+          ? tx(lang, "Good selling timing — haven't sold too early yet", '卖出时机把握得不错，还没卖飞过')
+          : tx(lang, `Sell-too-early rate ${Math.round(sell.rate * 100)}% — selling rhythm looks solid`, `卖飞率 ${Math.round(sell.rate * 100)}%，卖出节奏基本靠谱`),
     );
   }
   if (buy.rate != null) {
     bits.push(
       buy.rate >= 0.5
-        ? `买高率 ${Math.round(buy.rate * 100)}%，一半以上的买入买在了高点`
-        : buy.rate === 0
-          ? '买入时机把握得不错，还没买高过'
-          : `买高率 ${Math.round(buy.rate * 100)}%，买入节奏基本靠谱`,
+        ? tx(lang, `Bought-too-high rate ${Math.round(buy.rate * 100)}% — more than half of your buys were near the top`, `买高率 ${Math.round(buy.rate * 100)}%，一半以上的买入买在了高点`)
+          : buy.rate === 0
+          ? tx(lang, "Good buying timing — haven't bought too high yet", '买入时机把握得不错，还没买高过')
+          : tx(lang, `Bought-too-high rate ${Math.round(buy.rate * 100)}% — buying rhythm looks solid`, `买高率 ${Math.round(buy.rate * 100)}%，买入节奏基本靠谱`),
     );
   }
-  return bits.join('；') + '。';
+  return bits.join(tx(lang, '; ', '；')) + tx(lang, '', '。');
 }
 
 /**

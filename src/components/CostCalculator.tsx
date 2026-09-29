@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { Calculator, ChevronDown } from 'lucide-react';
+import { tx } from '@/lib/hant';
+import { useLanguage } from '@/context/LanguageContext';
 
 /**
  * 真实成本试算器：美股一来一回到底花多少钱。
@@ -12,6 +14,7 @@ import { Calculator, ChevronDown } from 'lucide-react';
 interface BrokerPreset {
   id: string;
   name: string;
+  nameEn: string;
   commissionPerShare: number; // 佣金 $/股
   commissionMin: number; // 最低佣金 $/笔
   commissionMaxRate: number; // 佣金上限 = 交易额比例（0 表示无上限）
@@ -20,16 +23,16 @@ interface BrokerPreset {
 }
 
 const BROKERS: BrokerPreset[] = [
-  { id: 'futu', name: '富途牛牛', commissionPerShare: 0.0049, commissionMin: 0.99, commissionMaxRate: 0, platformPerShare: 0.005, platformMin: 1 },
-  { id: 'tiger', name: '老虎证券', commissionPerShare: 0.0049, commissionMin: 0.99, commissionMaxRate: 0, platformPerShare: 0.005, platformMin: 1 },
-  { id: 'longbridge', name: '长桥证券', commissionPerShare: 0.0049, commissionMin: 0.99, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
-  { id: 'ibkr', name: '盈透证券（固定式）', commissionPerShare: 0.0035, commissionMin: 0.35, commissionMaxRate: 0.01, platformPerShare: 0, platformMin: 0 },
-  { id: 'ibkr-lite', name: '盈透证券 Lite（零佣金）', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
-  { id: 'robinhood', name: 'Robinhood（罗宾汉）', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
-  { id: 'schwab', name: 'Charles Schwab（嘉信理财）', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
-  { id: 'fidelity', name: 'Fidelity（富达）', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
-  { id: 'webull', name: 'Webull（微牛）', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
-  { id: 'custom', name: '自定义…', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
+  { id: 'futu', name: '富途牛牛', nameEn: 'Futu', commissionPerShare: 0.0049, commissionMin: 0.99, commissionMaxRate: 0, platformPerShare: 0.005, platformMin: 1 },
+  { id: 'tiger', name: '老虎证券', nameEn: 'Tiger Brokers', commissionPerShare: 0.0049, commissionMin: 0.99, commissionMaxRate: 0, platformPerShare: 0.005, platformMin: 1 },
+  { id: 'longbridge', name: '长桥证券', nameEn: 'Longbridge', commissionPerShare: 0.0049, commissionMin: 0.99, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
+  { id: 'ibkr', name: '盈透证券（固定式）', nameEn: 'Interactive Brokers (Fixed)', commissionPerShare: 0.0035, commissionMin: 0.35, commissionMaxRate: 0.01, platformPerShare: 0, platformMin: 0 },
+  { id: 'ibkr-lite', name: '盈透证券 Lite（零佣金）', nameEn: 'Interactive Brokers Lite (Zero commission)', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
+  { id: 'robinhood', name: 'Robinhood（罗宾汉）', nameEn: 'Robinhood', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
+  { id: 'schwab', name: 'Charles Schwab（嘉信理财）', nameEn: 'Charles Schwab', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
+  { id: 'fidelity', name: 'Fidelity（富达）', nameEn: 'Fidelity', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
+  { id: 'webull', name: 'Webull（微牛）', nameEn: 'Webull', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
+  { id: 'custom', name: '自定义…', nameEn: 'Custom…', commissionPerShare: 0, commissionMin: 0, commissionMaxRate: 0, platformPerShare: 0, platformMin: 0 },
 ];
 
 // 美股卖出时监管费（经常调整，仅供参考）
@@ -51,6 +54,7 @@ const inputCls =
 const labelCls = 'text-[11px] text-slate-400';
 
 export default function CostCalculator() {
+  const { lang } = useLanguage();
   const [open, setOpen] = useState(false);
   const [advanced, setAdvanced] = useState(false);
   const [brokerId, setBrokerId] = useState<string>(() => {
@@ -189,9 +193,9 @@ export default function CostCalculator() {
       >
         <Calculator className="w-4 h-4 text-amber-400 shrink-0" />
         <span className="flex-1">
-          <span className="text-sm font-semibold text-slate-100">真实成本试算</span>
+          <span className="text-sm font-semibold text-slate-100">{tx(lang, 'True cost calculator', '真实成本试算')}</span>
           <span className="block text-[10px] text-slate-500 mt-0.5">
-            别让佣金、平台费、换汇悄悄吃掉利润
+            {tx(lang, "Don't let commissions, platform fees, and FX spreads quietly eat your profit", '别让佣金、平台费、换汇悄悄吃掉利润')}
           </span>
         </span>
         <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -200,7 +204,7 @@ export default function CostCalculator() {
       {open && (
         <div className="px-4 pb-4 space-y-3 border-t border-slate-800 pt-3">
           <div>
-            <label className={labelCls}>券商（费率仅供参考，可在下方微调）</label>
+            <label className={labelCls}>{tx(lang, 'Broker (rates are estimates — fine-tune below)', '券商（费率仅供参考，可在下方微调）')}</label>
             <select
               value={brokerId}
               onChange={(e) => pickBroker(e.target.value)}
@@ -208,7 +212,7 @@ export default function CostCalculator() {
             >
               {BROKERS.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.name}
+                  {tx(lang, b.nameEn, b.name)}
                 </option>
               ))}
             </select>
@@ -216,20 +220,20 @@ export default function CostCalculator() {
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className={labelCls}>买入价 $</label>
-              <input value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} inputMode="decimal" placeholder="如 150.00" className={inputCls} />
+              <label className={labelCls}>{tx(lang, 'Buy price $', '买入价 $')}</label>
+              <input value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} inputMode="decimal" placeholder={tx(lang, 'e.g. 150.00', '如 150.00')} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>股数</label>
-              <input value={shares} onChange={(e) => setShares(e.target.value)} inputMode="decimal" placeholder="如 100" className={inputCls} />
+              <label className={labelCls}>{tx(lang, 'Shares', '股数')}</label>
+              <input value={shares} onChange={(e) => setShares(e.target.value)} inputMode="decimal" placeholder={tx(lang, 'e.g. 100', '如 100')} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>卖出价 $（可选）</label>
-              <input value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} inputMode="decimal" placeholder="不填只算保本价" className={inputCls} />
+              <label className={labelCls}>{tx(lang, 'Sell price $ (optional)', '卖出价 $（可选）')}</label>
+              <input value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} inputMode="decimal" placeholder={tx(lang, 'Leave blank to only compute breakeven', '不填只算保本价')} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>持有天数（可选）</label>
-              <input value={days} onChange={(e) => setDays(e.target.value)} inputMode="decimal" placeholder="算融资利息用" className={inputCls} />
+              <label className={labelCls}>{tx(lang, 'Holding days (optional)', '持有天数（可选）')}</label>
+              <input value={days} onChange={(e) => setDays(e.target.value)} inputMode="decimal" placeholder={tx(lang, 'For margin interest', '算融资利息用')} className={inputCls} />
             </div>
           </div>
 
@@ -237,40 +241,40 @@ export default function CostCalculator() {
             onClick={() => setAdvanced((v) => !v)}
             className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-300"
           >
-            高级：费率微调 / 换汇 / 融资
+            {tx(lang, 'Advanced: rate tweaks / FX / margin', '高级：费率微调 / 换汇 / 融资')}
             <ChevronDown className={`w-3 h-3 transition-transform ${advanced ? 'rotate-180' : ''}`} />
           </button>
           {advanced && (
             <div className="space-y-2 bg-slate-800/50 rounded-lg p-3">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className={labelCls}>佣金 $/股</label>
+                  <label className={labelCls}>{tx(lang, 'Commission $/share', '佣金 $/股')}</label>
                   <input value={cPS} onChange={(e) => setCommPS(e.target.value)} inputMode="decimal" className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>最低佣金 $/笔</label>
+                  <label className={labelCls}>{tx(lang, 'Min commission $/order', '最低佣金 $/笔')}</label>
                   <input value={cMin} onChange={(e) => setCommMin(e.target.value)} inputMode="decimal" className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>平台费 $/股</label>
+                  <label className={labelCls}>{tx(lang, 'Platform fee $/share', '平台费 $/股')}</label>
                   <input value={pPS} onChange={(e) => setPlatPS(e.target.value)} inputMode="decimal" className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>最低平台费 $/笔</label>
+                  <label className={labelCls}>{tx(lang, 'Min platform fee $/order', '最低平台费 $/笔')}</label>
                   <input value={pMin} onChange={(e) => setPlatMin(e.target.value)} inputMode="decimal" className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>换汇点差 %</label>
-                  <input value={fxSpread} onChange={(e) => setFxSpread(e.target.value)} inputMode="decimal" placeholder="如 0.3" className={inputCls} />
+                  <label className={labelCls}>{tx(lang, 'FX spread %', '换汇点差 %')}</label>
+                  <input value={fxSpread} onChange={(e) => setFxSpread(e.target.value)} inputMode="decimal" placeholder={tx(lang, 'e.g. 0.3', '如 0.3')} className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>融资年利率 %</label>
-                  <input value={marginRate} onChange={(e) => setMarginRate(e.target.value)} inputMode="decimal" placeholder="如 6.8" className={inputCls} />
+                  <label className={labelCls}>{tx(lang, 'Margin rate %', '融资年利率 %')}</label>
+                  <input value={marginRate} onChange={(e) => setMarginRate(e.target.value)} inputMode="decimal" placeholder={tx(lang, 'e.g. 6.8', '如 6.8')} className={inputCls} />
                 </div>
               </div>
               <div>
-                <label className={labelCls}>融资金额 $（配合天数+利率算利息）</label>
-                <input value={marginAmt} onChange={(e) => setMarginAmt(e.target.value)} inputMode="decimal" placeholder="不融资不填" className={inputCls} />
+                <label className={labelCls}>{tx(lang, 'Margin amount $ (works with days + rate for interest)', '融资金额 $（配合天数+利率算利息）')}</label>
+                <input value={marginAmt} onChange={(e) => setMarginAmt(e.target.value)} inputMode="decimal" placeholder={tx(lang, 'Leave blank if no margin', '不融资不填')} className={inputCls} />
               </div>
               <label className="flex items-center gap-2 text-[11px] text-slate-400 cursor-pointer">
                 <input
@@ -279,53 +283,55 @@ export default function CostCalculator() {
                   onChange={(e) => setWithRegFee(e.target.checked)}
                   className="accent-emerald-500"
                 />
-                计入美股卖出监管费（SEC + FINRA，约数）
+                {tx(lang, 'Include US sell-side regulatory fees (SEC + FINRA, estimates)', '计入美股卖出监管费（SEC + FINRA，约数）')}
               </label>
             </div>
           )}
 
           {!r ? (
-            <p className="text-[11px] text-slate-500 py-2">填一下买入价和股数，就算出这一笔的真实成本。</p>
+            <p className="text-[11px] text-slate-500 py-2">{tx(lang, 'Enter buy price and shares to see the true cost of this trade.', '填一下买入价和股数，就算出这一笔的真实成本。')}</p>
           ) : (
             <div className="space-y-2 bg-slate-800/50 rounded-lg p-3 text-[11px]">
               <div className="flex justify-between">
-                <span className="text-slate-400">买入金额</span>
+                <span className="text-slate-400">{tx(lang, 'Buy amount', '买入金额')}</span>
                 <span className="text-slate-200 font-medium">{fmt$(r.buyNotional)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">买入端费用（佣金+平台费）</span>
+                <span className="text-slate-400">{tx(lang, 'Buy-side fees (commission + platform)', '买入端费用（佣金+平台费）')}</span>
                 <span className="text-slate-200 font-medium">{fmt$(r.buyFees)}</span>
               </div>
               {r.fxBuy > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-slate-400">换汇成本</span>
+                  <span className="text-slate-400">{tx(lang, 'FX cost', '换汇成本')}</span>
                   <span className="text-slate-200 font-medium">{fmt$(r.fxBuy)}</span>
                 </div>
               )}
               {r.interest > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-slate-400">融资利息</span>
+                  <span className="text-slate-400">{tx(lang, 'Margin interest', '融资利息')}</span>
                   <span className="text-slate-200 font-medium">{fmt$(r.interest)}</span>
                 </div>
               )}
               <div className="flex justify-between border-t border-slate-700 pt-2">
-                <span className="text-slate-300 font-medium">保本卖出价</span>
+                <span className="text-slate-300 font-medium">{tx(lang, 'Breakeven sell price', '保本卖出价')}</span>
                 <span className="text-amber-400 font-bold text-sm">{fmt$(r.breakeven)}</span>
               </div>
               <p className="text-slate-500 leading-relaxed">
-                这一来一回，费用占买入金额的 {r.feeRatio.toFixed(2)}%。卖到 {fmt$(r.breakeven)} 才真正回本。
+                {tx(lang,
+                  `Round trip: fees are ${r.feeRatio.toFixed(2)}% of your buy amount — you truly break even only at ${fmt$(r.breakeven)}.`,
+                  `这一来一回，费用占买入金额的 ${r.feeRatio.toFixed(2)}%。卖到 ${fmt$(r.breakeven)} 才真正回本。`)}
               </p>
               {r.sell && (
                 <>
                   <div className="border-t border-slate-700 pt-2 space-y-1.5">
                     <div className="flex justify-between">
-                      <span className="text-slate-400">看着赚了（名义）</span>
+                      <span className="text-slate-400">{tx(lang, 'Paper gain (nominal)', '看着赚了（名义）')}</span>
                       <span className={`font-medium ${r.sell.nominal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {r.sell.nominal >= 0 ? '+' : ''}{fmt$(r.sell.nominal)}（{r.sell.nominalPct >= 0 ? '+' : ''}{r.sell.nominalPct.toFixed(2)}%）
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">实际到手（扣完所有费用）</span>
+                      <span className="text-slate-400">{tx(lang, 'Actually in hand (after all fees)', '实际到手（扣完所有费用）')}</span>
                       <span className={`font-bold ${r.sell.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {r.sell.pnl >= 0 ? '+' : ''}{fmt$(r.sell.pnl)}（{r.sell.pnl >= 0 ? '+' : ''}{r.sell.truePct.toFixed(2)}%）
                       </span>
@@ -333,13 +339,15 @@ export default function CostCalculator() {
                   </div>
                   {r.sell.profitEaten !== null && r.sell.profitEaten > 0 && (
                     <p className="text-slate-500 leading-relaxed">
-                      费用吃掉了 {r.sell.profitEaten < 1 ? r.sell.profitEaten.toFixed(1) : r.sell.profitEaten.toFixed(0)}% 的利润。
-                      {r.feeRatio > 1 ? '小资金短线进出的话，券商赚得比你稳。' : ''}
+                      {tx(lang,
+                        `Fees ate ${r.sell.profitEaten < 1 ? r.sell.profitEaten.toFixed(1) : r.sell.profitEaten.toFixed(0)}% of your profit.`,
+                        `费用吃掉了 ${r.sell.profitEaten < 1 ? r.sell.profitEaten.toFixed(1) : r.sell.profitEaten.toFixed(0)}% 的利润。`)}
+                      {r.feeRatio > 1 ? tx(lang, ' With small, frequent trades, the broker earns more steadily than you.', '小资金短线进出的话，券商赚得比你稳。') : ''}
                     </p>
                   )}
                   {r.sell.pnl < 0 && r.sell.nominal >= 0 && (
                     <p className="text-amber-400/90 leading-relaxed">
-                      注意：股价涨了，但扣完费用你还是亏的 —— 这就是只看涨跌幅的坑。
+                      {tx(lang, "Heads up: the stock rose, but you're still in the red after fees — that's the trap of watching only the price move.", '注意：股价涨了，但扣完费用你还是亏的 —— 这就是只看涨跌幅的坑。')}
                     </p>
                   )}
                 </>
@@ -347,7 +355,7 @@ export default function CostCalculator() {
             </div>
           )}
           <p className="text-[10px] text-slate-600 leading-relaxed">
-            费率为公开资料整理的参考值，券商随时可能调整，下单前以官方最新公布为准；监管费率经常变动，此处为约数。
+            {tx(lang, 'Rates are reference values from public sources; brokers may change them anytime — always check the official site before trading. Regulatory fees change often; figures here are approximations.', '费率为公开资料整理的参考值，券商随时可能调整，下单前以官方最新公布为准；监管费率经常变动，此处为约数。')}
           </p>
         </div>
       )}
