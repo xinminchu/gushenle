@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { STOCK_LIST, findStock } from '@/lib/stockList';
 import { recordPlay } from '@/lib/gameStats';
-import { loadWatchlist, saveWatchlist } from '@/lib/watchlist';
+import { useWatchlist } from '@/components/WatchlistContext';
 import { zh2hant } from '@/lib/hant';
 import { useLanguage } from '@/context/LanguageContext';
 import {
@@ -87,6 +87,8 @@ function useBlip() {
 
 export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void }) {
   const { lang } = useLanguage();
+  // 走全站自选 Context：加入后首页 state 实时更新，不用刷新页面
+  const { items: watchItems, addItem } = useWatchlist();
   const [phase, setPhase] = useState<Phase>('idle');
   const [strip, setStrip] = useState<Pull[]>([]);
   const [pull, setPull] = useState<Pull | null>(null);
@@ -173,7 +175,7 @@ export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void
     items.push(result);
     setStrip(items);
     setPull(result);
-    setInWatch(loadWatchlist().items.some((w) => w.symbol === result.code));
+    setInWatch(watchItems.some((w) => w.symbol === result.code));
     setPhase('spinning');
 
     // 减速动画：easeOutQuint，3.4 秒落定
@@ -215,10 +217,15 @@ export default function StockBoxGame({ onGoEndorse }: { onGoEndorse?: () => void
 
   const addToWatch = () => {
     if (!pull || inWatch) return;
-    const wl = loadWatchlist();
-    saveWatchlist([...wl.items, { symbol: pull.code, name: pull.zh }]);
-    setInWatch(true);
-    setHint(`已加入自选，去今日页看它的律动诊断`);
+    const r = addItem(pull.code, pull.zh);
+    if (r === 'exists') {
+      setInWatch(true);
+      return;
+    }
+    if (r === 'ok') {
+      setInWatch(true);
+      setHint(`已加入自选，去今日页看它的律动诊断`);
+    }
   };
 
   const usedToday = daily.date === todayStr() ? daily.count : 0;

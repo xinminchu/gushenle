@@ -209,13 +209,11 @@ export default function FunTab() {
     return game ? zh2hant(lang, game.name) : tx(lang, 'Mini game', '小游戏');
   };
 
-  // 按游玩次数排序，玩得多的排前面
-  const sortedGames = [...games].sort(
-    (a, b) => (stats?.[b.id as GameId]?.plays || 0) - (stats?.[a.id as GameId]?.plays || 0)
-  );
+  // 按添加顺序固定排列（数组定义顺序即上线顺序）：玩过也不跳位，位置永远找得着
+  const orderedGames = games;
 
   // 列数自适应：9 个及以内 3 列（9 个正好 3x3），超过 9 个换 4 列
-  const cols = sortedGames.length > 9 ? 4 : 3;
+  const cols = orderedGames.length > 9 ? 4 : 3;
   const compact = cols === 4;
 
   return (
@@ -235,7 +233,7 @@ export default function FunTab() {
 
       {/* 游戏小方块 */}
       <div className={`grid ${cols === 4 ? 'grid-cols-4' : 'grid-cols-3'} gap-2`}>
-        {sortedGames.map((game) => {
+        {orderedGames.map((game) => {
           const st = stats?.[game.id as GameId];
           return (
             <button
