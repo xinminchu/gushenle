@@ -107,7 +107,7 @@ export const STOCK_LIST: StockInfo[] = [
   { code: 'SKHY', en: 'SK Hynix', zh: 'SK海力士', sector: '半导体', themes: ['芯片'], blurb: '韩国存储芯片巨头，HBM龙头' },
   { code: 'SNDK', en: 'Sandisk Corporation', zh: '闪迪', sector: '半导体', themes: ['AI', '芯片'], blurb: '闪存（NAND）大厂，AI存储需求受益' },
   { code: 'ARM', en: 'Arm', zh: 'Arm', sector: '半导体', themes: ['AI', '芯片'], blurb: '芯片架构授权，手机芯片都用它' },
-  { code: 'MRVL', en: 'Marvell', zh: '美满', sector: '半导体', themes: ['AI', '芯片'], blurb: '数据中心网络芯片，光模块 DSP 那家' },
+  { code: 'MRVL', en: 'Marvell', zh: '迈威尔', sector: '半导体', themes: ['AI', '芯片'], blurb: '数据中心网络芯片，光模块 DSP 那家' },
   { code: 'LRCX', en: 'Lam Research', zh: '泛林', sector: '半导体', themes: ['芯片'], blurb: '半导体刻蚀机巨头，造芯片的关键设备商' },
   { code: 'AMAT', en: 'Applied Materials', zh: '应用材料', sector: '半导体', themes: ['芯片'], blurb: '半导体设备龙头（应用材料）' },
   { code: 'KLAC', en: 'KLA', zh: 'KLA', sector: '半导体', themes: ['芯片'], blurb: '芯片检测量测设备，晶圆厂的"质检员"' },
@@ -318,6 +318,56 @@ import { STOCK_PINYIN } from './stockPinyin';
  * 联想建议：代码前缀优先，其次英文名/中文名/拼音包含。
  * 用于「是不是想找 XXX？」提示，最多返回 3 个。
  */
+/**
+ * 编辑距离：给搜索做「错别字容错」。
+ * 中文如「迈微尔/麦威尔」差一个字也能命中「迈威尔」；
+ * 英文如「Marvle」也能命中「Marvell」。
+ */
+export function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    const ai = a.charCodeAt(i - 1);
+    for (let j = 1; j <= n; j++) {
+      const cost = ai === b.charCodeAt(j - 1) ? 0 : 1;
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+/**
+ * 命中强度：0 未命中；1 模糊命中（差一个字，容纳错别字）；
+ * 2 子串/精确命中。排序时精确永远排在模糊前面。
+ *
+ * 模糊只比「开头」：拼音/英文打错一个字母（marvle→marvell）、
+ * 中文错别字（迈微尔/麦威尔→迈威尔）都能命中；但「nvda」不会
+ * 再捞出拼音里带 nda 的摩根大通，「mwe」也不会捞出带 wei 的微软。
+ * 太短的查询（<2 字）不做模糊；短查询（≤3 字）只允许同长度替换。
+ */
+export function hitStrength(hay: string, q: string): number {
+  if (!q || !hay) return 0;
+  if (hay.includes(q)) return 2;
+  const L = q.length;
+  if (L < 2 || L > hay.length + 1) return 0;
+  const lens = L <= 3 ? [L] : [L - 1, L, L + 1];
+  for (const len of lens) {
+    if (len < 2 || len > hay.length) continue;
+    if (levenshtein(hay.slice(0, len), q) <= 1) return 1;
+  }
+  return 0;
+}
+
+/** 模糊命中：hitStrength > 0 */
+export function fuzzyHit(hay: string, q: string): boolean {
+  return hitStrength(hay, q) > 0;
+}
+
 export function suggestStocks(input: string, limit = 3): StockInfo[] {
   const q = input.trim().toUpperCase();
   if (!q) return [];
@@ -327,10 +377,10 @@ export function suggestStocks(input: string, limit = 3): StockInfo[] {
   for (const s of STOCK_LIST) {
     if (s.code.startsWith(q)) codeHit.push(s);
     else if (
-      s.en.toLowerCase().includes(qLower) ||
-      s.zh.includes(input.trim()) ||
-      STOCK_PINYIN[s.code]?.full.includes(qLower) ||
-      STOCK_PINYIN[s.code]?.initials.startsWith(qLower)
+      fuzzyHit(s.en.toLowerCase(), qLower) ||
+      fuzzyHit(s.zh.toLowerCase(), input.trim().toLowerCase()) ||
+      fuzzyHit(STOCK_PINYIN[s.code]?.full ?? '', qLower) ||
+      fuzzyHit(STOCK_PINYIN[s.code]?.initials ?? '', qLower)
     )
       nameHit.push(s);
     if (codeHit.length + nameHit.length >= limit * 2) break;

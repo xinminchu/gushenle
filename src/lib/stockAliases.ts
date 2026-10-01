@@ -38,6 +38,7 @@ export const STOCK_ALIASES: Record<string, string> = {
   '沃尔玛': 'WMT', 'walmart': 'WMT',
   '可口可乐': 'KO', 'coca-cola': 'KO',
   '小火箭': 'RKLB', '火箭实验室': 'RKLB', 'rocket lab': 'RKLB',
+  '迈威尔科技': 'MRVL', 'marvell': 'MRVL',
   '海力士': 'SKHY', 'sk海力士': 'SKHY', 'sk hynix': 'SKHY', 'hynix': 'SKHY', 'skhy': 'SKHY',
   '红猫': 'RCAT', 'red cat': 'RCAT', 'rcat': 'RCAT',
   '航境': 'AVAV', 'avav': 'AVAV', 'aerovironment': 'AVAV',

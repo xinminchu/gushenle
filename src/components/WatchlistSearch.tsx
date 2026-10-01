@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Plus, Check, X } from 'lucide-react';
 import { STOCK_LIST, CODE_CORRECTIONS, displayStockName, type StockInfo } from '@/lib/stockList';
-import { matchStock } from './DiscoverStocks';
+import { matchStrength } from './DiscoverStocks';
 import { loadUniverse, searchUniverse, type UniverseEntry } from '@/lib/universe';
 import { useWatchlist } from './WatchlistContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -53,17 +53,12 @@ export default function WatchlistSearch({
   const candidates = useMemo(() => {
     const t = q.trim();
     if (!t) return [];
-    const out: StockInfo[] = [];
-    for (const s of STOCK_LIST) {
-      if (matchStock(s, t)) {
-        out.push(s);
-        if (out.length >= 6) break;
-      }
-    }
-    // 精确代码优先排第一
-    const exact = t.toUpperCase();
-    out.sort((a, b) => (a.code === exact ? -1 : b.code === exact ? 1 : 0));
-    return out;
+    // 按命中强度排序：精确/子串命中在前，错别字模糊命中在后
+    return STOCK_LIST.map((st) => ({ st, score: matchStrength(st, t) }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6)
+      .map((x) => x.st);
   }, [q]);
 
   // 精确匹配的代码（纠正打错如 TESLA->TSLA）

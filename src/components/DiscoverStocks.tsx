@@ -10,6 +10,7 @@ import {
   CODE_CORRECTIONS,
   sectorLabel,
   themeLabel,
+  hitStrength,
   type StockInfo,
 } from '@/lib/stockList';
 import { STOCK_PINYIN, ALIAS_PINYIN } from '@/lib/stockPinyin';
@@ -31,16 +32,8 @@ for (const [alias, code] of Object.entries(STOCK_ALIASES)) {
   ALIASES_BY_CODE.set(code, arr);
 }
 
-/**
- * 搜索命中：代码 / 英文名 / 中文名 / 拼音全拼 / 拼音首字母 / 别名(含拼音)。
- * 打错自动纠正：TESLA -> TSLA。
- * （导出给顶部搜索条复用）
- */
-export function matchStock(s: StockInfo, qRaw: string): boolean {
-  const q = qRaw.trim().toLowerCase().replace(/\s+/g, '');
-  if (!q) return true;
-  const corrected = CODE_CORRECTIONS[qRaw.trim().toUpperCase()];
-  if (corrected && s.code === corrected) return true;
+/** 一只股票的所有可搜字段：代码 / 英文名 / 中文名 / 拼音 / 别名 */
+function stockHays(s: StockInfo): string[] {
   const hay: string[] = [s.code.toLowerCase(), s.en.toLowerCase(), s.zh.toLowerCase()];
   const py = STOCK_PINYIN[s.code];
   if (py) hay.push(py.full, py.initials);
@@ -49,7 +42,39 @@ export function matchStock(s: StockInfo, qRaw: string): boolean {
     const apy = ALIAS_PINYIN[alias];
     if (apy) hay.push(apy.full, apy.initials);
   }
-  return hay.some((h) => h.includes(q));
+  return hay;
+}
+
+function cleanQuery(qRaw: string): string {
+  return qRaw.trim().toLowerCase().replace(/\s+/g, '');
+}
+
+/**
+ * 搜索命中强度：0 未命中；1 模糊（错别字）；2 子串/精确。
+ * 打错自动纠正：TESLA -> TSLA（强度按 2 算）。
+ * （导出给顶部搜索条复用）
+ */
+export function matchStrength(s: StockInfo, qRaw: string): number {
+  const q = cleanQuery(qRaw);
+  if (!q) return 2;
+  const corrected = CODE_CORRECTIONS[qRaw.trim().toUpperCase()];
+  if (corrected && s.code === corrected) return 2;
+  let best = 0;
+  for (const h of stockHays(s)) {
+    const st = hitStrength(h, q);
+    if (st > best) best = st;
+    if (best === 2) break;
+  }
+  return best;
+}
+
+/**
+ * 搜索命中：代码 / 英文名 / 中文名 / 拼音全拼 / 拼音首字母 / 别名(含拼音)。
+ * 错别字容错：迈微尔 -> 迈威尔。
+ * （导出给顶部搜索条复用）
+ */
+export function matchStock(s: StockInfo, qRaw: string): boolean {
+  return matchStrength(s, qRaw) > 0;
 }
 
 /**

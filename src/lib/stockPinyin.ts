@@ -102,8 +102,8 @@ export const STOCK_PINYIN: Record<string, { full: string; initials: string }> = 
     "initials": "shls"
   },
   "MRVL": {
-    "full": "meiman",
-    "initials": "mm"
+    "full": "maiweier",
+    "initials": "mwe"
   },
   "LRCX": {
     "full": "fanlin",
@@ -683,6 +683,10 @@ export const ALIAS_PINYIN: Record<string, { full: string; initials: string }> = 
   "小火箭": {
     "full": "xiaohuojian",
     "initials": "xhj"
+  },
+  "迈威尔科技": {
+    "full": "maiweierkeji",
+    "initials": "mwekj"
   },
   "火箭实验室": {
     "full": "huojianshiyanshi",
