@@ -352,7 +352,7 @@ export default function FamilyNews() {
           </div>
         )}
         <p className="text-[10px] text-slate-600 pt-1">
-          📊 {tx(lang, "Earnings days for your watchlist: manage your watchlist on the 'Today' tab and earnings days will show up here.", '自选股财报日：在「今日」页管理自选后，有财报的日子会自动列在这里。')}
+          📊 {tx(lang, "Earnings days for your watchlist: tap the 'Watchlist' title on the 'Today' tab to manage it, and earnings days will show up here.", '自选股财报日：在「今日」页点「自选列表」标题管理自选后，有财报的日子会自动列在这里。')}
         </p>
         {/* 全年大事记 */}
         <div className="pt-1 border-t border-slate-800">

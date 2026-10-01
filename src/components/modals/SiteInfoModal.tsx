@@ -51,15 +51,15 @@ function Guide() {
   const items: [string, string, string, string][] = [
     [
       '今日看板',
-      '管自选：管理自选增删改，"发现股票"可按板块、主题找标的一键加入，结果带一句话业务介绍。看诊断：律动分数 + 大白话状态（涨太猛了 / 高位稳着涨 / 横盘波动 / 跌不动了 / 还在往下跌 / 跌过头了）。价格走势支持 K 线 / 收盘线切换；筹码分布与资金流向是日线估算，仅供参考。"判断复盘"里能看到历史信号的命中率，自己验准不准。',
+      '管自选：顶部搜索条输代码 / 名称 / 拼音，匹配上自动出下面走势，右边 ＋ 一键加入自选；点「自选列表」几个字进全部列表（增删改、点一行直接看走势），里面"发现股票"可按板块、主题找标的一键加入，结果带一句话业务介绍。看诊断：律动分数 + 大白话状态（涨太猛了 / 高位稳着涨 / 横盘波动 / 跌不动了 / 还在往下跌 / 跌过头了）。价格走势支持 K 线 / 收盘线切换；筹码分布与资金流向是日线估算，仅供参考。"判断复盘"里能看到历史信号的命中率，自己验准不准。',
       'Today',
-      'Manage your watchlist: add/remove, and use "Discover stocks" to find tickers by sector or theme, each with a one-line business intro. Read the diagnosis: rhythm score plus plain-English status (Running too hot / Strong near the top / Going sideways / Selling pressure easing / Still sliding / Oversold). The price chart supports K-line / close-line toggle; chip distribution and money flow are daily estimates, for reference only. "Backtest" shows historical signal hit rates — verify the accuracy yourself.',
+      'Manage your watchlist: a search bar on top — type a ticker / name / pinyin and the chart below switches automatically, with a + button to add it; tap the "Watchlist" title to open the full list (add/remove, tap a row to view), where "Discover stocks" finds tickers by sector or theme, each with a one-line business intro. Read the diagnosis: rhythm score plus plain-English status (Running too hot / Strong near the top / Going sideways / Selling pressure easing / Still sliding / Oversold). The price chart supports K-line / close-line toggle; chip distribution and money flow are daily estimates, for reference only. "Backtest" shows historical signal hit rates — verify the accuracy yourself.',
     ],
     [
       '持仓',
-      '手动录入股数和成本，看实时盈亏；按住手柄拖动排序；点任意一行跳到今日页看它的律动诊断。"本周关注"每周一清零、最多 6 只，自选里没有也能手动加，第一次加会问本周预算。"真实成本试算"算一来一回的佣金、平台费、换汇和保本价。',
+      '手动录入股数和成本，看实时盈亏；按住手柄拖动排序；点任意一行跳到今日页看它的律动诊断。"历史关注"按周记下你以前「＋关注」过的股票，本周在最上，点一只直接去看走势。"真实成本试算"算一来一回的佣金、平台费、换汇和保本价。',
       'Holdings',
-      'Enter shares and cost manually to see live P&L; drag the handle to reorder; tap any row to jump to its rhythm diagnosis on the Today tab. "This week\'s watch" resets every Monday, max 6 names — you can add names not in your watchlist, and the first add asks for this week\'s budget. "True cost calculator" estimates commissions, platform fees, FX and breakeven for a round trip.',
+      'Enter shares and cost manually to see live P&L; drag the handle to reorder; tap any row to jump to its rhythm diagnosis on the Today tab. "Watch history" logs the stocks you tapped "+ Follow" on, grouped by week with the current week on top — tap one to view its chart. "True cost calculator" estimates commissions, platform fees, FX and breakeven for a round trip.',
     ],
     [
       '我的持仓故事',

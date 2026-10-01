@@ -8,13 +8,9 @@ import { tx } from '@/lib/hant';
 import type { Lang } from '@/lib/i18n';
 import { loadPositions, savePositions, holdingDays, sectorOf, type Position } from '@/lib/positions';
 import { loadAccount, saveAccount, todayStr, type AccountInfo } from '@/lib/account';
-import { weekStartStr, FOCUS_MAX, concentrationAdvice } from '@/lib/focus';
-import { useFocusList } from '@/hooks/useFocusList';
-import { typicalBuyAmount } from '@/lib/portrait';
-import { loadOperations } from '@/lib/operations';
-import { loadUniverse, findInUniverse } from '@/lib/universe';
 import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
 import { statusLabel, type RhythmResponse } from '@/lib/rhythm';
+import { groupFocusHistory, weekLabel, clearFocusHistory } from '@/lib/focusHistory';
 import { sectorLabel } from '@/lib/stockList';
 import { useColorScheme, upText, downText } from '@/lib/colorScheme';
 import CostCalculator from '@/components/CostCalculator';
@@ -81,13 +77,15 @@ export default function PortfolioTab({
   const [addCost, setAddCost] = useState('');
   const [addSince, setAddSince] = useState('');
   const [addError, setAddError] = useState('');
-  // 本周关注：最多 6 只，周一自动清空；预算一周问一次，画像反填
-  // 状态走共享 hook（今日页一句话播报的＋关注共用，同页签实时同步）
-  const { focus, persistFocus, addFocus: addFocusBase, removeFocus } = useFocusList();
-  const [focusQuotes, setFocusQuotes] = useState<Record<string, RhythmResponse | null>>({});
-  const [showBudgetAsk, setShowBudgetAsk] = useState(false);
-  const [budgetInput, setBudgetInput] = useState('');
-  const [typicalAmt] = useState<number | null>(() => typicalBuyAmount(loadOperations()));
+  // 历史关注：以前「＋关注」过的股票，按周分组展示（本周在最上）
+  const [histTick, setHistTick] = useState(0);
+  const focusGroups = useMemo(() => groupFocusHistory(), [histTick]);
+  // 今日页一句话播报点了「＋关注」：同页签实时刷新
+  useEffect(() => {
+    const bump = () => setHistTick((t) => t + 1);
+    window.addEventListener('gushenle:focus-changed', bump);
+    return () => window.removeEventListener('gushenle:focus-changed', bump);
+  }, []);
   // 持仓故事展开：一次只展开一只
   const [storySymbol, setStorySymbol] = useState<string | null>(null);
   // 持仓深入分析展开：一次只展开一只（与故事互斥）
@@ -106,10 +104,6 @@ export default function PortfolioTab({
     }, 350);
     return () => clearTimeout(t);
   }, [showAdd]);
-  // 本周关注手动加码
-  const [showFocusAdd, setShowFocusAdd] = useState(false);
-  const [focusAddCode, setFocusAddCode] = useState('');
-  const [focusAddError, setFocusAddError] = useState('');
 
   /* ---------- 手动拖放排序（手机可用：拖动手柄 + pointer 事件） ---------- */
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -231,126 +225,6 @@ export default function PortfolioTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [[...positions.map((p) => p.symbol)].sort().join(',')]); // 排序后不重拉行情
 
-  /* ---------- 本周关注 ---------- */
-  const focusSymbols = focus.items.map((i) => i.symbol);
-  useEffect(() => {
-    if (focusSymbols.length === 0) {
-      setFocusQuotes({});
-      return;
-    }
-    (async () => {
-      const entries = await Promise.all(
-        focusSymbols.map(async (s) => {
-          try {
-            return [s, await getRhythm(s, '1M')] as const;
-          } catch {
-            return [s, null] as const;
-          }
-        }),
-      );
-      const map: Record<string, RhythmResponse | null> = {};
-      entries.forEach(([s, q]) => {
-        map[s] = q;
-      });
-      setFocusQuotes(map);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusSymbols.sort().join(',')]);
-
-  const addFocus = (symbol: string) => {
-    const s = symbol.toUpperCase();
-    if (positions.some((p) => p.symbol === s)) return; // 已持有就不进关注
-    addFocusBase(s, () => {
-      // 本周第一次加关注且还没定预算：问一次，画像反填默认值
-      if (focus.budget == null) {
-        setBudgetInput(typicalAmt != null ? String(typicalAmt) : '');
-        setShowBudgetAsk(true);
-      }
-    });
-  };
-
-  const confirmBudget = () => {
-    const v = Number(budgetInput);
-    persistFocus({ ...focus, budget: Number.isFinite(v) && v > 0 ? Math.round(v) : null });
-    setShowBudgetAsk(false);
-  };
-
-  /** 手动加一只关注：输代码直接加，先验是不是真实股票 */
-  const [focusAdding, setFocusAdding] = useState(false);
-  const confirmFocusAdd = async () => {
-    const code = focusAddCode.trim().toUpperCase();
-    if (!code) {
-      setFocusAddError(tx(lang, 'Enter a ticker first', '先填个股票代码'));
-      return;
-    }
-    if (!/^[A-Z.]{1,10}$/.test(code) && !/^\d{6}\.[A-Z]{2}$/.test(code)) {
-      setFocusAddError(tx(lang, 'Ticker format is off, e.g. NVDA, TSLA, or 000660.KS', '代码格式不对，如 NVDA、TSLA，或 000660.KS'));
-      return;
-    }
-    if (positions.some((p) => p.symbol === code)) {
-      setFocusAddError(tx(lang, 'Already in your holdings — no need to watch it', '这只已在持仓里，不用关注了'));
-      return;
-    }
-    if (focus.items.some((i) => i.symbol === code)) {
-      setFocusAddError(tx(lang, `Already in this week's focus list`, '这只已经在关注里了'));
-      return;
-    }
-    if (focus.items.length >= FOCUS_MAX) {
-      setFocusAddError(tx(lang, `Focus list is full (${FOCUS_MAX}) — remove one first`, `关注已满 ${FOCUS_MAX} 只，先删一只再加`));
-      return;
-    }
-    setFocusAdding(true);
-    // 先在精选名单里找（nameOf 能解析即真实），找不到再查全市场库
-    let displayName: string | undefined;
-    const known = nameOf(code);
-    if (known !== code) {
-      displayName = known;
-    } else {
-      try {
-        const all = await loadUniverse();
-        const hit = findInUniverse(all, code, new Set());
-        if (!hit) {
-          setFocusAddError(tx(lang, `Couldn't find ${code} — check the spelling`, `没找到 ${code} 这只股票，检查下代码拼写`));
-          setFocusAdding(false);
-          return;
-        }
-        displayName = hit.en.replace(/\s+(Class\s+[A-Z]\s+)?Common\s+Stock$/i, '').trim() || hit.en;
-      } catch {
-        setFocusAddError(tx(lang, 'Stock list failed to load — try again later', '股票库加载失败，稍后再试'));
-        setFocusAdding(false);
-        return;
-      }
-    }
-    setFocusAdding(false);
-    const firstOfWeek = focus.items.length === 0;
-    persistFocus({
-      ...focus,
-      items: [...focus.items, { symbol: code, addedAt: Date.now(), name: displayName }],
-    });
-    // 关注的股票自动进自选：自选 = 持仓 ∪ 本周关注 ∪ 其他手动添加
-    if (!watchlist.some((i) => i.symbol === code)) {
-      addItem(code, displayName);
-    }
-    setFocusAddCode('');
-    setFocusAddError('');
-    setShowFocusAdd(false);
-    if (firstOfWeek && focus.budget == null) {
-      setBudgetInput(typicalAmt != null ? String(typicalAmt) : '');
-      setShowBudgetAsk(true);
-    }
-  };
-
-  /** 改本周预算：和"修正持仓"同风格，两步 prompt 太重，这里一步就够 */
-  const editBudget = () => {
-    const v = prompt(tx(lang, `Edit this week's budget (USD)`, '修改本周预算（美元）'), focus.budget != null ? String(focus.budget) : '');
-    if (v == null) return;
-    const n = Math.round(Number(v));
-    if (!Number.isFinite(n) || n <= 0) {
-      alert(tx(lang, 'Budget must be above 0 — no change made', '预算得是个大于 0 的数字，没改'));
-      return;
-    }
-    persistFocus({ ...focus, budget: n });
-  };
 
   // 汇总（只统计已拿到行情的）
   let totalValue = 0;
@@ -864,204 +738,54 @@ export default function PortfolioTab({
         )}
       </div>
 
-      {/* 本周关注：冷静池——想买先放着，最多 6 只，周一自动清空 */}
+      {/* 历史关注：以前「＋关注」过的股票，按周分组，本周在最上，点一只直接去看走势 */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="text-xs font-semibold text-slate-200">
-            👀 {tx(lang, `This week's focus`, '本周关注')}{' '}
-            <span className="text-slate-500 font-normal">({focus.items.length}/{FOCUS_MAX})</span>
+            🕘 {tx(lang, 'Watch history', '历史关注')}
           </div>
-          <div className="text-[10px] text-slate-600">{tx(lang, 'Resets every Monday · park it here before you buy', '周一自动刷新 · 想买先冷静')}</div>
+          {focusGroups.length > 0 && (
+            <button
+              onClick={() => {
+                if (confirm(tx(lang, 'Clear all watch history?', '清空全部关注历史？'))) {
+                  clearFocusHistory();
+                  setHistTick((t) => t + 1);
+                }
+              }}
+              className="text-[10px] text-slate-600 hover:text-slate-400"
+            >
+              {tx(lang, 'Clear', '清空')}
+            </button>
+          )}
         </div>
-
-        {/* 预算：一周问一次，画像反填 */}
-        {showBudgetAsk ? (
-          <div className="bg-slate-800/70 border border-blue-500/30 rounded-lg p-3 space-y-2">
-            <div className="text-xs text-slate-200">
-              {tx(lang, 'How much are you putting in this week (USD)?', '这周准备投多少（美元）？')}
-              {typicalAmt != null && (
-                <span className="text-slate-400">{tx(lang, `(your usual single buy is around $${typicalAmt.toLocaleString()})`, `（你过去单笔通常 ${typicalAmt.toLocaleString()} 左右）`)}</span>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <input
-                value={budgetInput}
-                onChange={(e) => setBudgetInput(e.target.value)}
-                inputMode="numeric"
-                placeholder={tx(lang, 'e.g. 10000 (USD)', '如 10000（美元）')}
-                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
-              />
-              <button
-                onClick={confirmBudget}
-                className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg"
-              >
-                {tx(lang, 'Confirm', '确认')}
-              </button>
-              <button
-                onClick={() => setShowBudgetAsk(false)}
-                className="text-slate-400 text-xs px-2"
-              >
-                {tx(lang, 'Skip', '跳过')}
-              </button>
-            </div>
+        {focusGroups.length === 0 ? (
+          <div className="text-[11px] text-slate-500 leading-relaxed">
+            {tx(lang, `Nothing here yet. Tap "+ Follow" on a stock's daily brief on the Today tab and it'll be logged here by week.`, '还没有记录。在「今日」页的一句话播报里点「＋关注」，就会按周记在这里。')}
           </div>
         ) : (
-          focus.budget != null && (
-            <div className="text-[11px] text-slate-400 leading-relaxed flex items-center gap-1 flex-wrap">
-              <span>
-                {tx(lang, `This week's budget`, '本周预算')}{' '}
-                <span className="font-bold text-slate-200">${focus.budget.toLocaleString()}</span>
-              </span>
-              <button
-                onClick={editBudget}
-                className="text-slate-600 hover:text-blue-400 p-0.5"
-                title={tx(lang, `Edit this week's budget`, '修改本周预算')}
-                aria-label={tx(lang, `Edit this week's budget`, '修改本周预算')}
-              >
-                <Pencil className="w-3 h-3" />
-              </button>
-              {(() => {
-                const advice = concentrationAdvice(focus.budget);
-                if (!advice) return null;
-                const en =
-                  advice === '预算不大，1-2 只就够了，摊太散每只涨 10% 也没感觉'
-                    ? 'Small budget — 1–2 stocks is plenty; spread too thin and a 10% pop barely moves the needle'
-                    : advice === '这个预算 2-3 只比较舒服，别超过 4 只'
-                      ? 'This budget fits 2–3 stocks comfortably — keep it under 4'
-                      : `Even with a big budget, don't overdo it: 3–4 stocks, 6 max`;
-                return <span className="text-slate-500">💡 {tx(lang, en, advice)}</span>;
-              })()}
-            </div>
-          )
-        )}
-
-        {/* 关注列表 */}
-        {focus.items.length > 0 && (
-          <div className="grid grid-cols-2 gap-2">
-            {focus.items.map((f) => {
-              const q = focusQuotes[f.symbol];
-              const price = q?.price ?? null;
-              const dayChg = q ? dayChangePct(q) : null;
-              const statusKey = q?.judgment.statusKey;
-              const cooling = statusKey === 'overheated';
-              return (
-                <div
-                  key={f.symbol}
-                  onClick={() => onViewSymbol(f.symbol)}
-                  className="bg-slate-800/60 border border-slate-700/60 rounded-lg p-2.5 cursor-pointer hover:border-slate-500"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-100">{f.symbol}</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeFocus(f.symbol);
-                      }}
-                      className="text-slate-600 hover:text-rose-400 p-0.5"
-                      aria-label={tx(lang, `Stop watching ${f.symbol}`, `移除关注 ${f.symbol}`)}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <div className="text-[10px] text-slate-500 truncate">{f.name ?? nameOf(f.symbol)}</div>
-                  <div className="mt-1 flex items-baseline justify-between">
-                    <span className="text-xs text-slate-200 font-semibold">
-                      {price != null ? fmtMoney(f.symbol, price) : '…'}
-                    </span>
-                    {dayChg != null && (
-                      <span className={`text-[10px] ${dayChg >= 0 ? upText(scheme) : downText(scheme)}`}>
-                        {dayChg >= 0 ? '+' : ''}{dayChg}%
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-1 text-[10px]">
-                    {cooling ? (
-                      <span className="text-sky-300">{tx(lang, '🧊 Running too hot — cool off first', '🧊 涨太猛了，先冷静')}</span>
-                    ) : (
-                      <span className="text-slate-500">
-                        {q
-                          ? q.judgment.statusKey
-                            ? statusLabel(q.judgment.statusKey, lang)
-                            : tx(lang, 'Not enough data', '数据不足')
-                          : tx(lang, 'Loading rhythm…', '律动加载中…')}
-                      </span>
-                    )}
-                  </div>
+          <div className="space-y-3">
+            {focusGroups.map((g) => (
+              <div key={g.week}>
+                <div className="text-[10px] text-slate-500 mb-1.5">
+                  {weekLabel(g.week, lang === 'en' ? 'en' : 'zh')}{' '}
+                  <span className="text-slate-600">({g.items.length})</span>
                 </div>
-              );
-            })}
+                <div className="flex flex-wrap gap-1.5">
+                  {g.items.map((it) => (
+                    <button
+                      key={it.symbol}
+                      onClick={() => onViewSymbol(it.symbol)}
+                      className="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700"
+                    >
+                      {it.symbol}
+                      <span className="ml-1 text-slate-500">{nameOf(it.symbol) !== it.symbol ? nameOf(it.symbol) : (it.name ?? '')}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
-
-        {/* 从自选加关注 */}
-        {(() => {
-          const candidates = watchlist.filter(
-            (w) =>
-              !positions.some((p) => p.symbol === w.symbol) &&
-              !focus.items.some((i) => i.symbol === w.symbol),
-          );
-          if (candidates.length === 0 || focus.items.length >= FOCUS_MAX) return null;
-          return (
-            <div>
-              <div className="text-[10px] text-slate-500 mb-1.5">{tx(lang, `Pick from your watchlist (held stocks won't show here)`, '从自选里挑（已持有的不会出现在这里）')}</div>
-              <div className="flex flex-wrap gap-1.5">
-                {candidates.slice(0, 12).map((c) => (
-                  <button
-                    key={c.symbol}
-                    onClick={() => addFocus(c.symbol)}
-                    className="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700"
-                  >
-                    + {c.symbol}
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-        {focus.items.length === 0 && (
-          <div className="text-[11px] text-slate-500 leading-relaxed">
-            {tx(lang, `Nothing here yet. Eyeing a stock but unsure? Park it here for a few days before deciding.`, '还没关注。看中哪只但拿不准的，先放这里冷静几天，再决定买不买。')}
-          </div>
-        )}
-
-        {/* 手动加一只：不经过自选，输代码直接加 */}
-        {focus.items.length < FOCUS_MAX &&
-          (showFocusAdd ? (
-            <div className="space-y-1.5">
-              <div className="flex gap-2">
-                <input
-                  value={focusAddCode}
-                  onChange={(e) => {
-                    setFocusAddCode(e.target.value.toUpperCase());
-                    setFocusAddError('');
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') confirmFocusAdd();
-                  }}
-                  placeholder={tx(lang, 'Enter a ticker, e.g. NVDA', '输代码，如 NVDA')}
-                  className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 uppercase"
-                />
-                <button
-                  onClick={confirmFocusAdd}
-                  disabled={focusAdding}
-                  className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs px-3 py-1.5 rounded-lg"
-                >
-                  {focusAdding ? tx(lang, 'Checking…', '查验中…') : tx(lang, 'Watch', '加关注')}
-                </button>
-                <button onClick={() => setShowFocusAdd(false)} className="text-slate-400 text-xs px-1">
-                  {tx(lang, 'Cancel', '取消')}
-                </button>
-              </div>
-              {focusAddError && <div className="text-[11px] text-rose-400">{focusAddError}</div>}
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowFocusAdd(true)}
-              className="w-full border border-dashed border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 rounded-lg py-2 text-[11px]"
-            >
-              {tx(lang, `＋ Add one manually (works even if it's not in your watchlist)`, '＋ 手动加一只（自选里没有也能加）')}
-            </button>
-          ))}
       </div>
 
       {/* 添加持仓 */}

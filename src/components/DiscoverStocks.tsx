@@ -34,8 +34,9 @@ for (const [alias, code] of Object.entries(STOCK_ALIASES)) {
 /**
  * 搜索命中：代码 / 英文名 / 中文名 / 拼音全拼 / 拼音首字母 / 别名(含拼音)。
  * 打错自动纠正：TESLA -> TSLA。
+ * （导出给顶部搜索条复用）
  */
-function matchStock(s: StockInfo, qRaw: string): boolean {
+export function matchStock(s: StockInfo, qRaw: string): boolean {
   const q = qRaw.trim().toLowerCase().replace(/\s+/g, '');
   if (!q) return true;
   const corrected = CODE_CORRECTIONS[qRaw.trim().toUpperCase()];

@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { loadFocus, saveFocus, FOCUS_MAX, type FocusState } from '@/lib/focus';
+import { logFocusWatch } from '@/lib/focusHistory';
 
 const EVT = 'gushenle:focus-changed';
 
@@ -39,6 +40,7 @@ export function useFocusList() {
       });
       if (added) {
         window.dispatchEvent(new Event(EVT));
+        logFocusWatch(s); // 关注历史：持仓页按周展示
         if (first) onFirstOfWeek?.();
       }
       return added;
