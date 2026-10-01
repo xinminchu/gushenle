@@ -23,6 +23,7 @@ import { lastSyncAt, markSynced, SYNC_DUP_WINDOW_MS } from '@/lib/positions';
 import { loadWatchlist } from '@/lib/watchlist';
 import { findSimilarRecord, findDuplicateGroups, type SimilarHit } from '@/lib/memoryParse';
 import PortraitPanel from '@/components/memory/PortraitPanel';
+import SpeakButton from '@/components/SpeakButton';
 import { useLanguage } from '@/context/LanguageContext';
 import { tx } from '@/lib/hant';
 
@@ -305,6 +306,24 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       setAdviceLoading(false);
     }
   };
+
+  /** 把"买什么"建议拼成一句口语，给小喇叭念 */
+  const adviceSpeech = (a: AdviceResult): string => {
+    if (a.candidates.length === 0) {
+      return tx(lang,
+        "Per rhythm, none of your watchlist stocks are good fresh entries right now. Don't chase, wait for a pullback.",
+        '按律动，自选里的股票现在都不适合新开仓，先不追，等回调。');
+    }
+    const head = tx(lang, 'Per rhythm, fine to buy without chasing: ', '按律动，现在买不算追高的有：');
+    const items = a.candidates.slice(0, 3).map((c) =>
+      tx(lang, `${c.symbol}, rhythm ${c.score} points. ${c.reason}`, `${c.name}，律动${c.score}分，${c.reason}`));
+    return head + items.join(tx(lang, ' ', '；')) + '。';
+  };
+
+  /** 把单只结论拼成一句口语，给小喇叭念 */
+  const singleSpeech = (s: SingleAdvice): string =>
+    tx(lang, `${s.name} ${s.symbol}, rhythm ${s.score} points, ${s.status}. ${s.verdict}`,
+      `${s.name}，律动${s.score}分，${s.status}。${s.verdict}`);
 
   const handleToggleRecord = () => {
     // 录音中再点：手动结束，直接走整理（静音计时器也会做这件事，所以平时不用点第二次）
@@ -674,8 +693,11 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       {/* 闲聊意图：AI 的一句引导 */}
       {chatReply && !loading && (
         <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-2">
-          <div className="text-xs font-semibold text-slate-200 flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> {tx(lang, 'AI says', 'AI 说')}
+          <div className="text-xs font-semibold text-slate-200 flex items-center justify-between">
+            <span className="flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> {tx(lang, 'AI says', 'AI 说')}
+            </span>
+            <SpeakButton text={chatReply} lang={lang} />
           </div>
           <p className="text-xs text-slate-300 leading-relaxed">{chatReply}</p>
           <button
@@ -701,7 +723,10 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
             <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5" /> {tx(lang, 'Per rhythm — fine to buy without chasing', '按律动，现在买不算追高的')}
             </span>
-            <span className="text-[10px] text-slate-500">{advice.asOf}</span>
+            <span className="flex items-center gap-1">
+              <SpeakButton text={adviceSpeech(advice)} lang={lang} />
+              <span className="text-[10px] text-slate-500">{advice.asOf}</span>
+            </span>
           </div>
 
           {advice.candidates.length === 0 ? (
@@ -763,6 +788,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
               <Sparkles className="w-3.5 h-3.5" />
               {tx(lang, singleAdvice.side === 'sell' ? 'Per rhythm — OK to sell now?' : 'Per rhythm — OK to buy this now?', singleAdvice.side === 'sell' ? '按律动，现在能不能卖' : '按律动，这只现在能不能买')}
             </span>
+            <SpeakButton text={singleSpeech(singleAdvice)} lang={lang} />
           </div>
           <div className="bg-slate-800/60 border border-slate-800 rounded-lg p-3">
             <div className="flex items-center justify-between mb-1">
