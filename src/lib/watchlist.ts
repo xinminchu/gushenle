@@ -2,6 +2,7 @@
 // 用户未自定义时，使用默认推荐（科技巨头 + 加密概念股）；持久化在 localStorage。
 
 import { CODE_CORRECTIONS, findStock } from './stockList';
+import { markUserDataDirty } from './userSync';
 
 export interface WatchlistItem {
   symbol: string;
@@ -55,6 +56,7 @@ export function loadWatchlist(): { items: WatchlistItem[]; customized: boolean }
 export function saveWatchlist(items: WatchlistItem[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ items, customized: true }));
+    markUserDataDirty();
   } catch {
     // 存储失败时静默忽略，不阻塞使用
   }
@@ -63,6 +65,7 @@ export function saveWatchlist(items: WatchlistItem[]): void {
 export function resetWatchlist(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
+    markUserDataDirty();
   } catch {
     // ignore
   }

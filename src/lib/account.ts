@@ -1,3 +1,4 @@
+import { markUserDataDirty } from './userSync';
 // 交易账户：券商 + 账户总资金（投入金额），持久化在 localStorage。
 // 仓位占比 = 持仓市值 / 账户总资金；现金 = 总资金 − 持仓总市值。
 // 单账户先行；以后要多账户，把 AccountInfo 改成数组即可，key 换版本。
@@ -36,6 +37,7 @@ export function loadAccount(): AccountInfo | null {
 export function saveAccount(info: AccountInfo): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(info));
+    markUserDataDirty();
   } catch {
     // ignore
   }

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { markUserDataDirty } from './userSync';
 
 /** 资讯朋友圈数据层：帖子、点赞、持仓总览意愿投票 */
 
@@ -115,6 +116,7 @@ export const NICKNAME_EVENT = 'gushenle:nickname';
 export function setNickname(name: string) {
   try {
     localStorage.setItem(NICK_KEY, name.trim().slice(0, 12));
+    markUserDataDirty();
   } catch {}
   // 广播：顶栏、发帖表单、帖子列表等所有用昵称的地方一起更新
   try {

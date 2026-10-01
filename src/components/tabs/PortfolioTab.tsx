@@ -8,6 +8,7 @@ import { tx } from '@/lib/hant';
 import type { Lang } from '@/lib/i18n';
 import { loadPositions, savePositions, holdingDays, sectorOf, type Position } from '@/lib/positions';
 import { loadAccount, saveAccount, todayStr, type AccountInfo } from '@/lib/account';
+import { SYNC_EVENT } from '@/lib/userSync';
 import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
 import { statusLabel, type RhythmResponse } from '@/lib/rhythm';
 import { groupFocusHistory, weekLabel, clearFocusHistory } from '@/lib/focusHistory';
@@ -164,6 +165,15 @@ export default function PortfolioTab({
 
   useEffect(() => {
     setPositions(loadPositions());
+  }, []);
+  useEffect(() => {
+    // 云端同步把本地数据换了（另一台设备改过）：持仓和资金一起重载
+    const reload = () => {
+      setPositions(loadPositions());
+      setAccount(loadAccount());
+    };
+    window.addEventListener(SYNC_EVENT, reload);
+    return () => window.removeEventListener(SYNC_EVENT, reload);
   }, []);
 
   const persist = (next: Position[]) => {

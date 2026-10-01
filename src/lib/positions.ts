@@ -1,3 +1,4 @@
+import { markUserDataDirty } from './userSync';
 // 持仓记录：用户手动录入（代码 / 股数 / 成本价 / 建仓日期），持久化在 localStorage。
 // 行情（现价 / 涨跌）走全 app 共享的 market 缓存，与今日页同源。
 // 操作记忆（买入/卖出）可同步到这里：买入加权平均成本，卖出扣减股数。
@@ -46,6 +47,7 @@ export function loadPositions(): Position[] {
 export function savePositions(positions: Position[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(positions));
+    markUserDataDirty();
   } catch {
     // ignore
   }

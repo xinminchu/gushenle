@@ -9,6 +9,7 @@ import {
   type WatchlistItem,
 } from '@/lib/watchlist';
 import { symbolToName } from '@/lib/stockAliases';
+import { SYNC_EVENT } from '@/lib/userSync';
 
 interface WatchlistContextValue {
   items: WatchlistItem[];
@@ -31,9 +32,15 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
   const [focusSymbol, setFocusSymbol] = useState<string | null>(null);
 
   useEffect(() => {
-    const { items: loaded, customized } = loadWatchlist();
-    setItems(loaded);
-    setIsDefault(!customized);
+    const reload = () => {
+      const { items: loaded, customized } = loadWatchlist();
+      setItems(loaded);
+      setIsDefault(!customized);
+    };
+    reload();
+    // 云端同步把本地数据换了（另一台设备改过）：重新加载
+    window.addEventListener(SYNC_EVENT, reload);
+    return () => window.removeEventListener(SYNC_EVENT, reload);
   }, []);
 
   const persist = (next: WatchlistItem[]) => {

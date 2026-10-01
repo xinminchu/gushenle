@@ -1,9 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { mergeCloudStats } from '@/lib/gameStats';
+import { mergeUserData } from '@/lib/userSync';
 
 interface AuthContextValue {
   user: User | null;
@@ -44,6 +45,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const configured = isSupabaseConfigured();
+  const userRef = useRef<User | null>(null);
+  const lastMergeRef = useRef(0);
+
+  /** 已登录时做一次用户数据合并（节流 30s，避免切 tab 反复跑） */
+  const mergeIfLoggedIn = (u: User | null) => {
+    if (!u) return;
+    const now = Date.now();
+    if (now - lastMergeRef.current < 30_000) return;
+    lastMergeRef.current = now;
+    mergeUserData().catch(() => {});
+  };
 
   useEffect(() => {
     if (!supabase) {
@@ -51,14 +63,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
+      const u = data.session?.user ?? null;
+      userRef.current = u;
+      setUser(u);
       setLoading(false);
+      // 已经是登录态（比如之前没关页面）：打开 app 也合并一次
+      mergeIfLoggedIn(u);
     });
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
+      const u = session?.user ?? null;
+      userRef.current = u;
+      setUser(u);
       if (event === 'SIGNED_IN') {
+        lastMergeRef.current = Date.now();
         // 点邮件链接回来后，地址栏会带上 token 参数，清掉它
         if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
           window.history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -66,6 +85,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // 登录成功：把云端战绩合并到本地
         try {
           await mergeCloudStats();
+        } catch {
+          /* 忽略 */
+        }
+        // 登录成功：持仓/自选/资金/昵称与云端合并
+        try {
+          await mergeUserData();
         } catch {
           /* 忽略 */
         }
@@ -81,7 +106,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
         sb.auth.getSession().then(({ data }) => {
-          setUser(data.session?.user ?? null);
+          const u = data.session?.user ?? null;
+          userRef.current = u;
+          setUser(u);
+          // 切回页面时也合并一次：另一台设备刚改过的数据能自动拿过来
+          mergeIfLoggedIn(u);
         });
       }
     };
