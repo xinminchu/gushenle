@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, X, RefreshCw, Briefcase, GripVertical, Pencil, BookOpen } from 'lucide-react';
+import { Plus, X, RefreshCw, Briefcase, GripVertical, Pencil, BookOpen, BarChart3 } from 'lucide-react';
 import { useWatchlist } from '@/components/WatchlistContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { tx } from '@/lib/hant';
 import type { Lang } from '@/lib/i18n';
 import { loadPositions, savePositions, holdingDays, sectorOf, type Position } from '@/lib/positions';
 import { loadAccount, saveAccount, todayStr, type AccountInfo } from '@/lib/account';
-import { loadFocus, saveFocus, weekStartStr, FOCUS_MAX, concentrationAdvice, type FocusState } from '@/lib/focus';
+import { weekStartStr, FOCUS_MAX, concentrationAdvice } from '@/lib/focus';
+import { useFocusList } from '@/hooks/useFocusList';
 import { typicalBuyAmount } from '@/lib/portrait';
 import { loadOperations } from '@/lib/operations';
 import { loadUniverse, findInUniverse } from '@/lib/universe';
@@ -16,10 +17,9 @@ import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
 import { statusLabel, type RhythmResponse } from '@/lib/rhythm';
 import { sectorLabel } from '@/lib/stockList';
 import { useColorScheme, upText, downText } from '@/lib/colorScheme';
-import { useWatchlistData } from '@/hooks/useWatchlistData';
 import CostCalculator from '@/components/CostCalculator';
-import StockBriefs from '@/components/StockBriefs';
 import StockStory from '@/components/portfolio/StockStory';
+import HoldingAnalysis from '@/components/portfolio/HoldingAnalysis';
 import { fmtMoney } from '@/lib/currency';
 
 /**
@@ -79,13 +79,16 @@ export default function PortfolioTab({
   const [addSince, setAddSince] = useState('');
   const [addError, setAddError] = useState('');
   // 本周关注：最多 6 只，周一自动清空；预算一周问一次，画像反填
-  const [focus, setFocus] = useState<FocusState>(() => loadFocus());
+  // 状态走共享 hook（今日页一句话播报的＋关注共用，同页签实时同步）
+  const { focus, persistFocus, addFocus: addFocusBase, removeFocus } = useFocusList();
   const [focusQuotes, setFocusQuotes] = useState<Record<string, RhythmResponse | null>>({});
   const [showBudgetAsk, setShowBudgetAsk] = useState(false);
   const [budgetInput, setBudgetInput] = useState('');
   const [typicalAmt] = useState<number | null>(() => typicalBuyAmount(loadOperations()));
   // 持仓故事展开：一次只展开一只
   const [storySymbol, setStorySymbol] = useState<string | null>(null);
+  // 持仓深入分析展开：一次只展开一只（与故事互斥）
+  const [analysisSymbol, setAnalysisSymbol] = useState<string | null>(null);
   // 添加持仓表单的滚动锚点：点"添加持仓"后自动滚到表单并聚焦第一个字段（portfolio-1）
   const addFormRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -225,10 +228,6 @@ export default function PortfolioTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [[...positions.map((p) => p.symbol)].sort().join(',')]); // 排序后不重拉行情
 
-  /* ---------- 一句话播报：自选股每天一句（走市场共享缓存，跟今日页同源） ---------- */
-  const briefSymbols = useMemo(() => watchlist.map((w) => w.symbol), [watchlist]);
-  const briefData = useWatchlistData(briefSymbols);
-
   /* ---------- 本周关注 ---------- */
   const focusSymbols = focus.items.map((i) => i.symbol);
   useEffect(() => {
@@ -255,27 +254,16 @@ export default function PortfolioTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusSymbols.sort().join(',')]);
 
-  const persistFocus = (next: FocusState) => {
-    setFocus(next);
-    saveFocus(next);
-  };
-
   const addFocus = (symbol: string) => {
     const s = symbol.toUpperCase();
     if (positions.some((p) => p.symbol === s)) return; // 已持有就不进关注
-    if (focus.items.some((i) => i.symbol === s)) return;
-    if (focus.items.length >= FOCUS_MAX) return;
-    const firstOfWeek = focus.items.length === 0;
-    persistFocus({ ...focus, items: [...focus.items, { symbol: s, addedAt: Date.now() }] });
-    // 本周第一次加关注且还没定预算：问一次，画像反填默认值
-    if (firstOfWeek && focus.budget == null) {
-      setBudgetInput(typicalAmt != null ? String(typicalAmt) : '');
-      setShowBudgetAsk(true);
-    }
-  };
-
-  const removeFocus = (symbol: string) => {
-    persistFocus({ ...focus, items: focus.items.filter((i) => i.symbol !== symbol) });
+    addFocusBase(s, () => {
+      // 本周第一次加关注且还没定预算：问一次，画像反填默认值
+      if (focus.budget == null) {
+        setBudgetInput(typicalAmt != null ? String(typicalAmt) : '');
+        setShowBudgetAsk(true);
+      }
+    });
   };
 
   const confirmBudget = () => {
@@ -732,7 +720,20 @@ export default function PortfolioTab({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      setAnalysisSymbol((cur) => (cur === p.symbol ? null : p.symbol));
+                      if (storySymbol === p.symbol) setStorySymbol(null);
+                    }}
+                    className={`p-0.5 ${analysisSymbol === p.symbol ? 'text-emerald-400' : 'text-slate-600 hover:text-emerald-400'}`}
+                    title={analysisSymbol === p.symbol ? tx(lang, 'Hide holding analysis', '收起持仓分析') : tx(lang, 'Deep holding analysis', '持仓深入分析')}
+                    aria-label={tx(lang, `${analysisSymbol === p.symbol ? 'Hide' : 'Show'} ${p.symbol} holding analysis`, `${analysisSymbol === p.symbol ? '收起' : '展开'} ${p.symbol} 持仓分析`)}
+                  >
+                    <BarChart3 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setStorySymbol((cur) => (cur === p.symbol ? null : p.symbol));
+                      if (analysisSymbol === p.symbol) setAnalysisSymbol(null);
                     }}
                     className={`p-0.5 ${storySymbol === p.symbol ? 'text-blue-400' : 'text-slate-600 hover:text-blue-400'}`}
                     title={storySymbol === p.symbol ? tx(lang, 'Hide my holding story', '收起持仓故事') : tx(lang, 'See my holding story', '看我的持仓故事')}
@@ -828,6 +829,19 @@ export default function PortfolioTab({
               )}
               {storySymbol === p.symbol && (
                 <StockStory symbol={p.symbol} quote={q ?? null} onGoMemory={onGoMemory} />
+              )}
+              {analysisSymbol === p.symbol && (
+                <HoldingAnalysis
+                  position={p}
+                  quote={q ?? null}
+                  account={account}
+                  pnl={pnl}
+                  pnlPct={pnlPct}
+                  price={price}
+                  advice={q ? positionAdvice(lang, q.judgment.statusKey, pnlPct) : null}
+                  onGoMemory={(s) => onGoMemory?.(s)}
+                  onViewSymbol={onViewSymbol}
+                />
               )}
             </div>
           );
@@ -1046,19 +1060,6 @@ export default function PortfolioTab({
             </button>
           ))}
       </div>
-
-      {/* 📣 一句话播报：自选股每天一句，看完顺手「＋关注」进本周冷静池 */}
-      <StockBriefs
-        symbols={briefSymbols}
-        nameOf={nameOf}
-        dataMap={briefData}
-        loading={Object.keys(briefData).length === 0}
-        onPick={onViewSymbol}
-        onAddFocus={addFocus}
-        focusSymbols={focusSymbols}
-        positionSymbols={positions.map((p) => p.symbol)}
-        focusFull={focus.items.length >= FOCUS_MAX}
-      />
 
       {/* 添加持仓 */}
       {positions.length > 0 && !showAdd && (

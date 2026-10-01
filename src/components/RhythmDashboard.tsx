@@ -5,6 +5,7 @@ import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 're
 import { Flame, ShieldAlert, Settings2, X, Plus, RotateCcw, TrendingUp, RefreshCw } from 'lucide-react';
 import RhythmChart, { type ChartType } from './RhythmChart';
 import AccuracyPanel from './AccuracyPanel';
+import ScoreSparkline from './ScoreSparkline';
 import ChipPanel from './ChipPanel';
 import FlowPanel from './FlowPanel';
 import type { RhythmResponse } from '@/lib/rhythm';
@@ -31,6 +32,9 @@ import { loadPositions } from '@/lib/positions';
 import { useColorScheme, schemeLabel, upText, downText } from '@/lib/colorScheme';
 import { useLanguage } from '@/context/LanguageContext';
 import MarketSignalBoard from './MarketSignalBoard';
+import StockBriefs from './StockBriefs';
+import { useFocusList } from '@/hooks/useFocusList';
+import { FOCUS_MAX } from '@/lib/focus';
 import BuyCheckup from './BuyCheckup';
 import { useWatchlistData } from '@/hooks/useWatchlistData';
 import { getStaticEvents } from '@/lib/financeCalendar';
@@ -140,6 +144,17 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     focusSymbol,
     setFocusSymbol,
   } = useWatchlist();
+
+  // 一句话播报（今日页底部）：自选股每天一句，看完顺手＋关注进本周冷静池
+  // focus 状态与持仓页的本周关注共用 hook，同页签实时同步
+  const { focus, addFocus } = useFocusList();
+  const [heldSymbols] = useState<string[]>(() => {
+    try {
+      return loadPositions().map((p) => p.symbol);
+    } catch {
+      return [];
+    }
+  });
 
   const [symbol, setSymbolState] = useState(() => {
     // 切 tab 会卸载整个面板，state 会丢：上次看的标的落盘，回来接着看
@@ -445,7 +460,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const curatedCodes = useMemo(() => new Set(STOCK_LIST.map((s) => s.code)), []);
 
   /* ---------- 关键价位 + 体检用的自选股 1Y 数据 ---------- */
-  /** 自选股全量 1Y 数据：关键价位线用，每只只拉一次（播报已搬到持仓页，用自己的 hook） */
+  /** 自选股全量 1Y 数据：关键价位线 + 底部一句话播报共用，每只只拉一次 */
   const wlSymbols = useMemo(() => watchlist.map((i) => i.symbol), [watchlist]);
   const wlData = useWatchlistData(wlSymbols);
   /** 当前标的的关键价位线（年高/年低/MA50/20日高低点） */
@@ -1140,6 +1155,13 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                     {judgment.score}
                   </div>
                   <div className="text-[10px] text-slate-400">{judgment.status}</div>
+                  <div className="mt-1 flex justify-end" title={tx(lang, 'Score trend, last 10 days', '近10天分数走势')}>
+                    <ScoreSparkline
+                      closes={(data.series ?? []).map((p) => p.close)}
+                      hot={judgment.thresholds.hot}
+                      cold={judgment.thresholds.cold}
+                    />
+                  </div>
                 </div>
               </div>
               {judgment.statusDetail && (
@@ -1297,6 +1319,22 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
             priceChartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           });
         }}
+      />
+
+      {/* 📣 一句话播报：自选股每天一句（从持仓页搬回来自选的地盘），看完顺手「＋关注」进本周冷静池 */}
+      <StockBriefs
+        symbols={wlSymbols}
+        nameOf={nameOf}
+        dataMap={wlData}
+        loading={Object.keys(wlData).length === 0}
+        onPick={(s) => {
+          setSymbol(s);
+          requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+        }}
+        onAddFocus={addFocus}
+        focusSymbols={focus.items.map((i) => i.symbol)}
+        positionSymbols={heldSymbols}
+        focusFull={focus.items.length >= FOCUS_MAX}
       />
 
       {/* 沉思乐：涨太猛了时点击诊断卡弹出的冷静拦截（看持仓说话） */}

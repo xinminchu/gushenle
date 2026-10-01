@@ -49,10 +49,47 @@ function fmtEdge(v: number | null): string {
   return `${v >= 0 ? '+' : ''}${v}`;
 }
 
+interface LedgerRow {
+  day: string;
+  status_key: string;
+  signals: number;
+  hits: number;
+  accuracy: number | null;
+  baseline: number | null;
+  edge: number | null;
+}
+
+/** 台账趋势小折线（准确率 %，动态区间） */
+function LedgerSparkline({ values }: { values: number[] }) {
+  if (values.length < 2) return null;
+  const w = 120;
+  const h = 30;
+  const pad = 3;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const xy = values.map(
+    (v, i) =>
+      [
+        pad + (i / (values.length - 1)) * (w - pad * 2),
+        h - pad - ((v - min) / span) * (h - pad * 2),
+      ] as const,
+  );
+  const d = xy.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  const [lx, ly] = xy[xy.length - 1];
+  return (
+    <svg width={w} height={h} className="overflow-visible" aria-hidden="true">
+      <path d={d} fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={lx} cy={ly} r="2.5" fill="#38bdf8" />
+    </svg>
+  );
+}
+
 export default function AccuracyPanel({ symbol }: { symbol: string }) {
   const { lang } = useLanguage();
   const [data, setData] = useState<AccuracyData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ledger, setLedger] = useState<LedgerRow[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,6 +103,12 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+    fetch(`/api/accuracy?view=ledger&symbol=${encodeURIComponent(symbol)}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (!cancelled && Array.isArray(json.ledger)) setLedger(json.ledger);
+      })
+      .catch((err) => console.error('ledger fetch failed:', err));
     return () => {
       cancelled = true;
     };
@@ -176,6 +219,40 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
       )}
 
       {rule && <p className="mt-3 text-[10px] text-slate-600 leading-relaxed">{tx(lang, 'Hit rule: ', '命中规则：')}{rule}</p>}
+
+      {/* 📒 台账：每天收盘后自动跑一遍回测，把准确率按天存下来 */}
+      <div className="mt-3 pt-3 border-t border-slate-800">
+        <div className="text-[11px] text-slate-400 font-medium mb-2">
+          {tx(lang, 'Ledger: daily accuracy log', '📒 台账：准确率日报')}
+        </div>
+        {(() => {
+          const overall = ledger.filter((r) => r.status_key === 'all' && r.accuracy != null);
+          if (overall.length === 0) {
+            return (
+              <p className="text-[11px] text-slate-600">
+                {tx(lang, 'Collecting… one entry is logged after each close.', '收集中…每天收盘后记一笔，攒够天数这里会出现走势。')}
+              </p>
+            );
+          }
+          const vals = overall.slice(-30).map((r) => r.accuracy as number);
+          const first = vals[0];
+          const lastV = vals[vals.length - 1];
+          const delta = Math.round((lastV - first) * 10) / 10;
+          return (
+            <div className="flex items-center gap-3">
+              <LedgerSparkline values={vals} />
+              <div className="text-[11px] text-slate-500 leading-relaxed">
+                <div>
+                  {tx(lang, `Overall ${lastV}% · ${overall.length} days logged`, `综合 ${lastV}% · 已记 ${overall.length} 天`)}
+                </div>
+                <div className={delta >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                  {tx(lang, `${delta >= 0 ? '+' : ''}${delta} pts since tracking`, `开始记录以来 ${delta >= 0 ? '+' : ''}${delta} 个百分点`)}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
     </div>
   );
 }
