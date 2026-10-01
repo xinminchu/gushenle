@@ -1133,6 +1133,17 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
                       {tx(lang, 'Cancel', '取消')}
                     </button>
                   </div>
+                ) : lastSyncAt(op.id) ? (
+                  <button
+                    onClick={() => {
+                      setSyncingId(op.id);
+                      setSyncQty(op.qty ? String(op.qty) : '');
+                    }}
+                    title={tx(lang, 'Already synced — tap to sync again', '这条已同步过，再点会重复同步')}
+                    className="text-[11px] text-emerald-400/80 hover:text-emerald-300 border border-emerald-500/25 hover:border-emerald-500/40 rounded-lg px-2.5 py-1 transition-colors"
+                  >
+                    {tx(lang, '✓ Synced', '✓ 已同步')}
+                  </button>
                 ) : (
                   <button
                     onClick={() => {

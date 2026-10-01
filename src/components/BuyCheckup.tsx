@@ -233,7 +233,14 @@ export default function BuyCheckup({
       const pnlPct = mine.avgCost > 0 ? ((price - mine.avgCost) / mine.avgCost) * 100 : 0;
       const sign = pnl >= 0 ? '+' : '-';
       const pnlStr = tx(lang, `Floating P/L ${sign}${fmtMoney(symbol, Math.abs(pnl))} (${sign}${Math.abs(pnlPct).toFixed(1)}%)`, `浮动盈亏 ${sign}${fmtMoney(symbol, Math.abs(pnl))}（${sign}${Math.abs(pnlPct).toFixed(1)}%）`);
-      if (w >= 0.3) {
+      if (positions.length <= 1) {
+        // 组合里只有这一只：100% 是天然的，不算"重仓警告"，如实说明集中度即可
+        checks.push({
+          icon: 'na',
+          title: tx(lang, 'Sole holding', '唯一持仓'),
+          detail: tx(lang, `This is your only holding — naturally 100% of the book. Adding more keeps everything in one name; ${pnlStr}`, `组合里现在只有这一只，天然就是 100% 集中，再加等于继续单吊一只；${pnlStr}`),
+        });
+      } else if (w >= 0.3) {
         checks.push({
           icon: 'warn',
           title: tx(lang, 'Position already heavy', '仓位已重'),
