@@ -93,9 +93,44 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
 
   const recogRef = useRef<any>(null);
   const speechTextRef = useRef('');
+  /** 静音自动结束：最后一次出字后 N 秒没新语音，自动 stop 走整理（不用再点一次） */
+  const SILENCE_MS = 2800;
+  const silenceTimerRef = useRef<number | null>(null);
+  /** 防连点：上一次 start 还没起来时不再 new 新会话 */
+  const startingRef = useRef(false);
+  /** 切后台时停语音：这时候不做自动整理，回来用户自己看输入框 */
+  const autoParseRef = useRef(true);
+
+  const clearSilenceTimer = () => {
+    if (silenceTimerRef.current != null) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  };
 
   useEffect(() => {
     setOps(loadOperations());
+  }, []);
+
+  /**
+   * 切后台/锁屏/关页面：自动停语音、释放麦克风。
+   * 之前不处理的话，iOS 状态栏左上角的小话筒会一直亮着（麦克风还被占着）。
+   */
+  useEffect(() => {
+    const stopForHide = () => {
+      if (!recogRef.current) return;
+      autoParseRef.current = false;
+      clearSilenceTimer();
+      try { recogRef.current.stop(); } catch {}
+    };
+    const onVis = () => { if (document.hidden) stopForHide(); };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('pagehide', stopForHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pagehide', stopForHide);
+      stopForHide();
+    };
   }, []);
 
   // 每条操作记录拉一次 forward-return（+5/+20 天）
@@ -272,39 +307,84 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
   };
 
   const handleToggleRecord = () => {
+    // 录音中再点：手动结束，直接走整理（静音计时器也会做这件事，所以平时不用点第二次）
     if (isRecording) {
+      clearSilenceTimer();
       try { recogRef.current?.stop(); } catch {}
-      setIsRecording(false);
-      return;
+      return; // onend 里关状态并自动整理
     }
+    if (startingRef.current) return; // 防连点
     if (!speechSupported) {
       setNotice({ type: 'info', text: tx(lang, "This browser doesn't support voice input — type it in instead", '当前浏览器不支持语音识别，请直接在输入框打字') });
       return;
     }
+    // 先清掉可能残留的上一个会话：iOS 上旧会话没释放会导致 start 静默失败，
+    // 现象就是"点一次没反应、再点一次才开始"。
+    try { recogRef.current?.abort?.(); } catch {}
+    recogRef.current = null;
+
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recog = new SR();
     recog.lang = 'zh-CN';
     recog.interimResults = true;
+    recog.continuous = true; // 句子间停顿不断连，iOS 说半句就掐话的毛病能缓一些
     recog.maxAlternatives = 1;
     speechTextRef.current = '';
+    autoParseRef.current = true;
     recog.onresult = (e: any) => {
       let text = '';
       for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
       speechTextRef.current = text;
       setInputText(text);
+      // 每次出字都把静音计时器续上：2.8 秒没新字就自动结束并整理
+      clearSilenceTimer();
+      silenceTimerRef.current = window.setTimeout(() => {
+        try { recog.stop(); } catch {}
+      }, SILENCE_MS);
     };
     recog.onend = () => {
+      clearSilenceTimer();
+      recogRef.current = null;
+      startingRef.current = false;
       setIsRecording(false);
       const t = speechTextRef.current.trim();
-      if (t) handleAnalyze(t, true);
+      if (t && autoParseRef.current) handleAnalyze(t, true);
     };
-    recog.onerror = () => setIsRecording(false);
+    recog.onerror = (e: any) => {
+      clearSilenceTimer();
+      const err = e?.error || '';
+      // aborted：手动停/切后台停，不打扰；no-speech：一般随后就 onend，不单独提示
+      if (err === 'aborted' || err === 'no-speech') return;
+      startingRef.current = false;
+      recogRef.current = null;
+      setIsRecording(false);
+      if (err === 'not-allowed' || err === 'service-not-allowed') {
+        setNotice({ type: 'error', text: tx(lang, 'Microphone/speech recognition is blocked — allow it in iPhone Settings → Safari, then tap again', '麦克风或语音识别没允许：去 iPhone 设置 → Safari 里打开，再点一次试试') });
+      } else if (err === 'network') {
+        setNotice({ type: 'error', text: tx(lang, 'Speech recognition needs network — check your connection', '语音识别需要联网，检查一下网络再试') });
+      } else if (err === 'audio-capture') {
+        setNotice({ type: 'error', text: tx(lang, "Couldn't access the microphone", '麦克风被占用或不可用，稍后再试') });
+      }
+    };
     recogRef.current = recog;
+    startingRef.current = true;
+    setNotice(null);
     try {
       recog.start();
       setIsRecording(true);
     } catch {
-      setIsRecording(false);
+      // iOS 偶发 InvalidStateError：等一拍重试一次，还不行就明说
+      window.setTimeout(() => {
+        try {
+          recog.start();
+          setIsRecording(true);
+        } catch {
+          startingRef.current = false;
+          recogRef.current = null;
+          setIsRecording(false);
+          setNotice({ type: 'error', text: tx(lang, "Voice didn't start — tap once more", '语音没启动，再点一次试试') });
+        }
+      }, 350);
     }
   };
 
@@ -556,9 +636,9 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
           </button>
           <p className="text-[10px] text-slate-400">
             {isRecording
-              ? tx(lang, 'Recording… tap again to stop and parse', '录音中... 再点击结束并自动整理')
+              ? tx(lang, 'Listening… pause a moment and it parses automatically (or tap to stop)', '聆听中…说完停顿一下自动整理，也可再点结束')
               : speechSupported
-                ? tx(lang, 'Tap to speak — it parses when you stop', '点击开始说话，结束自动整理')
+                ? tx(lang, 'Tap to speak — pause when done and it parses automatically', '点击开始说话，说完停顿一下自动整理')
                 : tx(lang, 'Voice input not supported here — please type', '当前浏览器不支持语音，请打字输入')}
           </p>
         </div>

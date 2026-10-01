@@ -77,6 +77,18 @@ function parseDate(text: string): string | null {
 
 const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
 
+/**
+ * 紧凑口语："今天233卖10 IBM" / "235买了100股AAPL" / "今天233卖IBM"
+ * 数字 + 买/卖 + 数字：前一个是单价，后一个是股数
+ * （口语里"233卖10"就是 233 块卖 10 股，不用"了""股"也成立）。
+ *
+ * 注意：不能用正则 lookbehind —— iOS 15 的 Safari 不支持，
+ * 整个脚本会 SyntaxError。用 (^|[^块毛\d.]) 吃掉前一个字符，
+ * 顺带挡掉"227块9毛2买了10股"里"毛2"被误当成单价。
+ */
+const TERSE_TRADE_RE =
+  /(^|[^块毛\d.])(\d+(?:\.\d+)?)\s*(买|卖)(?:了|入|出|掉|进)?(?:\s*(\d+)\s*股?)?(?![\d.])/;
+
 interface PriceHit {
   value: number;
   matched: string; // 命中的原文片段，供调用方剔除后继续提数量
@@ -129,16 +141,31 @@ function parseRecord(text: string, symbol: string): RecordParse {
   const isSell = SELL_WORD.test(text) && !BUY_WORD.test(text) ? true
     : BUY_WORD.test(text) && !SELL_WORD.test(text) ? false
     : /卖/.test(text); // 都有提到时，默认按卖处理（用户多半在说卖）
-  const hit = matchPrice(text);
-  // 先抠掉价格命中的片段再提数量，避免"217块1毛95股"里分位的 9 被吞成 95 股
-  const restForQty = hit ? text.replace(hit.matched, ' ') : text;
-  const qtyM = restForQty.match(/(\d+)\s*股/);
+  // 0) 紧凑口语优先："今天233卖10 IBM" -> 单价 233、股数 10
+  const terse = text.match(TERSE_TRADE_RE);
+  let price: number | null = null;
+  let qty: number | null = null;
+  let restForQty: string;
+  if (terse) {
+    price = parseFloat(terse[2]);
+    if (terse[4] != null) qty = parseInt(terse[4], 10);
+    restForQty = text.replace(terse[0], ' ');
+  } else {
+    const hit = matchPrice(text);
+    // 先抠掉价格命中的片段再提数量，避免"217块1毛95股"里分位的 9 被吞成 95 股
+    restForQty = hit ? text.replace(hit.matched, ' ') : text;
+    price = hit ? hit.value : null;
+  }
+  if (qty == null) {
+    const qtyM = restForQty.match(/(\d+)\s*股/);
+    qty = qtyM ? parseInt(qtyM[1], 10) : null;
+  }
   return {
     intent: 'record',
     symbol,
     action: isSell ? 'SELL' : 'BUY',
-    price: hit ? hit.value : null,
-    qty: qtyM ? parseInt(qtyM[1], 10) : null,
+    price,
+    qty,
     opDate: parseDate(text),
     thesis: '',
     emotion: '冷静',

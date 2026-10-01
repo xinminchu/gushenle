@@ -141,7 +141,19 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     setFocusSymbol,
   } = useWatchlist();
 
-  const [symbol, setSymbol] = useState('AAPL');
+  const [symbol, setSymbolState] = useState(() => {
+    // 切 tab 会卸载整个面板，state 会丢：上次看的标的落盘，回来接着看
+    try {
+      const saved = localStorage.getItem('gsl.chartSymbol');
+      if (saved && /^[A-Za-z0-9.]{1,12}$/.test(saved)) return saved.toUpperCase();
+    } catch {}
+    return 'AAPL';
+  });
+  /** 选标的：顺手落盘，下次切回首页接着看这只 */
+  const setSymbol = (s: string) => {
+    setSymbolState(s);
+    try { localStorage.setItem('gsl.chartSymbol', s); } catch {}
+  };
   const [range, setRange] = useState(ANCHOR_RANGE_ID);
   // 涨跌配色：默认绿涨红跌（美股习惯），页面上可一键切换，全站统一
   const { scheme, toggle: toggleScheme } = useColorScheme();
@@ -231,14 +243,16 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   }, [focusSymbol, setFocusSymbol]);
 
   // 自选变化后，当前标的若"被删掉"才回到第一只。
-  // 从信号牌点进来的标的可能根本不在自选里——那不算被删，不能回弹。
-  // 所以只跟 watchlist 走：对比变化前后的名单，当前标的"曾经在、现在没了"才回弹。
+  // 从持仓/信号牌点进来的标的可能根本不在自选里（focusSymbol）——那不算被删，不能回弹。
+  // 组件重新挂载（从别的 tab 切回首页）时也一样：上次看的标的若不在自选里，
+  // 回落到自选第一只，不再硬顶着 AAPL（AAPL 也可能根本不在自选里）。
   const prevWatchlistRef = useRef<string[] | null>(null);
   useEffect(() => {
     const cur = watchlist.map((i) => i.symbol);
     const prev = prevWatchlistRef.current;
-    if (prev !== null && cur.length > 0) {
-      const wasIn = prev.includes(symbol);
+    if (cur.length > 0 && !focusSymbol) {
+      // 挂载时 prev 为 null：把"上次看的"当成"曾经在"，不在名单就回落
+      const wasIn = prev === null ? true : prev.includes(symbol);
       const nowIn = cur.includes(symbol);
       if (wasIn && !nowIn) {
         setSymbol(cur[0]);
@@ -246,7 +260,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     }
     prevWatchlistRef.current = cur;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchlist]);
+  }, [watchlist, focusSymbol]);
 
   // 收盘后自动刷新：页面开着过夜，第二天自动拉取最新收盘价
   const autoTick = useMarketAutoRefresh(
