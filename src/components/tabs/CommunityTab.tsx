@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Users, HeartHandshake, Send, Trash2, LogIn, BarChart3, Check,
+  Users, HeartHandshake, Send, Trash2, LogIn, BarChart3, Check, Pencil, MessageCircle, X,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNickname } from '@/hooks/useNickname';
@@ -18,15 +18,21 @@ import {
   fetchPosts,
   createPost,
   deletePost,
+  updatePost,
   toggleLike,
   setNickname,
   updateMyPostsNickname,
+  fetchReplies,
+  createReply,
+  deleteReply,
+  splitSymbols,
   getSurvey,
   setSurveyVote,
   getVoterKey,
   relativeTime,
   surveyLabel,
   type FamilyPost,
+  type FamilyReply,
   type SurveyChoice,
   type SurveyState,
 } from '@/lib/family';
@@ -67,6 +73,19 @@ export default function CommunityTab() {
   // 删除二次确认（两步点击，不用浏览器 confirm）
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
+  // 回复
+  const [replies, setReplies] = useState<FamilyReply[]>([]);
+  const [repliesReady, setRepliesReady] = useState(false); // 034 迁移跑完才有回复表
+  const [openReplyFor, setOpenReplyFor] = useState<number | null>(null);
+  const [replyDraft, setReplyDraft] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
+  // 编辑自己的帖子
+  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editSymbol, setEditSymbol] = useState('');
+  const [editType, setEditType] = useState<'thesis' | 'lesson'>('thesis');
+  const [savingEdit, setSavingEdit] = useState(false);
+
   // 投票
   const [survey, setSurvey] = useState<SurveyState | null>(null);
   const [voting, setVoting] = useState(false);
@@ -85,8 +104,19 @@ export default function CommunityTab() {
       if (user) {
         const p = await fetchPosts(user.id);
         setPosts(p);
+        // 回复表要等 034 迁移跑完；没跑就先隐藏回复入口，不挡发帖
+        try {
+          const r = await fetchReplies(p.map((x) => x.id));
+          setReplies(r);
+          setRepliesReady(true);
+        } catch {
+          setReplies([]);
+          setRepliesReady(false);
+        }
       } else {
         setPosts([]);
+        setReplies([]);
+        setRepliesReady(false);
       }
     } catch (e: any) {
       console.error(e);
@@ -171,6 +201,69 @@ export default function CommunityTab() {
     } catch (e) {
       console.error(e);
       setNotice(tx(lang, 'Delete failed — try again later', '删除失败，稍后再试'));
+    }
+  };
+
+  const handleSendReply = async (postId: number) => {
+    if (!user) {
+      setLoginOpen(true);
+      return;
+    }
+    const text = replyDraft.trim();
+    if (text.length < 1 || sendingReply) return;
+    setSendingReply(true);
+    try {
+      await createReply({ post_id: postId, user_id: user.id, nickname, content: text });
+      setReplyDraft('');
+      const r = await fetchReplies(posts.map((x) => x.id));
+      setReplies(r);
+    } catch (e) {
+      console.error(e);
+      setNotice(tx(lang, 'Reply failed — try again later', '回复失败，稍后再试'));
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
+  const handleDeleteReply = async (id: number) => {
+    try {
+      await deleteReply(id);
+      setReplies((prev) => prev.filter((r) => r.id !== id));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const startEdit = (post: FamilyPost) => {
+    setEditingPostId(post.id);
+    setEditContent(post.content);
+    setEditSymbol(splitSymbols(post.symbol).join(' '));
+    setEditType(post.post_type);
+    setOpenReplyFor(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (editingPostId == null) return;
+    const text = editContent.trim();
+    if (text.length < 2) {
+      setNotice(tx(lang, 'Write a couple of lines first', '写两句再发吧'));
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      await updatePost(editingPostId, { content: text, symbol: editSymbol, post_type: editType });
+      const normSymbol = editSymbol.toUpperCase().split(/[\s,，、]+/).map((s) => s.replace(/[^A-Z]/g, '')).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 8).join(',');
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === editingPostId ? { ...p, content: text, symbol: normSymbol, post_type: editType } : p,
+        ),
+      );
+      setEditingPostId(null);
+    } catch (e) {
+      console.error(e);
+      setNotice(tx(lang, 'Edit needs migration 034 — run it from the ⚙️ admin panel first', '编辑要先跑 034 迁移：点顶栏 ⚙️ → 数据库迁移 → 一键执行'));
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -314,8 +407,8 @@ export default function CommunityTab() {
             </div>
             <input
               value={symbol}
-              onChange={(e) => setSymbol(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 10))}
-              placeholder={tx(lang, 'Ticker (optional, e.g. AAPL)', '标的代码（选填，如 AAPL）')}
+              onChange={(e) => setSymbol(e.target.value.toUpperCase().replace(/[^A-Z,，、 ]/g, '').slice(0, 40))}
+              placeholder={tx(lang, 'Tickers (optional, several separated by space, e.g. NVDA COIN)', '标的代码（选填，可填多个，空格分隔，如 NVDA COIN）')}
               className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
             />
             <textarea
@@ -345,6 +438,10 @@ export default function CommunityTab() {
               {posts.map((post) => {
                 // 自己的帖子永远显示当前昵称，改名即时生效
                 const displayName = post.user_id === user?.id ? nickname : post.nickname;
+                const symbols = splitSymbols(post.symbol);
+                const postReplies = replies.filter((r) => r.post_id === post.id);
+                const isEditing = editingPostId === post.id;
+                const replyOpen = openReplyFor === post.id;
                 return (
                 <div key={post.id} className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-4 space-y-3">
                   <div className="flex justify-between items-center">
@@ -368,33 +465,151 @@ export default function CommunityTab() {
                     </span>
                   </div>
 
-                  <div className="space-y-1">
-                    {post.symbol && (
-                      <div className="text-xs font-bold text-slate-100">{tx(lang, `Ticker: ${post.symbol}`, `标的：${post.symbol}`)}</div>
-                    )}
-                    <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-800 whitespace-pre-wrap">
-                      {post.content}
-                    </p>
-                  </div>
+                  {isEditing ? (
+                    <div className="space-y-2 bg-slate-900/60 border border-amber-500/30 rounded-lg p-3">
+                      <div className="flex gap-1.5">
+                        {(['thesis', 'lesson'] as const).map((t) => (
+                          <button
+                            key={t}
+                            onClick={() => setEditType(t)}
+                            className={`text-[11px] px-3 py-1 rounded-full border font-medium ${
+                              editType === t
+                                ? t === 'thesis'
+                                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                                  : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                                : 'text-slate-500 border-slate-700'
+                            }`}
+                          >
+                            {t === 'thesis' ? tx(lang, '💡 Buy logic', '💡 买入逻辑') : tx(lang, '⚠️ Lessons learned', '⚠️ 避坑经验')}
+                          </button>
+                        ))}
+                      </div>
+                      <input
+                        value={editSymbol}
+                        onChange={(e) => setEditSymbol(e.target.value.toUpperCase().replace(/[^A-Z,，、 ]/g, '').slice(0, 40))}
+                        placeholder={tx(lang, 'Tickers, space-separated', '标的代码，空格分隔可填多个')}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                      />
+                      <textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value.slice(0, 500))}
+                        className="w-full h-20 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500 resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSaveEdit}
+                          disabled={savingEdit}
+                          className="flex-1 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 text-xs font-semibold py-2 rounded-lg"
+                        >
+                          {savingEdit ? tx(lang, 'Saving…', '保存中…') : tx(lang, 'Save', '保存')}
+                        </button>
+                        <button
+                          onClick={() => setEditingPostId(null)}
+                          className="px-4 text-xs text-slate-400 border border-slate-700 rounded-lg hover:text-slate-200"
+                        >
+                          {tx(lang, 'Cancel', '取消')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {symbols.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {symbols.map((s) => (
+                            <span key={s} className="text-[11px] font-bold text-sky-300 bg-sky-500/15 border border-sky-500/30 rounded-md px-2 py-0.5">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-800 whitespace-pre-wrap">
+                        {post.content}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex justify-between items-center text-xs text-slate-400 pt-1 border-t border-slate-700/50">
-                    <button
-                      onClick={() => handleLike(post)}
-                      className={`flex items-center gap-1 ${post.liked_by_me ? 'text-emerald-400' : 'hover:text-emerald-400'}`}
-                    >
-                      <HeartHandshake className="w-3.5 h-3.5" />
-                      {post.liked_by_me ? tx(lang, 'Insightful ✓', '有启发 ✓') : tx(lang, 'Insightful', '觉得有启发')} ({post.like_count})
-                    </button>
-                    {user && post.user_id === user.id && (
+                    <div className="flex items-center gap-3">
                       <button
-                        onClick={() => handleDelete(post.id)}
-                        className={`flex items-center gap-1 ${confirmDeleteId === post.id ? 'text-rose-400 font-semibold' : 'hover:text-rose-400'}`}
+                        onClick={() => handleLike(post)}
+                        className={`flex items-center gap-1 ${post.liked_by_me ? 'text-emerald-400' : 'hover:text-emerald-400'}`}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        {confirmDeleteId === post.id ? tx(lang, 'Confirm delete?', '确认删除？') : tx(lang, 'Delete', '删除')}
+                        <HeartHandshake className="w-3.5 h-3.5" />
+                        {post.liked_by_me ? tx(lang, 'Insightful ✓', '有启发 ✓') : tx(lang, 'Insightful', '觉得有启发')} ({post.like_count})
                       </button>
+                      {repliesReady && !isEditing && (
+                        <button
+                          onClick={() => {
+                            setOpenReplyFor(replyOpen ? null : post.id);
+                            setReplyDraft('');
+                          }}
+                          className={`flex items-center gap-1 ${replyOpen ? 'text-sky-400' : 'hover:text-sky-400'}`}
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          {tx(lang, 'Reply', '回复')} ({postReplies.length})
+                        </button>
+                      )}
+                    </div>
+                    {user && post.user_id === user.id && !isEditing && (
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => startEdit(post)}
+                          className="flex items-center gap-1 hover:text-amber-400"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          {tx(lang, 'Edit', '编辑')}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(post.id)}
+                          className={`flex items-center gap-1 ${confirmDeleteId === post.id ? 'text-rose-400 font-semibold' : 'hover:text-rose-400'}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          {confirmDeleteId === post.id ? tx(lang, 'Confirm delete?', '确认删除？') : tx(lang, 'Delete', '删除')}
+                        </button>
+                      </div>
                     )}
                   </div>
+
+                  {replyOpen && (
+                    <div className="space-y-2">
+                      {postReplies.map((r) => (
+                        <div key={r.id} className="flex gap-1.5 items-start">
+                          <div className="flex-1 bg-slate-900/60 rounded-lg px-2.5 py-1.5 border border-slate-800">
+                            <span className="text-[11px] font-semibold text-slate-200">
+                              {r.user_id === user?.id ? nickname : r.nickname}
+                            </span>
+                            <span className="text-[10px] text-slate-500 ml-1.5">{relativeTime(r.created_at, lang)}</span>
+                            <p className="text-xs text-slate-300 mt-0.5 whitespace-pre-wrap">{r.content}</p>
+                          </div>
+                          {user && r.user_id === user.id && (
+                            <button
+                              onClick={() => handleDeleteReply(r.id)}
+                              className="text-slate-600 hover:text-rose-400 mt-1.5"
+                              aria-label={tx(lang, 'Delete reply', '删除回复')}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <div className="flex gap-1.5">
+                        <input
+                          value={replyDraft}
+                          onChange={(e) => setReplyDraft(e.target.value.slice(0, 300))}
+                          placeholder={tx(lang, 'Write a reply…', '写条回复…')}
+                          className="flex-1 bg-slate-800/60 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                        />
+                        <button
+                          onClick={() => handleSendReply(post.id)}
+                          disabled={sendingReply || !replyDraft.trim()}
+                          className="bg-sky-500 hover:bg-sky-400 disabled:opacity-40 text-slate-950 px-3 rounded-lg"
+                          aria-label={tx(lang, 'Send reply', '发送回复')}
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 );
               })}

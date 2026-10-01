@@ -14,6 +14,88 @@ export interface FamilyPost {
   liked_by_me: boolean;
 }
 
+/** 标的字段存的是逗号连接的多个代码（如 "NVDA,COIN"）；兼容老数据的单个代码 */
+export function splitSymbols(symbol: string): string[] {
+  return (symbol || '')
+    .split(',')
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+/** 把用户输入（空格/逗号分隔）规范成逗号连接的多个代码 */
+export function normalizeSymbols(raw: string): string {
+  const codes = raw
+    .toUpperCase()
+    .split(/[\s,，、]+/)
+    .map((s) => s.replace(/[^A-Z]/g, ''))
+    .filter(Boolean);
+  return [...new Set(codes)].slice(0, 8).join(',');
+}
+
+/** 回复 */
+export interface FamilyReply {
+  id: number;
+  post_id: number;
+  user_id: string;
+  nickname: string;
+  content: string;
+  created_at: string;
+}
+
+/** 一次查出这些帖子的全部回复（帖子列表小，一次全拿） */
+export async function fetchReplies(postIds: number[]): Promise<FamilyReply[]> {
+  if (postIds.length === 0) return [];
+  const db = needDb();
+  const { data, error } = await db
+    .from('family_post_replies')
+    .select('id,post_id,user_id,nickname,content,created_at')
+    .in('post_id', postIds)
+    .order('created_at', { ascending: true })
+    .limit(500);
+  if (error) throw error;
+  return (data || []) as FamilyReply[];
+}
+
+export async function createReply(input: {
+  post_id: number;
+  user_id: string;
+  nickname: string;
+  content: string;
+}): Promise<void> {
+  const db = needDb();
+  const { error } = await db.from('family_post_replies').insert({
+    post_id: input.post_id,
+    user_id: input.user_id,
+    nickname: input.nickname.slice(0, 12),
+    content: input.content.trim().slice(0, 300),
+  });
+  if (error) throw error;
+}
+
+export async function deleteReply(id: number): Promise<void> {
+  const db = needDb();
+  const { error } = await db.from('family_post_replies').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/** 本人编辑帖子（内容/标的/类型；RLS 只允许改自己的） */
+export async function updatePost(
+  id: number,
+  input: { content: string; symbol: string; post_type: 'thesis' | 'lesson' },
+): Promise<void> {
+  const db = needDb();
+  const { error } = await db
+    .from('family_posts')
+    .update({
+      content: input.content.trim().slice(0, 500),
+      symbol: normalizeSymbols(input.symbol).slice(0, 80),
+      post_type: input.post_type,
+    })
+    .eq('id', id);
+  if (error) throw error;
+}
+
 const NICK_KEY = 'gushenle:nickname';
 
 export function getNickname(fallbackEmail?: string | null): string {
@@ -99,7 +181,7 @@ export async function createPost(input: {
     user_id: input.user_id,
     nickname: input.nickname.slice(0, 12),
     post_type: input.post_type,
-    symbol: input.symbol.trim().toUpperCase().slice(0, 10),
+    symbol: normalizeSymbols(input.symbol).slice(0, 80),
     content: input.content.trim().slice(0, 500),
   });
   if (error) throw error;
