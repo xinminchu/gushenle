@@ -1,6 +1,6 @@
 // src/app/api/cron/accuracy-ledger/route.ts
 // 每日台账：收盘后自动跑核心股票的复盘回测，结果按天写入 accuracy_ledger。
-// 由 Vercel Cron 每天触发（见 vercel.json），用 ?secret=CRON_SECRET 鉴权。
+// 由 Vercel Cron 每天触发（vercel.json：每天 13:00 UTC = 美东夏令时 9:00），用 ?secret=CRON_SECRET 鉴权。
 // 手动触发：/api/cron/accuracy-ledger?secret=xxx&symbols=AAPL,NVDA
 
 import { NextRequest, NextResponse } from 'next/server';
