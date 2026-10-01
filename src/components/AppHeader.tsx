@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { UserRound, LogOut, Settings, Pencil, ChevronDown } from 'lucide-react';
+import { UserRound, LogOut, Settings, Pencil, ChevronDown, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useNickname } from '@/hooks/useNickname';
@@ -9,6 +9,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { isAdminEmail, getAdminRole, ADMIN_ROLE_LABEL } from '@/lib/admin';
 import { setNickname, updateMyPostsNickname } from '@/lib/family';
 import LoginModal from './modals/LoginModal';
+import SecurityModal from './modals/SecurityModal';
 import AdminToolsModal from './modals/AdminToolsModal';
 import WorldClock from './WorldClock';
 import SloganShow from './SloganShow';
@@ -23,8 +24,9 @@ export default function AppHeader() {
   const en = lang === 'en';
   const { theme, toggle } = useTheme();
   const [loginOpen, setLoginOpen] = useState(false);
+  const [securityOpen, setSecurityOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
-  // 顶栏用户菜单：改昵称 / 退出登录
+  // 顶栏用户菜单：改昵称 / 账号安全 / 退出登录
   const [menuOpen, setMenuOpen] = useState(false);
   const [editingNick, setEditingNick] = useState(false);
   const [nickDraft, setNickDraft] = useState('');
@@ -140,6 +142,16 @@ export default function AppHeader() {
                             <button
                               onClick={() => {
                                 setMenuOpen(false);
+                                setSecurityOpen(true);
+                              }}
+                              className="w-full text-left px-2.5 py-2 rounded-lg text-xs text-slate-200 hover:bg-slate-800 flex items-center gap-2 active:scale-95 transition"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
+                              {t('securityTitle')}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setMenuOpen(false);
                                 if (confirm(t('logoutConfirm'))) void signOut();
                               }}
                               className="w-full text-left px-2.5 py-2 rounded-lg text-xs text-rose-300 hover:bg-slate-800 flex items-center gap-2 active:scale-95 transition"
@@ -205,6 +217,7 @@ export default function AppHeader() {
         <SloganShow />
       </div>
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} />}
+      {securityOpen && <SecurityModal onClose={() => setSecurityOpen(false)} />}
       {toolsOpen && <AdminToolsModal onClose={() => setToolsOpen(false)} />}
     </div>
   );
