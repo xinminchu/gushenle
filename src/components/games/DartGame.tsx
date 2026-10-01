@@ -150,7 +150,7 @@ export default function DartGame() {
   const prepare = useCallback(async (): Promise<boolean> => {
     const wl = readWatchlist().slice(0, 8);
     if (wl.length < 3) {
-      setErr(zh2hant(lang, `自选只有 ${wl.length} 只股票，至少 3 只才能摆飞镖盘，去今日页「管理自选」加点吧`));
+      setErr(zh2hant(lang, `自选只有 ${wl.length} 只股票，至少 3 只才能摆飞镖盘，去今日页点「自选列表」标题加点吧`));
       return false;
     }
     const all = await Promise.all([...wl.map((w) => fetchSeries(w.symbol)), fetchSeries('QQQ')]);

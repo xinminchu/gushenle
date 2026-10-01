@@ -874,7 +874,7 @@ export default function PortfolioTab({
           </div>
           {watchlist.length > 0 &&
             watchlist.every((w) => positions.some((p) => p.symbol === w.symbol)) && (
-              <div className="text-[11px] text-slate-500">{tx(lang, 'Everything in your watchlist is already added — add more under “Manage watchlist” in the Today tab.', '自选里的股票都已加完，去今日页「管理自选」可加更多。')}</div>
+              <div className="text-[11px] text-slate-500">{tx(lang, 'Everything in your watchlist is already added — tap the “Watchlist” title on the Today tab to add more.', '自选里的股票都已加完，去今日页点「自选列表」标题可加更多。')}</div>
             )}
         </div>
       )}
