@@ -32,9 +32,14 @@ for (const [alias, code] of Object.entries(STOCK_ALIASES)) {
   ALIASES_BY_CODE.set(code, arr);
 }
 
-/** 一只股票的所有可搜字段：代码 / 英文名 / 中文名 / 拼音 / 别名 */
+/** 一只股票的所有可搜字段：代码 / 英文名 / 中文名 / 拼音 / 别名 / 板块 / 主题 / 业务简介 */
 function stockHays(s: StockInfo): string[] {
-  const hay: string[] = [s.code.toLowerCase(), s.en.toLowerCase(), s.zh.toLowerCase()];
+  const hay: string[] = [
+    s.code.toLowerCase(), s.en.toLowerCase(), s.zh.toLowerCase(),
+    s.sector.toLowerCase(), sectorLabel(s.sector, 'en').toLowerCase(),
+    ...s.themes.map((t) => t.toLowerCase()),
+  ];
+  if (s.blurb) hay.push(s.blurb.toLowerCase());
   const py = STOCK_PINYIN[s.code];
   if (py) hay.push(py.full, py.initials);
   for (const alias of ALIASES_BY_CODE.get(s.code) ?? []) {

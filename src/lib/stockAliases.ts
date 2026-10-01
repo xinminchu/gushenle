@@ -55,6 +55,9 @@ export const STOCK_ALIASES: Record<string, string> = {
   'mp材料': 'MP', 'mp': 'MP',
   '美洲锂业': 'LAC', 'lac': 'LAC', 'lithium americas': 'LAC',
   '茅台': '600519', // A股：数据可能没有，提取出来再说，查不到会友好提示
+  '开市客': 'COST',
+  '西部数据': 'WDC',
+  '约翰迪尔': 'DE',
 };
 
 import { STOCK_LIST } from './stockList';

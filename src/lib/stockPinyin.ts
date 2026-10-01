@@ -45,10 +45,6 @@ export const STOCK_PINYIN: Record<string, { full: string; initials: string }> = 
     "full": "feita",
     "initials": "ft"
   },
-  "INTU": {
-    "full": "zhijue",
-    "initials": "zj"
-  },
   "STX": {
     "full": "xijie",
     "initials": "xj"
@@ -536,6 +532,86 @@ export const STOCK_PINYIN: Record<string, { full: string; initials: string }> = 
   "NEM": {
     "full": "niumengte",
     "initials": "nmt"
+  },
+  "VZ": {
+    "full": "weiruisen",
+    "initials": "wrs"
+  },
+  "V": {
+    "full": "weisa",
+    "initials": "ws"
+  },
+  "ADBE": {
+    "full": "aoduobi",
+    "initials": "adb"
+  },
+  "PLTR": {
+    "full": "palantier",
+    "initials": "plte"
+  },
+  "UBER": {
+    "full": "youbu",
+    "initials": "yb"
+  },
+  "PYPL": {
+    "full": "beibao",
+    "initials": "bb"
+  },
+  "HOOD": {
+    "full": "luobinhan",
+    "initials": "lbh"
+  },
+  "ADSK": {
+    "full": "outeke",
+    "initials": "otk"
+  },
+  "ARM": {
+    "full": "anmou",
+    "initials": "am"
+  },
+  "KLAC": {
+    "full": "kelei",
+    "initials": "kl"
+  },
+  "LULU": {
+    "full": "lululemeng",
+    "initials": "lllm"
+  },
+  "ABNB": {
+    "full": "aibiying",
+    "initials": "aby"
+  },
+  "BKNG": {
+    "full": "binke",
+    "initials": "bk"
+  },
+  "EA": {
+    "full": "yidian",
+    "initials": "yd"
+  },
+  "RBLX": {
+    "full": "luobulesi",
+    "initials": "lbls"
+  },
+  "MRNA": {
+    "full": "modena",
+    "initials": "mdn"
+  },
+  "GOLD": {
+    "full": "balike",
+    "initials": "blk"
+  },
+  "ANSS": {
+    "full": "anxisi",
+    "initials": "axs"
+  },
+  "RIVN": {
+    "full": "liweian",
+    "initials": "lwa"
+  },
+  "VRTX": {
+    "full": "futai",
+    "initials": "ft"
   }
 };
 
@@ -735,5 +811,17 @@ export const ALIAS_PINYIN: Record<string, { full: string; initials: string }> = 
   "MP": { "full": "mpcailiao", "initials": "mpcl" },
   "MP材料": { "full": "mpcailiao", "initials": "mpcl" },
   "LAC": { "full": "meizhouliye", "initials": "mzly" },
-  "美洲锂业": { "full": "meizhouliye", "initials": "mzly" }
+  "美洲锂业": { "full": "meizhouliye", "initials": "mzly" },
+  "开市客": {
+    "full": "kaishike",
+    "initials": "ksk"
+  },
+  "西部数据": {
+    "full": "xibushuju",
+    "initials": "xbsj"
+  },
+  "约翰迪尔": {
+    "full": "yuehandier",
+    "initials": "yhde"
+  }
 };
