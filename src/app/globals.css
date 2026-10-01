@@ -80,3 +80,11 @@ nav {
 @media (prefers-reduced-motion: reduce) {
   .gsl-marquee { animation: none; }
 }
+
+/* iOS Safari：输入框字号 <16px 时，点输入框会自动放大整个页面，而且经常"卡住"不缩回去。
+   全站输入框统一 16px，Safari 就不再自动放大（用户双指缩放不受影响，无障碍保留）。 */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
