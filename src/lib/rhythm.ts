@@ -322,7 +322,17 @@ export function judgeFromScore(
   });
   if (score >= th.hot) {
     if (vel >= VEL_PARABOLIC) return pick('overheated', true);
-    return pick('hotStrong', false);
+    const base = pick('hotStrong', false);
+    if (score >= 90) {
+      // 90+ 分：位置已到近 3 个月极高位——趋势健康照样拿着，但新开仓/加仓要更慎
+      const warn = tx(
+        lang,
+        ' (90+: sitting near 3-month highs — go easy on fresh buys or adds; staging in is steadier.)',
+        '（90+ 分：位置已到近3个月极高位，新买/加仓更要慎，分批更稳）',
+      );
+      return { ...base, advice: base.advice + warn };
+    }
+    return base;
   }
   if (score >= 60) return pick('risingAccel', false);
   if (score >= 40) return pick('sideways', false);

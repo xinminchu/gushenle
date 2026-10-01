@@ -28,7 +28,7 @@ import { fmtMoney } from '@/lib/currency';
  */
 
 /** 持仓诊断一句话：律动状态 × 浮盈亏 → 大白话，不批评 */
-function positionAdvice(lang: Lang, statusKey: string | undefined, pnlPct: number | null): string {
+function positionAdvice(lang: Lang, statusKey: string | undefined, pnlPct: number | null, score?: number): string {
   const p = pnlPct;
   switch (statusKey) {
     case 'overheated':
@@ -36,6 +36,9 @@ function positionAdvice(lang: Lang, statusKey: string | undefined, pnlPct: numbe
         ? tx(lang, `Running too hot, up ${p.toFixed(1)}% — bank some?`, `涨太猛了，浮盈 ${p.toFixed(1)}%，分批落袋？`)
         : tx(lang, `Running too hot — cool off, chasing is risky`, '涨太猛了，先冷静，追高要慎');
     case 'hotStrong':
+      // 90+ 分：位置已到近 3 个月极高位，新开仓/加仓多提醒一句
+      if (score != null && score >= 90)
+        return tx(lang, 'Strong near the top, 90+ — holding is fine, but fresh buys/adds deserve extra caution', '高位强势，拿着；90+ 分位置已极高，新买/加仓更要慎');
       return tx(lang, 'Strong near the top — hold, set your take-profit', '高位强势，拿着，止盈位设好');
     case 'weakLow':
       return p != null && p < 0
@@ -815,7 +818,7 @@ export default function PortfolioTab({
               {q && (
                 <div className="mt-2 space-y-1">
                   <div className="text-[11px] text-amber-300/90">
-                    💡 {positionAdvice(lang, q.judgment.statusKey, pnlPct)}
+                    💡 {positionAdvice(lang, q.judgment.statusKey, pnlPct, q.judgment.score)}
                   </div>
                   <div className="text-[10px] text-slate-500">
                     {tx(lang, 'Rhythm score', '律动分')}{' '}
