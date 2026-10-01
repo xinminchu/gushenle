@@ -37,6 +37,7 @@ import {
   type SurveyState,
 } from '@/lib/family';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { saveOperation, todayStr } from '@/lib/operations';
 
 /** 昵称首字配色 */
 function avatarColor(name: string): string {
@@ -69,6 +70,10 @@ export default function CommunityTab() {
   const [nickDraft, setNickDraft] = useState('');
   const [editingNick, setEditingNick] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  // 发帖时同步记一笔到操作记忆：勾选后按标的逐只记（股数/价格逐只填）
+  const [logToMemory, setLogToMemory] = useState(false);
+  const [logAction, setLogAction] = useState<'buy' | 'sell'>('buy');
+  const [logRows, setLogRows] = useState<Record<string, { qty: string; price: string }>>({});
 
   // 删除二次确认（两步点击，不用浏览器 confirm）
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -152,10 +157,48 @@ export default function CommunityTab() {
         symbol,
         content: text,
       });
+      // 发帖→记一笔：按标的逐只生成操作记忆（价格没填的跳过）
+      let logged = 0;
+      let skipped: string[] = [];
+      if (logToMemory) {
+        const syms = splitSymbols(symbol);
+        const today = todayStr();
+        for (const s of syms) {
+          const row = logRows[s] || { qty: '', price: '' };
+          const price = parseFloat(row.price);
+          const qty = parseInt(row.qty, 10);
+          if (price > 0) {
+            saveOperation({
+              symbol: s,
+              action: logAction,
+              price,
+              qty: qty > 0 ? qty : undefined,
+              date: today,
+              source: 'community',
+              thesis: text,
+            });
+            logged++;
+          } else {
+            skipped.push(s);
+          }
+        }
+      }
       setContent('');
       setSymbol('');
+      setLogToMemory(false);
+      setLogRows({});
+      setLogAction('buy');
       const p = await fetchPosts(user.id);
       setPosts(p);
+      if (logged > 0) {
+        setNotice(
+          tx(
+            lang,
+            `Posted ✓ — logged ${logged} ${logged > 1 ? 'entries' : 'entry'} to your memory${skipped.length > 0 ? ` (${skipped.join('、')} had no price, skipped)` : ''}`,
+            `发布成功 ✓，已记 ${logged} 笔到操作记忆${skipped.length > 0 ? `（${skipped.join('、')}没填价格，未记）` : ''}`,
+          ),
+        );
+      }
     } catch (e: any) {
       console.error(e);
       setNotice(tx(lang, 'Post failed — try again later', '发布失败，稍后再试'));
@@ -361,7 +404,7 @@ export default function CommunityTab() {
             <div className="flex items-center justify-between">
               <div className="flex gap-1.5">
                 <button
-                  onClick={() => setPostType('thesis')}
+                  onClick={() => { setPostType('thesis'); setLogAction('buy'); }}
                   className={`text-[11px] px-3 py-1.5 rounded-full border font-medium ${
                     postType === 'thesis'
                       ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
@@ -371,7 +414,7 @@ export default function CommunityTab() {
                   {tx(lang, '💡 Buy logic', '💡 买入逻辑')}
                 </button>
                 <button
-                  onClick={() => setPostType('lesson')}
+                  onClick={() => { setPostType('lesson'); setLogAction('sell'); }}
                   className={`text-[11px] px-3 py-1.5 rounded-full border font-medium ${
                     postType === 'lesson'
                       ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
@@ -417,6 +460,62 @@ export default function CommunityTab() {
               placeholder={postType === 'thesis' ? tx(lang, 'Share why you bought… (within 500 chars)', '说说这次买入的逻辑…（500字以内）') : tx(lang, 'Share the pitfall so others can avoid it… (within 500 chars)', '说说这次踩的坑，给大家提个醒…（500字以内）')}
               className="w-full h-20 bg-slate-800/60 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
             />
+            {/* 发帖→记一笔：把这次分享同步成操作记忆 */}
+            <label className="flex items-center gap-2 text-[11px] text-slate-400 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={logToMemory}
+                onChange={(e) => setLogToMemory(e.target.checked)}
+                className="accent-emerald-500 w-3.5 h-3.5"
+              />
+              {tx(lang, 'Also log to my trade memory', '同时记一笔到操作记忆')}
+            </label>
+            {logToMemory && (
+              <div className="bg-slate-800/40 border border-slate-800 rounded-xl p-3 space-y-2">
+                <div className="flex gap-1.5">
+                  {(['buy', 'sell'] as const).map((a) => (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => setLogAction(a)}
+                      className={`text-[11px] px-3 py-1 rounded-full border font-medium ${
+                        logAction === a
+                          ? a === 'buy'
+                            ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                          : 'text-slate-500 border-slate-700'
+                      }`}
+                    >
+                      {a === 'buy' ? tx(lang, 'Buy', '买入') : tx(lang, 'Sell', '卖出')}
+                    </button>
+                  ))}
+                </div>
+                {splitSymbols(symbol).length === 0 ? (
+                  <p className="text-[11px] text-slate-600">{tx(lang, 'Add the tickers above first', '先在上面填标的代码')}</p>
+                ) : (
+                  splitSymbols(symbol).map((s) => (
+                    <div key={s} className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold text-blue-300 w-20 truncate">{s}</span>
+                      <input
+                        value={logRows[s]?.qty ?? ''}
+                        onChange={(e) => setLogRows((prev) => ({ ...prev, [s]: { qty: e.target.value.replace(/[^\d]/g, ''), price: prev[s]?.price ?? '' } }))}
+                        inputMode="numeric"
+                        placeholder={tx(lang, 'Shares', '股数')}
+                        className="w-20 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+                      />
+                      <input
+                        value={logRows[s]?.price ?? ''}
+                        onChange={(e) => setLogRows((prev) => ({ ...prev, [s]: { qty: prev[s]?.qty ?? '', price: e.target.value.replace(/[^\d.]/g, '') } }))}
+                        inputMode="decimal"
+                        placeholder={tx(lang, 'Price', '价格')}
+                        className="w-24 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  ))
+                )}
+                <p className="text-[10px] text-slate-600">{tx(lang, 'No price = skipped for that ticker', '没填价格的那只会跳过，不记')}</p>
+              </div>
+            )}
             <button
               onClick={handlePublish}
               disabled={publishing}

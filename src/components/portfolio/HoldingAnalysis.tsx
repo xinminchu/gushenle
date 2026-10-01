@@ -8,9 +8,19 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { tx } from '@/lib/hant';
 import { getRhythm } from '@/lib/market';
-import { statusLabel, type RhythmResponse } from '@/lib/rhythm';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { fetchPosts, splitSymbols, relativeTime, type FamilyPost } from '@/lib/family';
+import {
+  statusLabel,
+  scoreAt,
+  volatilityAt,
+  thresholdsFor,
+  judgeFromScore,
+  type RhythmResponse,
+} from '@/lib/rhythm';
 import { holdingDays, sectorOf, type Position } from '@/lib/positions';
 import { type AccountInfo } from '@/lib/account';
 import { loadOperations, type OperationRecord } from '@/lib/operations';
@@ -47,7 +57,29 @@ export default function HoldingAnalysis({
 }) {
   const { lang } = useLanguage();
   const { scheme } = useColorScheme();
+  const { user } = useAuth();
   const [closes, setCloses] = useState<number[] | null>(null);
+  // 资讯足迹：我在朋友圈发过的关于这只的帖子（只看自己的）
+  const [myPosts, setMyPosts] = useState<FamilyPost[]>([]);
+  useEffect(() => {
+    if (!user || !isSupabaseConfigured()) {
+      setMyPosts([]);
+      return;
+    }
+    let cancelled = false;
+    const sym = position.symbol.toUpperCase();
+    fetchPosts(user.id)
+      .then((all) => {
+        if (!cancelled)
+          setMyPosts(all.filter((p) => p.user_id === user.id && splitSymbols(p.symbol).includes(sym)).slice(0, 3));
+      })
+      .catch(() => {
+        if (!cancelled) setMyPosts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, position.symbol]);
 
   // 迷你折线要 3M 日线：行里的 quote 是 1M 的，展开时再拉（走市场共享缓存）
   useEffect(() => {
@@ -73,6 +105,46 @@ export default function HoldingAnalysis({
       return [];
     }
   }, [position.symbol]);
+
+  // 你的行为画像：这只股票的操作统计（来自操作记忆）
+  const portrait = useMemo(() => {
+    const buys = history.filter((o) => o.action === 'buy');
+    const sells = history.filter((o) => o.action === 'sell');
+    const buyPrices = buys.map((o) => o.price).filter((p) => p > 0);
+    const avgBuy = buyPrices.length > 0 ? buyPrices.reduce((a, b) => a + b, 0) / buyPrices.length : null;
+    const emotions: string[] = [];
+    for (const o of history) {
+      const e = (o.emotion || '').trim();
+      if (e && !emotions.includes(e) && emotions.length < 3) emotions.push(e);
+    }
+    const latestAdvice = history.find((o) => o.adviceSnapshot)?.adviceSnapshot ?? null;
+    return { buys: buys.length, sells: sells.length, avgBuy, emotions, latestAdvice };
+  }, [history]);
+
+  // 律动足迹：近 30 天每天的状态分布（客户端无未来函数回算，口径与诊断一致）
+  const trail = useMemo(() => {
+    if (!closes || closes.length < 32) return null;
+    const buckets = [
+      { key: 'high', label: tx(lang, 'Near highs', '高位'), n: 0, cls: 'bg-amber-400/70' },
+      { key: 'accel', label: tx(lang, 'Accelerating', '加速'), n: 0, cls: 'bg-emerald-400/70' },
+      { key: 'flat', label: tx(lang, 'Sideways', '震荡'), n: 0, cls: 'bg-slate-500/70' },
+      { key: 'weak', label: tx(lang, 'Weak', '弱势'), n: 0, cls: 'bg-sky-400/70' },
+    ];
+    const start = Math.max(32, closes.length - 30);
+    let total = 0;
+    for (let i = start; i < closes.length; i++) {
+      const s = scoreAt(closes, i);
+      if (!s) continue;
+      const th = thresholdsFor(volatilityAt(closes, i), 'zh');
+      const { statusKey } = judgeFromScore(s.score, s.trend, s.vel, th, 'zh');
+      total++;
+      if (statusKey === 'overheated' || statusKey === 'hotStrong') buckets[0].n++;
+      else if (statusKey === 'risingAccel') buckets[1].n++;
+      else if (statusKey === 'sideways') buckets[2].n++;
+      else buckets[3].n++;
+    }
+    return total > 0 ? { buckets, total } : null;
+  }, [closes, lang]);
 
   const marketValue = price != null ? position.shares * price : null;
   const weightPct =
@@ -152,25 +224,132 @@ export default function HoldingAnalysis({
         </div>
       </div>
 
+      {/* 你的行为画像：这只股票的操作统计 */}
+      <div className="bg-slate-800/40 rounded-lg p-3">
+        <div className="text-[11px] text-slate-500 mb-2">{tx(lang, 'Your behavior profile', '你的行为画像')}</div>
+        {history.length > 0 ? (
+          <div className="space-y-1.5 text-[11px]">
+            <div className="flex justify-between">
+              <span className="text-slate-500">{tx(lang, 'Trades', '操作')}</span>
+              <span className="text-slate-200">
+                {tx(lang, `${portrait.buys} buys · ${portrait.sells} sells`, `买入 ${portrait.buys} 次 · 卖出 ${portrait.sells} 次`)}
+              </span>
+            </div>
+            {portrait.avgBuy != null && (
+              <div className="flex justify-between">
+                <span className="text-slate-500">{tx(lang, 'Avg buy price', '买入均价')}</span>
+                <span className="text-slate-200 font-semibold">{fmtMoney(position.symbol, portrait.avgBuy)}</span>
+              </div>
+            )}
+            {portrait.emotions.length > 0 && (
+              <div className="flex justify-between items-start gap-2">
+                <span className="text-slate-500 shrink-0">{tx(lang, 'Moods', '当时情绪')}</span>
+                <span className="flex flex-wrap gap-1 justify-end">
+                  {portrait.emotions.map((e) => (
+                    <span key={e} className="px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-300/90 text-[10px]">
+                      {e}
+                    </span>
+                  ))}
+                </span>
+              </div>
+            )}
+            {portrait.latestAdvice && (
+              <div className="text-[10px] text-slate-500 leading-relaxed pt-0.5">
+                {tx(lang, 'Advice back then: ', '当时建议：')}{portrait.latestAdvice}
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-[11px] text-slate-600">
+            {tx(lang, 'No trades logged for this stock yet — your profile builds as you log.', '这只还没有操作记录，记一笔后画像就有了。')}
+          </p>
+        )}
+      </div>
+
+      {/* 资讯足迹：我在朋友圈发过的关于这只的帖子 */}
+      {myPosts.length > 0 && (
+        <div className="bg-slate-800/40 rounded-lg p-3">
+          <div className="text-[11px] text-slate-500 mb-2">{tx(lang, 'Your community trail', '资讯足迹')}</div>
+          <div className="space-y-2">
+            {myPosts.map((p) => (
+              <div key={p.id} className="text-[11px] leading-relaxed">
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                  <span>{p.post_type === 'thesis' ? '💡' : '⚠️'}</span>
+                  <span>{p.post_type === 'thesis' ? tx(lang, 'Buy logic', '买入逻辑') : tx(lang, 'Lesson', '避坑经验')}</span>
+                  <span>·</span>
+                  <span>{relativeTime(p.created_at, lang)}</span>
+                </div>
+                <p className="text-slate-400 mt-0.5">
+                  {p.content.length > 80 ? `${p.content.slice(0, 80)}…` : p.content}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 律动足迹：近 30 天状态分布 */}
+      {trail && (
+        <div className="bg-slate-800/40 rounded-lg p-3">
+          <div className="text-[11px] text-slate-500 mb-2">
+            {tx(lang, `Rhythm trail (last ${trail.total} days)`, `律动足迹（近 ${trail.total} 天）`)}
+          </div>
+          <div className="flex h-2 rounded-full overflow-hidden bg-slate-700/40">
+            {trail.buckets.map((b) =>
+              b.n > 0 ? (
+                <div key={b.key} className={b.cls} style={{ width: `${(b.n / trail.total) * 100}%` }} />
+              ) : null,
+            )}
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-[10px] text-slate-500">
+            {trail.buckets.map((b) => (
+              <span key={b.key}>
+                <span className={`inline-block w-2 h-2 rounded-full mr-1 ${b.cls}`} />
+                {b.label} {b.n}{tx(lang, 'd', '天')}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 持仓历史：这只的操作记忆 */}
       <div className="bg-slate-800/40 rounded-lg p-3">
         <div className="text-[11px] text-slate-500 mb-2">{tx(lang, 'Holding history', '持仓历史')}</div>
         {history.length > 0 ? (
           <div className="space-y-1.5">
             {history.map((o) => (
-              <div key={o.id} className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-500">{o.date}</span>
-                <span
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                    o.action === 'buy' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'
-                  }`}
-                >
-                  {actionLabel(o.action, lang)}
-                  {o.qty != null ? ` ${o.qty}${tx(lang, ' sh', '股')}` : ''}
-                </span>
-                <span className="text-slate-300">
-                  {o.price > 0 ? `@ ${fmtMoney(position.symbol, o.price)}` : ''}
-                </span>
+              <div key={o.id} className="text-[11px] space-y-1 py-1 border-b border-slate-800/50 last:border-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">
+                    {o.date}
+                    {o.source === 'community' && (
+                      <span className="ml-1.5 px-1 py-px rounded bg-violet-500/15 text-violet-300/80 text-[9px]">
+                        {tx(lang, 'from post', '来自分享')}
+                      </span>
+                    )}
+                  </span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                      o.action === 'buy' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'
+                    }`}
+                  >
+                    {actionLabel(o.action, lang)}
+                    {o.qty != null ? ` ${o.qty}${tx(lang, ' sh', '股')}` : ''}
+                  </span>
+                  <span className="text-slate-300">
+                    {o.price > 0 ? `@ ${fmtMoney(position.symbol, o.price)}` : ''}
+                  </span>
+                </div>
+                {(o.thesis || o.emotion) && (
+                  <div className="text-[10px] text-slate-500 leading-relaxed">
+                    {o.emotion && (
+                      <span className="mr-1.5 px-1.5 py-px rounded bg-violet-500/15 text-violet-300/90">
+                        {o.emotion}
+                      </span>
+                    )}
+                    {o.thesis}
+                  </div>
+                )}
               </div>
             ))}
           </div>

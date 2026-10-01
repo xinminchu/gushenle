@@ -2,7 +2,7 @@
 // 用户股票操作记录：语音/一键记录 -> localStorage -> 自动复盘（卖飞/买高）
 
 export type OpAction = 'buy' | 'sell';
-export type OpSource = 'voice' | 'one-tap' | 'manual';
+export type OpSource = 'voice' | 'one-tap' | 'manual' | 'community';
 
 export interface OperationRecord {
   id: string;

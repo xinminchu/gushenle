@@ -23,9 +23,26 @@ import { lastSyncAt, markSynced, SYNC_DUP_WINDOW_MS } from '@/lib/positions';
 import { loadWatchlist } from '@/lib/watchlist';
 import { findSimilarRecord, findDuplicateGroups, type SimilarHit } from '@/lib/memoryParse';
 import PortraitPanel from '@/components/memory/PortraitPanel';
+import SymbolReview from '@/components/memory/SymbolReview';
 import SpeakButton from '@/components/SpeakButton';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
+import { useNickname } from '@/hooks/useNickname';
 import { tx } from '@/lib/hant';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { createPost, fetchPosts, splitSymbols, type FamilyPost } from '@/lib/family';
+
+/** 已分享到资讯圈的操作 id（防重复分享，localStorage） */
+const SHARED_OPS_KEY = 'gushenle:shared_ops:v1';
+function loadSharedOpIds(): Set<string> {
+  try {
+    const raw = typeof window !== 'undefined' ? window.localStorage.getItem(SHARED_OPS_KEY) : null;
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
 
 interface Review { r5: number | null; r20: number | null }
 
@@ -91,6 +108,13 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
   // 防重复：记一笔确认前的相似提醒；查重复的扫描结果
   const [dupWarning, setDupWarning] = useState<SimilarHit | null>(null);
   const [auditGroups, setAuditGroups] = useState<OperationRecord[][] | null>(null);
+  // 资讯联动：登录 + 自己的帖子（复盘区用）
+  const { user } = useAuth();
+  const nickname = useNickname(user?.email);
+  const [myPosts, setMyPosts] = useState<FamilyPost[]>([]);
+  // 分享到资讯圈：已分享的操作 id（防重复）
+  const [sharedOpIds, setSharedOpIds] = useState<Set<string>>(() => loadSharedOpIds());
+  const [sharingId, setSharingId] = useState<string | null>(null);
 
   const recogRef = useRef<any>(null);
   const speechTextRef = useRef('');
@@ -112,6 +136,25 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
   useEffect(() => {
     setOps(loadOperations());
   }, []);
+
+  // 自己的资讯帖子：登录后拉取，供复盘区按标的归类
+  useEffect(() => {
+    if (!user || !isSupabaseConfigured()) {
+      setMyPosts([]);
+      return;
+    }
+    let cancelled = false;
+    fetchPosts(user.id)
+      .then((all) => {
+        if (!cancelled) setMyPosts(all.filter((p) => p.user_id === user.id));
+      })
+      .catch(() => {
+        if (!cancelled) setMyPosts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   /**
    * 切后台/锁屏/关页面：自动停语音、释放麦克风。
@@ -594,6 +637,49 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
     }
   };
 
+  // 分享到资讯圈：只带操作和逻辑，情绪/成本不公开
+  const handleShare = async (op: OperationRecord) => {
+    if (!isSupabaseConfigured()) {
+      setNotice({ type: 'error', text: tx(lang, 'Community is not available', '资讯功能暂不可用') });
+      return;
+    }
+    if (!user) {
+      setNotice({ type: 'info', text: tx(lang, 'Log in from the Community tab first, then share', '先去资讯页登录，回来就能分享给家人了') });
+      return;
+    }
+    if (sharedOpIds.has(op.id)) return;
+    setSharingId(op.id);
+    try {
+      const tradeLine = `${actName(op.action)} ${op.symbol}${op.qty ? ` ${op.qty}${tx(lang, ' sh', '股')}` : ''} @ $${op.price.toFixed(2)}`;
+      await createPost({
+        user_id: user.id,
+        nickname,
+        post_type: op.action === 'buy' ? 'thesis' : 'lesson',
+        symbol: op.symbol,
+        content: op.thesis ? `${tradeLine}\n${op.thesis}` : tradeLine,
+      });
+      const next = new Set(sharedOpIds);
+      next.add(op.id);
+      setSharedOpIds(next);
+      try {
+        window.localStorage.setItem(SHARED_OPS_KEY, JSON.stringify([...next]));
+      } catch {}
+      // 刷新自己的帖子，复盘区同步
+      fetchPosts(user.id)
+        .then((all) => setMyPosts(all.filter((p) => p.user_id === user.id)))
+        .catch(() => {});
+      setNotice({
+        type: 'info',
+        text: tx(lang, 'Shared to the community ✓ (only the trade and your logic — emotions stay private)', '已分享到资讯圈 ✓（只分享操作和逻辑，情绪不会公开）'),
+      });
+    } catch (e) {
+      console.error(e);
+      setNotice({ type: 'error', text: tx(lang, 'Share failed — try again later', '分享失败，稍后再试') });
+    } finally {
+      setSharingId(null);
+    }
+  };
+
   // 汇总：卖飞/卖对/买高/买对（用 20 天，没有就用 5 天）
   const summary = { missSell: 0, goodSell: 0, highBuy: 0, goodBuy: 0 };
   ops.forEach((op) => {
@@ -1051,6 +1137,9 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
         </div>
       )}
 
+      {/* 按标的复盘：操作记录 + 我的资讯分享，一只一只看 */}
+      <SymbolReview ops={ops} reviews={reviews} myPosts={myPosts} lang={lang} loggedIn={!!user} />
+
       {/* 操作记录列表 */}
       <div className="space-y-2">
         <div className="text-sm font-semibold text-slate-200">{tx(lang, `Trade log (${ops.length})`, `操作记录（${ops.length}）`)}</div>
@@ -1108,8 +1197,8 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
                   <span className="text-slate-600">{tx(lang, `(5-day ${rv.r5 >= 0 ? '+' : ''}${rv.r5.toFixed(1)}%)`, `（5天 ${rv.r5 >= 0 ? '+' : ''}${rv.r5.toFixed(1)}%）`)}</span>
                 )}
               </div>
-              {/* 同步到持仓：记忆是流水，持仓是余额 */}
-              <div className="pt-1">
+              {/* 同步到持仓：记忆是流水，持仓是余额；分享到资讯圈：只带操作和逻辑 */}
+              <div className="pt-1 flex items-center gap-2 flex-wrap">
                 {syncingId === op.id ? (
                   <div className="flex gap-2 items-center">
                     <input
@@ -1153,6 +1242,17 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
                     className="text-[11px] text-blue-400/90 hover:text-blue-300 border border-blue-500/30 hover:border-blue-500/50 rounded-lg px-2.5 py-1 transition-colors"
                   >
                     {tx(lang, 'Sync to holdings', '同步到持仓')}
+                  </button>
+                )}
+                {sharedOpIds.has(op.id) ? (
+                  <span className="text-[11px] text-emerald-400/70">✓ {tx(lang, 'Shared', '已分享')}</span>
+                ) : (
+                  <button
+                    onClick={() => handleShare(op)}
+                    disabled={sharingId === op.id}
+                    className="text-[11px] text-violet-400/90 hover:text-violet-300 border border-violet-500/30 hover:border-violet-500/50 rounded-lg px-2.5 py-1 transition-colors disabled:opacity-50"
+                  >
+                    {sharingId === op.id ? tx(lang, 'Sharing…', '分享中…') : tx(lang, 'Share to community', '分享到资讯圈')}
                   </button>
                 )}
               </div>
