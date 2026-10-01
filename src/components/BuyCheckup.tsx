@@ -8,6 +8,7 @@ import { CheckCircle2, AlertTriangle, XCircle, Minus, X } from 'lucide-react';
 import type { RhythmPoint, StatusKey } from '@/lib/rhythm';
 import { statusLabel } from '@/lib/rhythm';
 import { loadPositions } from '@/lib/positions';
+import { loadAccount } from '@/lib/account';
 import { loadOperations } from '@/lib/operations';
 import { getRhythm } from '@/lib/market';
 import { actualHighLow } from '@/lib/brief';
@@ -226,15 +227,23 @@ export default function BuyCheckup({
     const mine = positions.find((p) => p.symbol.toUpperCase() === symbol.toUpperCase());
     const ops = loadOperations().filter((o) => (o.symbol || '').toUpperCase() === symbol.toUpperCase());
     if (mine) {
+      const acct = loadAccount();
+      const capital = acct && acct.capital > 0 ? acct.capital : 0;
       const total = positions.reduce((a, p) => a + p.shares * p.avgCost, 0);
-      const w = total > 0 ? (mine.shares * mine.avgCost) / total : 0;
+      // 设了账户总资金：仓位 = 市值/总资金；没设：回退到成本/持仓总成本
+      const w = capital > 0
+        ? (price * mine.shares) / capital
+        : total > 0 ? (mine.shares * mine.avgCost) / total : 0;
       const pct = (w * 100).toFixed(0);
       const pnl = (price - mine.avgCost) * mine.shares;
       const pnlPct = mine.avgCost > 0 ? ((price - mine.avgCost) / mine.avgCost) * 100 : 0;
       const sign = pnl >= 0 ? '+' : '-';
       const pnlStr = tx(lang, `Floating P/L ${sign}${fmtMoney(symbol, Math.abs(pnl))} (${sign}${Math.abs(pnlPct).toFixed(1)}%)`, `浮动盈亏 ${sign}${fmtMoney(symbol, Math.abs(pnl))}（${sign}${Math.abs(pnlPct).toFixed(1)}%）`);
-      if (positions.length <= 1) {
-        // 组合里只有这一只：100% 是天然的，不算"重仓警告"，如实说明集中度即可
+      const basis = capital > 0
+        ? tx(lang, ` (of $${capital.toLocaleString('en-US')} capital)`, `（按总资金 $${capital.toLocaleString('en-US')}）`)
+        : tx(lang, ' (by cost)', '（按成本）');
+      if (capital === 0 && positions.length <= 1) {
+        // 没设总资金 + 组合里只有这一只：100% 是天然的，不算"重仓警告"，如实说明集中度即可
         checks.push({
           icon: 'na',
           title: tx(lang, 'Sole holding', '唯一持仓'),
@@ -244,13 +253,13 @@ export default function BuyCheckup({
         checks.push({
           icon: 'warn',
           title: tx(lang, 'Position already heavy', '仓位已重'),
-          detail: tx(lang, `This one is already ${pct}% of your book (by cost) — adding more is heavy; ${pnlStr}`, `这只已占 ${pct}% 仓位（按成本），再加就重了；${pnlStr}`),
+          detail: tx(lang, `This one is already ${pct}% of your book${basis} — adding more is heavy; ${pnlStr}`, `这只已占 ${pct}% 仓位${basis}，再加就重了；${pnlStr}`),
         });
       } else {
         checks.push({
           icon: 'ok',
           title: tx(lang, 'Position not heavy', '仓位不重'),
-          detail: tx(lang, `Holding, ${pct}% of book (by cost); ${pnlStr}`, `已持有，占 ${pct}% 仓位（按成本）；${pnlStr}`),
+          detail: tx(lang, `Holding, ${pct}% of book${basis}; ${pnlStr}`, `已持有，占 ${pct}% 仓位${basis}；${pnlStr}`),
         });
       }
     } else if (ops.length > 0) {

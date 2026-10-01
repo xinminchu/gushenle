@@ -7,6 +7,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { tx } from '@/lib/hant';
 import type { Lang } from '@/lib/i18n';
 import { loadPositions, savePositions, holdingDays, sectorOf, type Position } from '@/lib/positions';
+import { loadAccount, saveAccount, todayStr, type AccountInfo } from '@/lib/account';
 import { loadFocus, saveFocus, weekStartStr, FOCUS_MAX, concentrationAdvice, type FocusState } from '@/lib/focus';
 import { typicalBuyAmount } from '@/lib/portrait';
 import { loadOperations } from '@/lib/operations';
@@ -64,6 +65,11 @@ export default function PortfolioTab({
   const { lang } = useLanguage();
   const { items: watchlist, nameOf, addItem } = useWatchlist();
   const [positions, setPositions] = useState<Position[]>([]);
+  const [account, setAccount] = useState<AccountInfo | null>(() => loadAccount());
+  const [showAccount, setShowAccount] = useState(false);
+  const [acctBrokerage, setAcctBrokerage] = useState('');
+  const [acctCapital, setAcctCapital] = useState('');
+  const [acctError, setAcctError] = useState('');
   const [quotes, setQuotes] = useState<Record<string, RhythmResponse | null>>({});
   const [refreshing, setRefreshing] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -372,6 +378,10 @@ export default function PortfolioTab({
   const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
   const totalDayPnlPct = totalValue - totalDayPnl > 0 ? (totalDayPnl / (totalValue - totalDayPnl)) * 100 : 0;
 
+  // 仓位分母：设了账户总资金就用它（市值/总资金），没设回退到持仓总市值
+  const weightDenom = account && account.capital > 0 ? account.capital : totalValue;
+  const cashValue = account ? account.capital - totalValue : null;
+
   // 板块分布（按市值）
   const sectorValue: Record<string, number> = {};
   const sectorSymbols: Record<string, string[]> = {};
@@ -386,7 +396,7 @@ export default function PortfolioTab({
     .map(([s, v]) => ({
       sector: s,
       value: v,
-      pct: totalValue > 0 ? (v / totalValue) * 100 : 0,
+      pct: weightDenom > 0 ? (v / weightDenom) * 100 : 0,
       symbols: sectorSymbols[s] ?? [],
     }))
     .sort((a, b) => b.value - a.value);
@@ -395,7 +405,7 @@ export default function PortfolioTab({
   const maxPos = positions
     .map((p) => ({ p, v: quotes[p.symbol] ? p.shares * (quotes[p.symbol] as RhythmResponse).price : 0 }))
     .sort((a, b) => b.v - a.v)[0];
-  const maxPosPct = maxPos && totalValue > 0 ? (maxPos.v / totalValue) * 100 : 0;
+  const maxPosPct = maxPos && weightDenom > 0 ? (maxPos.v / weightDenom) * 100 : 0;
   const holdDaysList = positions
     .map((p) => holdingDays(p.since))
     .filter((d): d is number => d != null);
@@ -437,6 +447,30 @@ export default function PortfolioTab({
     setShowAdd(false);
   };
 
+  // 账户编辑：券商 + 总资金；追加资金直接改大这个数就行
+  const openAccountEditor = () => {
+    setAcctBrokerage(account?.brokerage ?? '');
+    setAcctCapital(account ? String(account.capital) : '');
+    setAcctError('');
+    setShowAccount(true);
+  };
+  const saveAccountEditor = () => {
+    const b = acctBrokerage.trim();
+    const c = Number(String(acctCapital).replace(/,/g, ''));
+    if (!b) {
+      setAcctError(tx(lang, 'Please enter your brokerage', '请填写券商'));
+      return;
+    }
+    if (!(c > 0)) {
+      setAcctError(tx(lang, 'Capital must be above 0', '总资金填一个大于 0 的数字'));
+      return;
+    }
+    const info: AccountInfo = { brokerage: b, capital: c, updatedAt: todayStr() };
+    saveAccount(info);
+    setAccount(info);
+    setShowAccount(false);
+  };
+
   return (
     <div className="p-4 space-y-5 pb-24 max-w-md mx-auto">
       <header className="pt-2 flex items-center justify-between">
@@ -453,6 +487,97 @@ export default function PortfolioTab({
           {tx(lang, 'Refresh', '刷新')}
         </button>
       </header>
+
+      {/* 账户条：券商 + 总资金 + 现金 */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          {account ? (
+            <div className="text-xs min-w-0">
+              <span className="text-slate-200 font-semibold">{account.brokerage}</span>
+              <span className="text-slate-500">
+                {' · '}
+                {tx(lang, 'Capital', '总资金')} $
+                {account.capital.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}
+                {cashValue != null && (
+                  <>
+                    {' · '}
+                    {tx(lang, 'Cash', '现金')}{' '}
+                    <span className={cashValue < 0 ? 'text-amber-400' : 'text-slate-300'}>
+                      ${cashValue.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}
+                    </span>
+                  </>
+                )}
+              </span>
+            </div>
+          ) : (
+            <div className="text-xs text-slate-500">
+              {tx(lang, 'Set your brokerage & capital for true position weights', '设置券商和总资金，才能看真实仓位占比')}
+            </div>
+          )}
+          <button
+            onClick={openAccountEditor}
+            className="text-[11px] text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 rounded-lg px-2.5 py-1 shrink-0 transition-colors"
+          >
+            {account ? tx(lang, 'Manage funds', '资金管理') : tx(lang, 'Set up', '设置')}
+          </button>
+        </div>
+        {cashValue != null && cashValue < 0 && (
+          <div className="text-[11px] text-amber-400/90 mt-1.5">
+            {tx(lang, 'Cash shows negative — capital may be under-recorded; top it up in fund management.', '现金算出来是负的，可能是总资金没录全，去资金管理里补一下。')}
+          </div>
+        )}
+      </div>
+
+      {showAccount && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+          <div className="text-sm font-medium text-slate-200">{tx(lang, 'Trading account', '交易账户')}</div>
+          <div>
+            <label className="text-[11px] text-slate-400">{tx(lang, 'Brokerage', '券商')}</label>
+            <input
+              value={acctBrokerage}
+              onChange={(e) => {
+                setAcctBrokerage(e.target.value);
+                setAcctError('');
+              }}
+              placeholder={tx(lang, 'e.g. Charles Schwab', '如 Charles Schwab')}
+              className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="text-[11px] text-slate-400">
+              {tx(lang, 'Total capital $ (edit this number when you add funds)', '总资金 $（以后追加资金，直接改大这个数）')}
+            </label>
+            <input
+              value={acctCapital}
+              onChange={(e) => {
+                setAcctCapital(e.target.value);
+                setAcctError('');
+              }}
+              inputMode="decimal"
+              placeholder={tx(lang, 'e.g. 5000', '如 5000')}
+              className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          {acctError && <div className="text-[11px] text-rose-400">{acctError}</div>}
+          <div className="flex gap-2">
+            <button
+              onClick={saveAccountEditor}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 py-2 rounded-lg font-medium"
+            >
+              {tx(lang, 'Save', '保存')}
+            </button>
+            <button
+              onClick={() => setShowAccount(false)}
+              className="text-slate-500 hover:text-slate-300 text-xs px-3 py-2"
+            >
+              {tx(lang, 'Cancel', '取消')}
+            </button>
+          </div>
+          <div className="text-[10px] text-slate-600">
+            {tx(lang, 'Stored only on this phone, never uploaded.', '只在你手机里，不上传。')}
+          </div>
+        </div>
+      )}
 
       {/* 汇总卡 */}
       {positions.length > 0 && (
@@ -493,7 +618,11 @@ export default function PortfolioTab({
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold text-slate-200">{tx(lang, 'By sector', '板块分布')}</div>
-            <div className="text-[10px] text-slate-600">{tx(lang, 'Left: sector · right: % of value', '左：板块 · 右：市值占比')}</div>
+            <div className="text-[10px] text-slate-600">
+              {account
+                ? tx(lang, 'Left: sector · right: % of account capital', '左：板块 · 右：占总资金')
+                : tx(lang, 'Left: sector · right: % of value', '左：板块 · 右：市值占比')}
+            </div>
           </div>
           {sectorRows.map((r) => (
             <div key={r.sector} className="text-xs">
@@ -512,6 +641,22 @@ export default function PortfolioTab({
               </div>
             </div>
           ))}
+          {cashValue != null && weightDenom > 0 && (
+            <div className="text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 w-16 shrink-0">{tx(lang, 'Cash', '现金')}</span>
+                <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-emerald-500/60"
+                    style={{ width: `${Math.min(100, Math.max(0, (cashValue / weightDenom) * 100))}%` }}
+                  />
+                </div>
+                <span className="text-slate-300 w-12 text-right">
+                  {((cashValue / weightDenom) * 100).toFixed(0)}%
+                </span>
+              </div>
+            </div>
+          )}
           <div className="pt-1 text-[11px] text-slate-500 leading-relaxed">
             {maxPos && maxPosPct > 0 && (
               <span>

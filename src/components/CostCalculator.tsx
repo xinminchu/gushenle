@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Calculator, ChevronDown } from 'lucide-react';
 import { tx } from '@/lib/hant';
 import { useLanguage } from '@/context/LanguageContext';
+import { loadAccount } from '@/lib/account';
 
 /**
  * 真实成本试算器：美股一来一回到底花多少钱。
@@ -59,7 +60,18 @@ export default function CostCalculator() {
   const [advanced, setAdvanced] = useState(false);
   const [brokerId, setBrokerId] = useState<string>(() => {
     try {
-      return localStorage.getItem(BROKER_KEY) || 'futu';
+      const saved = localStorage.getItem(BROKER_KEY);
+      if (saved) return saved;
+      // 没手动选过：按交易账户里记的券商默认选中
+      const acct = loadAccount();
+      if (acct) {
+        const b = acct.brokerage.toLowerCase();
+        const hit = BROKERS.find(
+          (x) => x.id !== 'custom' && (b.includes(x.id) || x.name.toLowerCase().includes(b) || x.nameEn.toLowerCase().includes(b)),
+        );
+        if (hit) return hit.id;
+      }
+      return 'futu';
     } catch {
       return 'futu';
     }
