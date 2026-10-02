@@ -1,4 +1,5 @@
 import { markUserDataDirty } from './userSync';
+import { saveOperation, type OperationRecord } from './operations';
 // 持仓记录：用户手动录入（代码 / 股数 / 成本价 / 建仓日期），持久化在 localStorage。
 // 行情（现价 / 涨跌）走全 app 共享的 market 缓存，与今日页同源。
 // 操作记忆（买入/卖出）可同步到这里：买入加权平均成本，卖出扣减股数。
@@ -173,5 +174,37 @@ export function applyOperationToPositions(input: SyncInput): { ok: boolean; msg:
   positions[idx] = { ...p, shares: left };
   savePositions(positions);
   return { ok: true, msg: `${sym} 减仓 ${input.qty} 股，还剩 ${left} 股` };
+}
+
+/* ---------------- 记一笔 -> 自动同步持仓 ---------------- */
+
+export interface SaveAndSyncResult {
+  rec: OperationRecord;
+  /** null = 没填股数，没做自动同步（界面保留手动"同步到持仓"按钮） */
+  syncMsg: string | null;
+  syncOk: boolean;
+}
+
+/**
+ * 存一条操作记录，并尝试自动同步到持仓（省掉手动点"同步到持仓"）。
+ * - 没填股数：只存记录，不自动同步（syncMsg=null），手动按钮仍在
+ * - 同步失败（如卖出超出持仓）：记录已存，返回错误信息，手动按钮可补救
+ * - 同步成功：记 markSynced，界面显示"✓ 已同步"，防重复
+ */
+export function saveOperationAndSync(
+  input: Omit<OperationRecord, 'id' | 'createdAt'>,
+): SaveAndSyncResult {
+  const rec = saveOperation(input);
+  const qty = rec.qty && rec.qty > 0 ? rec.qty : undefined;
+  if (!qty) return { rec, syncMsg: null, syncOk: false };
+  const r = applyOperationToPositions({
+    symbol: rec.symbol,
+    action: rec.action,
+    price: rec.price,
+    qty,
+    date: rec.date,
+  });
+  if (r.ok) markSynced(rec.id);
+  return { rec, syncMsg: r.msg, syncOk: r.ok };
 }
 

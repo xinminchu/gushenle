@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import {
   loadOperations,
-  saveOperation,
   deleteOperation,
   updateOperation,
   normalizeAction,
@@ -19,7 +18,7 @@ import {
 } from '@/lib/operations';
 import { applyOperationToPositions } from '@/lib/positions';
 import { loadPositions } from '@/lib/positions';
-import { lastSyncAt, markSynced, SYNC_DUP_WINDOW_MS } from '@/lib/positions';
+import { lastSyncAt, markSynced, SYNC_DUP_WINDOW_MS, saveOperationAndSync } from '@/lib/positions';
 import { loadWatchlist } from '@/lib/watchlist';
 import { findSimilarRecord, findDuplicateGroups, type SimilarHit } from '@/lib/memoryParse';
 import PortraitPanel from '@/components/memory/PortraitPanel';
@@ -464,7 +463,8 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       return;
     }
     const qty = qtyEdit ? parseInt(qtyEdit, 10) : undefined;
-    const rec = saveOperation({
+    // 存记录 + 自动同步到持仓（有股数才同步；没填股数/同步失败时手动按钮仍可补救）
+    const { rec, syncMsg, syncOk } = saveOperationAndSync({
       symbol,
       action: actionEdit,
       price,
@@ -477,6 +477,19 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
     setOps(loadOperations());
     setParsedResult(null);
     setInputText('');
+    if (syncMsg) {
+      setNotice({
+        type: syncOk ? 'info' : 'error',
+        text: syncOk
+          ? tx(lang, `Logged and auto-synced to holdings: ${syncMsg}`, `已记入，持仓已自动同步：${syncMsg}`)
+          : syncMsg,
+      });
+    } else {
+      setNotice({
+        type: 'info',
+        text: tx(lang, 'Logged (no share count — tap "Sync to holdings" on the entry to update positions)', '已记入记忆（没填股数）；如需更新持仓，点这条记录下的「同步到持仓」'),
+      });
+    }
     // 新记录立刻拉复盘
     fetch(`/api/forward-return?symbol=${encodeURIComponent(rec.symbol)}&date=${rec.date}`)
       .then((r) => r.json())

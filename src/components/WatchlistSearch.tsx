@@ -15,6 +15,8 @@ const CURATED_CODES = new Set(STOCK_LIST.map((s) => s.code));
 /**
  * 自选区顶部搜索条：输代码/名称/拼音，匹配上自动切下面走势；
  * 右边 ＋ 一键加入自选。找不到去「自选列表」弹窗的发现股票里找。
+ * 自动采用（600ms 停顿/回车/＋键）只认强匹配：精确代码、代码纠正、子串命中；
+ * 错一字的模糊命中只出现在下拉候选里，必须手动点选，避免"bull变bill"式误切。
  */
 export default function WatchlistSearch({
   symbol,
@@ -49,17 +51,23 @@ export default function WatchlistSearch({
     onSelect(code, { scroll });
   };
 
-  // 精选名单候选（最多 6 个）
-  const candidates = useMemo(() => {
+  // 精选名单候选（最多 6 个），附带命中强度：
+  // 2=精确/子串命中（可自动采用），1=错一字模糊（只展示，需手动点选）
+  const scored = useMemo(() => {
     const t = q.trim();
     if (!t) return [];
     // 按命中强度排序：精确/子串命中在前，错别字模糊命中在后
     return STOCK_LIST.map((st) => ({ st, score: matchStrength(st, t) }))
       .filter((x) => x.score > 0)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 6)
-      .map((x) => x.st);
+      .slice(0, 6);
   }, [q]);
+  const candidates = useMemo(() => scored.map((x) => x.st), [scored]);
+  /** 强匹配的首个代码：回车/＋键只自动采用它，模糊匹配不自动切 */
+  const strongFirst = useMemo(
+    () => scored.find((x) => x.score >= 2)?.st.code ?? null,
+    [scored],
+  );
 
   // 精确匹配的代码（纠正打错如 TESLA->TSLA）
   const exactCode = useMemo(() => {
@@ -97,7 +105,7 @@ export default function WatchlistSearch({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exactCode, imeComposing]);
 
-  const bestForAdd = exactCode ?? candidates[0]?.code ?? uniCandidates[0]?.code ?? null;
+  const bestForAdd = exactCode ?? strongFirst ?? uniCandidates[0]?.code ?? null;
   const bestInList = bestForAdd ? inList.has(bestForAdd) : false;
 
   const handleAdd = () => {
@@ -131,7 +139,7 @@ export default function WatchlistSearch({
             onBlur={() => setTimeout(() => setOpen(false), 150)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                const first = exactCode ?? candidates[0]?.code ?? uniCandidates[0]?.code;
+                const first = exactCode ?? strongFirst ?? uniCandidates[0]?.code;
                 if (first) pick(first, true);
               }
             }}

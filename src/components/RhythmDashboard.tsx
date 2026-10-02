@@ -17,8 +17,8 @@ import { useWatchlist } from './WatchlistContext';
 import CompanyIntro from './CompanyIntro';
 import { findStock, displayStockName } from '@/lib/stockList';
 import { fmtMoney } from '@/lib/currency';
-import { saveOperation, todayStr, type OpAction } from '@/lib/operations';
-import { loadPositions } from '@/lib/positions';
+import { todayStr, type OpAction } from '@/lib/operations';
+import { loadPositions, saveOperationAndSync } from '@/lib/positions';
 import { useColorScheme, schemeLabel, upText, downText } from '@/lib/colorScheme';
 import { useLanguage } from '@/context/LanguageContext';
 import WatchlistSearch from './WatchlistSearch';
@@ -207,6 +207,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const [opPrice, setOpPrice] = useState('');
   const [opQty, setOpQty] = useState('');
   const [opSaved, setOpSaved] = useState(false);
+  const [opSyncMsg, setOpSyncMsg] = useState<string | null>(null);
   // 区间横滑条的滚动位置：切区间/切股票重渲染时保持，不回到最左
   const rangeBarRef = useRef<HTMLDivElement | null>(null);
   const rangeScrollPos = useRef(0);
@@ -1002,6 +1003,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                     setOpPrice(data.price ? fmtPrice(data.price) : '');
                     setOpQty('');
                     setOpSaved(false);
+                    setOpSyncMsg(null);
                     setShowOpModal(true);
                   }}
                   className="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 font-medium transition-colors"
@@ -1178,8 +1180,9 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               {tx(lang, `Advice then: ${judgment.status} (${judgment.score} pts) · ${displayAdvice}`, `当时建议：${judgment.status}（${judgment.score}分）· ${displayAdvice}`)}
             </div>
             {opSaved ? (
-              <div className="text-center py-4 text-sm text-emerald-400 font-medium">
-                {tx(lang, '✓ Logged — see the review in Memory', '✓ 已记入操作记忆，去记忆页看复盘')}
+              <div className="text-center py-4 text-sm text-emerald-400 font-medium space-y-1.5">
+                <div>{tx(lang, '✓ Logged — see the review in Memory', '✓ 已记入操作记忆，去记忆页看复盘')}</div>
+                {opSyncMsg && <div className="text-xs text-slate-400 font-normal">{opSyncMsg}</div>}
               </div>
             ) : (
               <>
@@ -1238,7 +1241,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                         return;
                       }
                       const qty = opQty ? parseInt(opQty, 10) : undefined;
-                      saveOperation({
+                      const { syncMsg, syncOk } = saveOperationAndSync({
                         symbol,
                         name: nameOf(symbol) || undefined,
                         action: opAction,
@@ -1249,8 +1252,15 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
                         adviceSnapshot: `${judgment.status}：${displayAdvice}`,
                         adviceScore: judgment.score,
                       });
+                      setOpSyncMsg(
+                        syncMsg
+                          ? syncOk
+                            ? tx(lang, `Auto-synced to holdings: ${syncMsg}`, `持仓已自动同步：${syncMsg}`)
+                            : syncMsg
+                          : tx(lang, 'Logged (no share count — sync it from Memory later)', '已记入（没填股数，可稍后去记忆页同步到持仓）'),
+                      );
                       setOpSaved(true);
-                      setTimeout(() => setShowOpModal(false), 1400);
+                      setTimeout(() => setShowOpModal(false), 2200);
                     }}
                     className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-medium"
                   >
