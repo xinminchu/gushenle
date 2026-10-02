@@ -86,6 +86,17 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
     if (prefillSymbol) setInputText((t) => (t ? t : `买入${prefillSymbol} `));
   }, [prefillSymbol]);
   const [isRecording, setIsRecording] = useState(false);
+  // 首次语音引导：把 iOS 系统麦克风弹窗翻译成人话，只出现一次，点"知道了"后不再打扰
+  const [micHintVisible, setMicHintVisible] = useState(false);
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem('gushenle:mic_hint_v1')) setMicHintVisible(true);
+    } catch {}
+  }, []);
+  const dismissMicHint = () => {
+    try { localStorage.setItem('gushenle:mic_hint_v1', '1'); } catch {}
+    setMicHintVisible(false);
+  };
   const [parsedResult, setParsedResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [ops, setOps] = useState<OperationRecord[]>([]);
@@ -462,7 +473,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       recogRef.current = null;
       setIsRecording(false);
       if (err === 'not-allowed' || err === 'service-not-allowed') {
-        setNotice({ type: 'error', text: tx(lang, 'Microphone/speech recognition is blocked — allow it in iPhone Settings → Safari, then tap again', '麦克风或语音识别没允许：去 iPhone 设置 → Safari 里打开，再点一次试试') });
+        setNotice({ type: 'error', text: tx(lang, 'Microphone not allowed: tap Edit on the top banner → Microphone → Allow, then try again', '麦克风没允许：点页面上方横幅的 Edit → 麦克风 → 允许，再点一次试试') });
       } else if (err === 'network') {
         setNotice({ type: 'error', text: tx(lang, 'Speech recognition needs network — check your connection', '语音识别需要联网，检查一下网络再试') });
       } else if (err === 'audio-capture') {
@@ -795,6 +806,23 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
         </div>
 
         <div className="text-center space-y-2">
+          {/* 首次语音引导：iOS 系统弹窗翻译成人话，一次性，点"知道了"后不再出现 */}
+          {micHintVisible && speechSupported && (
+            <div className="bg-sky-950/60 border border-sky-500/30 rounded-xl p-3 text-left">
+              <p className="text-[11px] text-slate-200 leading-relaxed">
+                📱 {tx(lang, 'Tapping the mic will bring up an iPhone system popup — tap "Allow" and you can talk.', '点麦克风后，iPhone 会弹个系统框问你要不要用麦克风，点「允许」就能说话记账啦。')}
+              </p>
+              <p className="text-[11px] text-slate-400 leading-relaxed mt-1">
+                {tx(lang, 'If it asks every time: tap Edit on the top banner → Microphone → Allow. One change and it never asks again.', '如果每次都弹：点页面上方横幅的 Edit → 麦克风 → 允许，一次搞定，以后不再问。')}
+              </p>
+              <button
+                onClick={dismissMicHint}
+                className="mt-2 text-[11px] text-sky-400 font-medium"
+              >
+                {tx(lang, 'Got it', '知道了')}
+              </button>
+            </div>
+          )}
           <button
             onClick={handleToggleRecord}
             className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto transition-all ${
