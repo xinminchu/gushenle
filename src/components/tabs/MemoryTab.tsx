@@ -29,7 +29,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useNickname } from '@/hooks/useNickname';
 import { tx } from '@/lib/hant';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { createPost, fetchPosts, splitSymbols, type FamilyPost } from '@/lib/family';
+import { createPost, fetchPosts, splitSymbols, isPostTypeSellBlocked, type FamilyPost } from '@/lib/family';
 
 /** 已分享到资讯圈的操作 id（防重复分享，localStorage） */
 const SHARED_OPS_KEY = 'gushenle:shared_ops:v1';
@@ -751,7 +751,12 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       });
     } catch (e) {
       console.error(e);
-      setNotice({ type: 'error', text: tx(lang, 'Share failed — try again later', '分享失败，稍后再试') });
+      setNotice({
+        type: 'error',
+        text: isPostTypeSellBlocked(e)
+          ? tx(lang, '"Sell logic" is new — run DB migration 036 once from the ⚙️ admin toolbox first', '“卖出逻辑”是新类型：先去顶栏 ⚙️ 站长工具箱跑一下数据库迁移 036，再分享')
+          : tx(lang, 'Share failed — try again later', '分享失败，稍后再试'),
+      });
     } finally {
       setSharingId(null);
     }

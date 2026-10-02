@@ -31,6 +31,7 @@ import {
   getVoterKey,
   relativeTime,
   surveyLabel,
+  isPostTypeSellBlocked,
   type FamilyPost,
   type FamilyReply,
   type SurveyChoice,
@@ -218,7 +219,11 @@ export default function CommunityTab() {
       }
     } catch (e: any) {
       console.error(e);
-      setNotice(tx(lang, 'Post failed — try again later', '发布失败，稍后再试'));
+      setNotice(
+        isPostTypeSellBlocked(e)
+          ? tx(lang, '"Sell logic" is new — run DB migration 036 once from the ⚙️ admin toolbox first', '“卖出逻辑”是新类型：先去顶栏 ⚙️ 站长工具箱跑一下数据库迁移 036，再发')
+          : tx(lang, 'Post failed — try again later', '发布失败，稍后再试'),
+      );
     } finally {
       setPublishing(false);
     }
@@ -321,7 +326,11 @@ export default function CommunityTab() {
       setEditingPostId(null);
     } catch (e) {
       console.error(e);
-      setNotice(tx(lang, 'Edit needs migration 034 — run it from the ⚙️ admin panel first', '编辑要先跑 034 迁移：点顶栏 ⚙️ → 数据库迁移 → 一键执行'));
+      setNotice(
+        isPostTypeSellBlocked(e)
+          ? tx(lang, '"Sell logic" is new — run DB migration 036 once from the ⚙️ admin toolbox first', '“卖出逻辑”是新类型：先去顶栏 ⚙️ 站长工具箱跑一下数据库迁移 036，再改')
+          : tx(lang, 'Edit needs migration 034 — run it from the ⚙️ admin panel first', '编辑要先跑 034 迁移：点顶栏 ⚙️ → 数据库迁移 → 一键执行'),
+      );
     } finally {
       setSavingEdit(false);
     }

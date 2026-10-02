@@ -74,6 +74,17 @@ export async function createReply(input: {
   if (error) throw error;
 }
 
+/**
+ * 036 迁移（post_type 放宽到含 'sell'）还没跑时，发/改"卖出逻辑"会撞 check 约束。
+ * 识别出来，给用户指条明路去站长工具箱跑迁移，而不是报一句"发布失败"。
+ */
+export function isPostTypeSellBlocked(e: any): boolean {
+  if (!e) return false;
+  const code = String(e.code || '');
+  const msg = String(e.message || '');
+  return code === '23514' || (/post_type/i.test(msg) && /check|constraint/i.test(msg));
+}
+
 export async function deleteReply(id: number): Promise<void> {
   const db = needDb();
   const { error } = await db.from('family_post_replies').delete().eq('id', id);
