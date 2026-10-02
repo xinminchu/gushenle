@@ -35,6 +35,15 @@ html, body {
   touch-action: manipulation; /* 提高手机端点击响应速度 */
 }
 
+/* iOS Safari：聚焦字号 <16px 的输入框会自动放大整个页面，且缩不回去；
+   触屏设备上输入框字号统一提到 16px 起步，从根上杜绝聚焦缩放。
+   （viewport 刻意没锁 maximum-scale，保证无障碍缩放不受影响） */
+@media (pointer: coarse) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
 /* 确保底部导航始终置顶可点击 */
 nav {
   -webkit-transform: translateZ(0);

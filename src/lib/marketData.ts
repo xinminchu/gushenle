@@ -379,6 +379,61 @@ export interface LiveQuote {
   marketStatus: string;
 }
 
+/** 展示价的会话来源：实时 / 盘后 / 盘前 / 日线收盘 */
+export type PriceSession = 'live' | 'after-hours' | 'pre-market' | 'close';
+
+const MONTH_NUM: Record<string, string> = {
+  Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
+  Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
+};
+
+/**
+ * 从报价时间串里抠出美东日历日期（YYYY-MM-DD）。
+ * Nasdaq 格式如 "Sep 28, 2026 7:59 PM ET" 或 "Sep 28, 2026"；串里已经是美东时间，直接取日期部分，
+ * 不做时区换算。解析失败返回 null（调用方按"不比日线新"处理）。
+ */
+export function quoteDateISO(time: string): string | null {
+  const m = /([A-Za-z]{3})\s+(\d{1,2}),\s+(\d{4})/.exec(time || '');
+  if (!m) return null;
+  const mon = MONTH_NUM[m[1]];
+  if (!mon) return null;
+  return `${m[3]}-${mon}-${m[2].padStart(2, '0')}`;
+}
+
+/**
+ * 展示价选择（各页面共用，口径一致）：
+ * ① 盘中用实时价；② 盘后用报价接口（夜盘价）；③ 盘前用报价接口（盘前价）；
+ * ④ 收盘后~日线发布今日 bar 之前（约美东 20:00~次日），报价接口已有今日常规收盘价
+ *    （如 SKHY 周一 21:56 ET 时报价 $181.92，日线还停在上周五 $191.56），此时也用报价，
+ *    否则页面会整晚停在上一个交易日的收盘价。
+ * 诊断（judgment）永远走日线收盘序列，不受影响。
+ */
+export function pickDisplayPrice(
+  dailyLastClose: number,
+  dailyLastDate: string,
+  live: LiveQuote | null,
+): { price: number; session: PriceSession } {
+  const quoteOk = !!live && live.price > 0;
+  const afterHours =
+    quoteOk && !live!.marketOpen && live!.marketStatus === 'After-Hours';
+  const preMarket =
+    quoteOk && !live!.marketOpen && live!.marketStatus === 'Pre-Market';
+  const qDate = quoteOk ? quoteDateISO(live!.time) : null;
+  const quoteFresher = !!(qDate && dailyLastDate && qDate > dailyLastDate);
+  const useQuote =
+    quoteOk && (live!.marketOpen || afterHours || preMarket || quoteFresher);
+  const session: PriceSession = !useQuote
+    ? 'close'
+    : live!.marketOpen
+      ? 'live'
+      : afterHours
+        ? 'after-hours'
+        : preMarket
+          ? 'pre-market'
+          : 'close';
+  return { price: useQuote ? live!.price : dailyLastClose, session };
+}
+
 /**
  * Nasdaq 实时报价（盘中用）。
  * 日线接口在盘中拿不到今天的 bar（永远显示昨收），所以开盘期间用这个补实时价。

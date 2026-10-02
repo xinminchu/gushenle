@@ -9,7 +9,7 @@ import {
   type RhythmPoint,
   type RhythmResponse,
 } from '@/lib/rhythm';
-import { getFullSeries, getLiveQuote, type LiveQuote } from '@/lib/marketData';
+import { getFullSeries, getLiveQuote, pickDisplayPrice, type LiveQuote } from '@/lib/marketData';
 import type { Lang } from '@/lib/i18n';
 import { toHantDeep } from '@/lib/hant';
 
@@ -25,24 +25,6 @@ function sliceRange(full: RhythmPoint[], rangeId: string): RhythmPoint[] {
   return full.slice(-def.points);
 }
 
-const MONTH_NUM: Record<string, string> = {
-  Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
-  Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
-};
-
-/**
- * 从报价时间串里抠出美东日历日期（YYYY-MM-DD）。
- * Nasdaq 格式如 "Sep 28, 2026 7:59 PM ET" 或 "Sep 28, 2026"；串里已经是美东时间，直接取日期部分，
- * 不做时区换算。解析失败返回 null（调用方按"不比日线新"处理）。
- */
-function quoteDateISO(time: string): string | null {
-  const m = /([A-Za-z]{3})\s+(\d{1,2}),\s+(\d{4})/.exec(time || '');
-  if (!m) return null;
-  const mon = MONTH_NUM[m[1]];
-  if (!mon) return null;
-  return `${m[3]}-${mon}-${m[2].padStart(2, '0')}`;
-}
-
 function buildResponse(
   symbol: string,
   rangeId: string,
@@ -56,33 +38,15 @@ function buildResponse(
   const lastClose = closes[closes.length - 1];
   const first = closes[0];
 
-  // 价格来源：
-  // ① 盘中用实时价；② 盘后用报价接口（夜盘价）；
-  // ③ 盘前用报价接口（盘前价）；
-  // ④ 收盘后~日线发布今日 bar 之前（约美东 20:00~次日），报价接口已有今日常规收盘价
-  //    （如 SKHY 周一 21:56 ET 时报价 $181.92，日线还停在上周五 $191.56），此时也用报价，
-  //    否则页面会整晚停在上一个交易日的收盘价。
+  // 展示价：盘中/盘后/盘前用实时报价，否则用日线收盘价（见 marketData.pickDisplayPrice）。
   // 诊断（judgment）永远走日线收盘序列，不受影响。
-  const quoteOk = !!live && live.price > 0;
-  const afterHours =
-    quoteOk && !live!.marketOpen && live!.marketStatus === 'After-Hours';
-  const preMarket =
-    quoteOk && !live!.marketOpen && live!.marketStatus === 'Pre-Market';
   const dailyLastDate = full.length > 0 ? full[full.length - 1].date : '';
-  const qDate = quoteOk ? quoteDateISO(live!.time) : null;
-  const quoteFresher = !!(qDate && dailyLastDate && qDate > dailyLastDate);
-  const useQuote =
-    quoteOk && (live!.marketOpen || afterHours || preMarket || quoteFresher);
-  const priceSession: RhythmResponse['priceSession'] = !useQuote
-    ? 'close'
-    : live!.marketOpen
-      ? 'live'
-      : afterHours
-        ? 'after-hours'
-        : preMarket
-          ? 'pre-market'
-          : 'close';
-  const displayPrice = useQuote ? live!.price : lastClose;
+  const { price: displayPrice, session } = pickDisplayPrice(
+    lastClose,
+    dailyLastDate,
+    live,
+  );
+  const priceSession: RhythmResponse['priceSession'] = session;
 
   // 所选区间的分位低点/高点（5%/95% 分位数，抗离群点）
   const sorted = [...closes].sort((a, b) => a - b);
@@ -107,13 +71,13 @@ function buildResponse(
     symbol,
     range: rangeId,
     price: Number(displayPrice.toFixed(2)),
-    priceLive: useQuote,
+    priceLive: priceSession !== 'close',
     priceSession,
-    priceTime: useQuote ? live!.time || null : null,
+    priceTime: priceSession !== 'close' ? live!.time || null : null,
     // 盘中/盘前/收盘后报价：报价接口自带的当日涨跌（相对昨收）；
     // 盘后：相对上一根日线收盘（即今日至今的涨跌，日线尚未发布今日 bar 时它是上周五收盘）。
     // 报价没用上时为 null，前端只显示"收盘价"。
-    dayChangePct: !useQuote
+    dayChangePct: priceSession === 'close'
       ? null
       : priceSession === 'after-hours'
         ? Number((((live!.price - lastClose) / lastClose) * 100).toFixed(2))

@@ -1,5 +1,5 @@
 import { markUserDataDirty } from './userSync';
-import { saveOperation, type OperationRecord } from './operations';
+import { saveOperation, deleteOperation, type OperationRecord } from './operations';
 // 持仓记录：用户手动录入（代码 / 股数 / 成本价 / 建仓日期），持久化在 localStorage。
 // 行情（现价 / 涨跌）走全 app 共享的 market 缓存，与今日页同源。
 // 操作记忆（买入/卖出）可同步到这里：买入加权平均成本，卖出扣减股数。
@@ -183,6 +183,13 @@ export interface SaveAndSyncResult {
   /** null = 没填股数，没做自动同步（界面保留手动"同步到持仓"按钮） */
   syncMsg: string | null;
   syncOk: boolean;
+  /**
+   * 同步前该标的的持仓快照（撤销用）：
+   * - undefined = 没做同步（没填股数），撤销时不用动持仓
+   * - null = 同步前无持仓，撤销时删掉同步建出来的那条
+   * - Position = 恢复这份快照（加权成本精确还原）
+   */
+  prevPosition?: Position | null;
 }
 
 /**
@@ -196,7 +203,11 @@ export function saveOperationAndSync(
 ): SaveAndSyncResult {
   const rec = saveOperation(input);
   const qty = rec.qty && rec.qty > 0 ? rec.qty : undefined;
-  if (!qty) return { rec, syncMsg: null, syncOk: false };
+  if (!qty) return { rec, syncMsg: null, syncOk: false, prevPosition: undefined };
+  // 同步前先给这只的持仓拍快照：撤销时精确恢复（加权成本不会算乱）
+  const sym = rec.symbol.toUpperCase();
+  const prev = loadPositions().find((p) => p.symbol.toUpperCase() === sym);
+  const prevPosition: Position | null = prev ? { ...prev } : null;
   const r = applyOperationToPositions({
     symbol: rec.symbol,
     action: rec.action,
@@ -205,6 +216,27 @@ export function saveOperationAndSync(
     date: rec.date,
   });
   if (r.ok) markSynced(rec.id);
-  return { rec, syncMsg: r.msg, syncOk: r.ok };
+  return { rec, syncMsg: r.msg, syncOk: r.ok, prevPosition };
+}
+
+/**
+ * 撤销一次 saveOperationAndSync：删掉那条操作记录，持仓按快照精确恢复。
+ * 给"语音免确认自动记入"的 8 秒撤销用。
+ */
+export function undoSaveAndSync(res: SaveAndSyncResult): void {
+  deleteOperation(res.rec.id);
+  if (res.prevPosition === undefined) return; // 当时没同步，不动持仓
+  const sym = res.rec.symbol.toUpperCase();
+  const positions = loadPositions();
+  const idx = positions.findIndex((p) => p.symbol.toUpperCase() === sym);
+  if (res.prevPosition === null) {
+    // 同步前无持仓：删掉同步建出来的那条
+    if (idx >= 0) positions.splice(idx, 1);
+  } else if (idx >= 0) {
+    positions[idx] = res.prevPosition;
+  } else {
+    positions.push(res.prevPosition);
+  }
+  savePositions(positions);
 }
 

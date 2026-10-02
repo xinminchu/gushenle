@@ -18,7 +18,7 @@ import {
 } from '@/lib/operations';
 import { applyOperationToPositions } from '@/lib/positions';
 import { loadPositions } from '@/lib/positions';
-import { lastSyncAt, markSynced, SYNC_DUP_WINDOW_MS, saveOperationAndSync } from '@/lib/positions';
+import { lastSyncAt, markSynced, SYNC_DUP_WINDOW_MS, saveOperationAndSync, undoSaveAndSync, type SaveAndSyncResult } from '@/lib/positions';
 import { loadWatchlist } from '@/lib/watchlist';
 import { findSimilarRecord, findDuplicateGroups, type SimilarHit } from '@/lib/memoryParse';
 import PortraitPanel from '@/components/memory/PortraitPanel';
@@ -49,6 +49,8 @@ interface AdviceCandidate {
   symbol: string;
   name: string;
   price: number;
+  /** true=实时/盘后/盘前报价，false/缺失=日线收盘价 */
+  priceLive?: boolean;
   score: number;
   status: string;
   reason: string;
@@ -66,6 +68,7 @@ interface SingleAdvice {
   symbol: string;
   name: string;
   price: number;
+  priceLive?: boolean;
   score: number;
   status: string;
   side: 'buy' | 'sell';
@@ -107,6 +110,12 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
   // 防重复：记一笔确认前的相似提醒；查重复的扫描结果
   const [dupWarning, setDupWarning] = useState<SimilarHit | null>(null);
   const [auditGroups, setAuditGroups] = useState<OperationRecord[][] | null>(null);
+  // 语音免确认自动记入：刚记入的一笔（8 秒内可撤销），持仓快照一起带
+  const [justSaved, setJustSaved] = useState<SaveAndSyncResult | null>(null);
+  const justSavedTimerRef = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (justSavedTimerRef.current) window.clearTimeout(justSavedTimerRef.current);
+  }, []);
   // 资讯联动：登录 + 自己的帖子（复盘区用）
   const { user } = useAuth();
   const nickname = useNickname(user?.email);
@@ -199,7 +208,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
     typeof window !== 'undefined' && 'speechSynthesis' in window;
 
   /** 语音回读：把解析出的一笔念出来，耳朵比眼睛更容易发现数字错了 */
-  const speakTrade = (action: string, symbol: string, qty: string, price: string, date: string) => {
+  const speakTrade = (action: string, symbol: string, qty: string, price: string, date: string, announced = false) => {
     if (!ttsSupported) return;
     try {
       window.speechSynthesis.cancel();
@@ -212,7 +221,8 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       if (qty) parts.push(`${qty}股`);
       if (price) parts.push(`单价${price}`);
       parts.push(dateWord);
-      const u = new SpeechSynthesisUtterance(parts.join('，') + '，对吗？');
+      // announced=true：已经记入，播报确认；否则是记入前回读核对
+      const u = new SpeechSynthesisUtterance(parts.join('，') + (announced ? '，已记入' : '，对吗？'));
       u.lang = 'zh-CN';
       u.rate = 0.95;
       window.speechSynthesis.speak(u);
@@ -233,6 +243,9 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
     setNotice(null);
     setDupWarning(null);
     setAuditGroups(null);
+    // 新的一轮整理：上一笔的"已记入/撤销"条收掉
+    if (justSavedTimerRef.current) window.clearTimeout(justSavedTimerRef.current);
+    setJustSaved(null);
     try {
       const res = await fetch('/api/analyze-memory', {
         method: 'POST',
@@ -242,33 +255,62 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       const json = await res.json();
       if (json.success && json.intent === 'record') {
         const d = json.data;
-        setParsedResult(d);
-        setPriceEdit(d.price != null ? String(d.price) : '');
-        setQtyEdit(d.qty != null ? String(d.qty) : '');
-        setDateEdit(d.opDate || todayStr());
-        setActionEdit(normalizeAction(d.action) ?? 'sell');
-        // 语音来的：一遍回读，数字错了耳朵先发现（iOS 可能拦截自动朗读，确认卡上有"再听一遍"按钮兜底）
-        if (fromVoice) {
-          speakTrade(
-            normalizeAction(d.action) ?? 'sell',
-            String(d.symbol || '').toUpperCase(),
-            d.qty != null ? String(d.qty) : '',
-            d.price != null ? String(d.price) : '',
-            d.opDate || todayStr(),
-          );
-        }
+        const symbol = String(d.symbol || '').toUpperCase();
+        const price = typeof d.price === 'number' ? d.price : null;
+        // 动作必须明确识别出买/卖才允许自动记入；识别不清时走确认卡，绝不默认当卖出自动执行
+        const parsedAction = normalizeAction(d.action);
+        const action = parsedAction ?? 'sell';
+        const opDate = d.opDate || todayStr();
         // 记一笔确认前：15 分钟内有没有疑似同一笔（防语音重说、手滑点两次）
         const similar = findSimilarRecord(
           {
-            symbol: String(d.symbol || '').toUpperCase(),
-            action: normalizeAction(d.action) ?? 'sell',
-            price: typeof d.price === 'number' ? d.price : null,
+            symbol,
+            action,
+            price,
             qty: typeof d.qty === 'number' ? d.qty : null,
-            date: d.opDate || todayStr(),
+            date: opDate,
           },
           ops,
         );
-        setDupWarning(similar);
+        // 语音来的、解析干净（股票+价格都有、无疑似重复）：直接记入并自动同步持仓，
+        // 不再弹确认卡；8 秒内可撤销（记录删除 + 持仓按快照精确恢复），听错了也不怕
+        const cleanVoice = fromVoice && symbol && symbol !== 'UNKNOWN' && price != null && price > 0 && !similar && parsedAction != null;
+        if (cleanVoice) {
+          const res = saveOperationAndSync({
+            symbol,
+            action,
+            price,
+            qty: typeof d.qty === 'number' && d.qty > 0 ? d.qty : undefined,
+            date: /^\d{4}-\d{2}-\d{2}$/.test(opDate) ? opDate : todayStr(),
+            source: 'voice',
+            thesis: d.thesis || undefined,
+            emotion: d.emotion || undefined,
+          });
+          setOps(loadOperations());
+          setInputText('');
+          setJustSaved(res);
+          // 记入后播报一遍，耳朵做最后的核对
+          speakTrade(action, symbol, res.rec.qty != null ? String(res.rec.qty) : '', String(price), opDate, true);
+          if (justSavedTimerRef.current) window.clearTimeout(justSavedTimerRef.current);
+          justSavedTimerRef.current = window.setTimeout(() => setJustSaved(null), 8000);
+        } else {
+          setParsedResult(d);
+          setPriceEdit(price != null ? String(price) : '');
+          setQtyEdit(typeof d.qty === 'number' ? String(d.qty) : '');
+          setDateEdit(opDate);
+          setActionEdit(action);
+          // 语音来的：一遍回读，数字错了耳朵先发现（iOS 可能拦截自动朗读，确认卡上有"再听一遍"按钮兜底）
+          if (fromVoice) {
+            speakTrade(
+              action,
+              symbol,
+              typeof d.qty === 'number' ? String(d.qty) : '',
+              price != null ? String(price) : '',
+              opDate,
+            );
+          }
+          setDupWarning(similar);
+        }
       } else if (json.success && json.intent === 'audit') {
         // 查重复：本地扫一遍操作记录，疑似的列出来由用户亲手删
         const groups = findDuplicateGroups(ops);
@@ -501,6 +543,17 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
     stopSpeak();
     setParsedResult(null);
     setDupWarning(null);
+  };
+
+  /** 撤销刚自动记入的一笔：删记录 + 持仓按快照精确恢复 */
+  const handleUndoSaved = () => {
+    if (!justSaved) return;
+    stopSpeak();
+    undoSaveAndSync(justSaved);
+    if (justSavedTimerRef.current) window.clearTimeout(justSavedTimerRef.current);
+    setJustSaved(null);
+    setOps(loadOperations());
+    setNotice({ type: 'info', text: tx(lang, 'Undone — entry removed and holdings restored', '已撤销：这条记录删掉了，持仓也恢复原样') });
   };
 
   /**
@@ -762,164 +815,33 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
         </div>
       </div>
 
-      {loading && (
-        <div className="flex items-center justify-center space-x-2 text-slate-400 py-6 text-xs">
-          <Sparkles className="w-4 h-4 animate-spin text-emerald-400" />
-          <span>{tx(lang, 'AI is parsing…', 'AI 正在整理...')}</span>
-        </div>
-      )}
-
-      {/* 页面内提示（替代 alert） */}
-      {notice && !loading && (
-        <div
-          className={`border rounded-xl p-3.5 flex items-start gap-2 ${
-            notice.type === 'error'
-              ? 'border-amber-500/40 bg-amber-500/10'
-              : 'border-blue-500/30 bg-blue-500/10'
-          }`}
-        >
-          <p className="flex-1 text-xs leading-relaxed text-slate-200">{notice.text}</p>
-          <button
-            onClick={() => setNotice(null)}
-            className="text-slate-500 hover:text-slate-300 shrink-0"
-            aria-label={tx(lang, 'Dismiss', '关闭提示')}
-          >
-            <XCircle className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {/* 闲聊意图：AI 的一句引导 */}
-      {chatReply && !loading && (
-        <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-2">
-          <div className="text-xs font-semibold text-slate-200 flex items-center justify-between">
-            <span className="flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> {tx(lang, 'AI says', 'AI 说')}
-            </span>
-            <SpeakButton text={chatReply} lang={lang} />
-          </div>
-          <p className="text-xs text-slate-300 leading-relaxed">{chatReply}</p>
-          <button
-            onClick={() => setChatReply(null)}
-            className="text-[11px] text-slate-500 hover:text-slate-300"
-          >
-            {tx(lang, 'Got it', '知道了')}
-          </button>
-        </div>
-      )}
-
-      {adviceLoading && (
-        <div className="flex items-center justify-center space-x-2 text-slate-400 py-6 text-xs">
-          <Sparkles className="w-4 h-4 animate-spin text-emerald-400" />
-          <span>{tx(lang, 'Checking rhythm…', '正在按律动诊断…')}</span>
-        </div>
-      )}
-
-      {/* 咨询意图：按律动给出的买入候选 */}
-      {advice && !adviceLoading && (
-        <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-4 space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
-            <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" /> {tx(lang, 'Per rhythm — fine to buy without chasing', '按律动，现在买不算追高的')}
-            </span>
-            <span className="flex items-center gap-1">
-              <SpeakButton text={adviceSpeech(advice)} lang={lang} />
-              <span className="text-[10px] text-slate-500">{advice.asOf}</span>
-            </span>
-          </div>
-
-          {advice.candidates.length === 0 ? (
-            <p className="text-xs text-slate-300 leading-relaxed">
-              {tx(lang, "Per rhythm, none of your watchlist stocks are good fresh entries right now — don't chase, wait for a pullback.", '自选里的股票按律动现在都不适合新开仓，先不追，等回调。')}
-            </p>
+      {/* 整理结果区：整理中 / 确认卡 / 已记入提示都在这一个位置切换，不再两次弹出 */}
+      {(loading || parsedResult || justSaved) && (
+        <>
+          {loading ? (
+            <div className="flex items-center justify-center space-x-2 text-slate-400 py-6 text-xs">
+              <Sparkles className="w-4 h-4 animate-spin text-emerald-400" />
+              <span>{tx(lang, 'AI is parsing…', 'AI 正在整理...')}</span>
+            </div>
+          ) : justSaved ? (
+            <div className="bg-emerald-950/50 border border-emerald-500/30 rounded-xl p-4 flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <div className="flex-1 text-xs text-slate-200 leading-relaxed">
+                <span className="font-semibold text-emerald-300">{tx(lang, 'Logged \u2713', '已记入 \u2713')}</span>{' '}
+                {actName(justSaved.rec.action)} {justSaved.rec.symbol}
+                {justSaved.rec.qty ? ` \u00d7 ${justSaved.rec.qty}${tx(lang, ' shares', '股')}` : ''}
+                {' @ $'}{justSaved.rec.price.toFixed(2)}
+                {justSaved.syncMsg && <span className="text-slate-400"> · {justSaved.syncMsg}</span>}
+                <div className="text-slate-500 text-[10px] mt-0.5">{tx(lang, 'Undo within 8s if anything is wrong', '有误 8 秒内可撤销')}</div>
+              </div>
+              <button
+                onClick={handleUndoSaved}
+                className="shrink-0 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+              >
+                {tx(lang, 'Undo', '撤销')}
+              </button>
+            </div>
           ) : (
-            <div className="space-y-2">
-              {advice.candidates.map((c) => (
-                <div key={c.symbol} className="bg-slate-800/60 border border-slate-800 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-bold text-slate-100">
-                      {c.symbol}{' '}
-                      <span className="text-[11px] font-normal text-slate-400">{c.name}</span>
-                    </span>
-                    <span className="text-xs text-slate-300">
-                      ${c.price.toFixed(2)} ·{' '}
-                      <span className="text-emerald-400 font-bold">{tx(lang, `${c.score} pts`, `${c.score}分`)}</span>
-                    </span>
-                  </div>
-                  {c.blurb && (
-                    <div className="text-[10px] text-slate-500 mb-1">🏢 {c.blurb}</div>
-                  )}
-                  <div className="text-[10px] text-slate-500 mb-1">{tx(lang, 'Rhythm: ', '律动诊断：')}{c.status}</div>
-                  <p className="text-[11px] text-slate-300 leading-relaxed">{c.reason}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {advice.excluded.length > 0 && (
-            <div className="pt-1">
-              <div className="text-[10px] text-slate-500 mb-1">{tx(lang, 'Excluded (no chasing / no falling knives):', '已排除（拦追高 / 不接飞刀）：')}</div>
-              {advice.excluded.map((e) => (
-                <p key={e.symbol} className="text-[11px] text-slate-500 leading-relaxed">
-                  · {e.symbol} {e.reason}
-                </p>
-              ))}
-            </div>
-          )}
-
-          <p className="text-[10px] text-slate-600 leading-relaxed border-t border-slate-800 pt-2">
-            {tx(lang, "Rhythm only helps you avoid chasing highs — it never predicts moves. Reference only, not investment advice.", '律动只帮你避开追高，不预测涨跌；仅供参考，不构成投资建议。')}
-          </p>
-          <button
-            onClick={() => setAdvice(null)}
-            className="text-[11px] text-slate-500 hover:text-slate-300"
-          >
-            {tx(lang, 'Collapse', '收起')}
-          </button>
-        </div>
-      )}
-
-      {/* 单只咨询：按律动给这只股票的买卖结论 */}
-      {singleAdvice && !adviceLoading && (
-        <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-4 space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
-            <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" />
-              {tx(lang, singleAdvice.side === 'sell' ? 'Per rhythm — OK to sell now?' : 'Per rhythm — OK to buy this now?', singleAdvice.side === 'sell' ? '按律动，现在能不能卖' : '按律动，这只现在能不能买')}
-            </span>
-            <SpeakButton text={singleSpeech(singleAdvice)} lang={lang} />
-          </div>
-          <div className="bg-slate-800/60 border border-slate-800 rounded-lg p-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-bold text-slate-100">
-                {singleAdvice.symbol}{' '}
-                <span className="text-[11px] font-normal text-slate-400">{singleAdvice.name}</span>
-              </span>
-              <span className="text-xs text-slate-300">
-                ${singleAdvice.price.toFixed(2)} ·{' '}
-                <span className="text-emerald-400 font-bold">{tx(lang, `${singleAdvice.score} pts`, `${singleAdvice.score}分`)}</span>
-              </span>
-            </div>
-            {singleAdvice.blurb && (
-              <div className="text-[10px] text-slate-500 mb-1">🏢 {singleAdvice.blurb}</div>
-            )}
-            <div className="text-[10px] text-slate-500 mb-1">{tx(lang, 'Rhythm: ', '律动诊断：')}{singleAdvice.status}</div>
-            <p className="text-[11px] text-slate-300 leading-relaxed">{singleAdvice.verdict}</p>
-          </div>
-          <p className="text-[10px] text-slate-600 leading-relaxed border-t border-slate-800 pt-2">
-            {tx(lang, "Rhythm only helps you avoid chasing highs and selling the bottom — it never predicts moves. Reference only, not investment advice.", '律动只帮你避开追高割肉，不预测涨跌；仅供参考，不构成投资建议。')}
-          </p>
-          <button
-            onClick={() => setSingleAdvice(null)}
-            className="text-[11px] text-slate-500 hover:text-slate-300"
-          >
-            {tx(lang, 'Collapse', '收起')}
-          </button>
-        </div>
-      )}
-
-      {/* AI 整理结果：确认后存入 */}
-      {parsedResult && !loading && (
         <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
             <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
@@ -1072,7 +994,161 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
             </button>
           </div>
         </div>
+          )}
+        </>
       )}
+
+      {/* 页面内提示（替代 alert） */}
+      {notice && !loading && (
+        <div
+          className={`border rounded-xl p-3.5 flex items-start gap-2 ${
+            notice.type === 'error'
+              ? 'border-amber-500/40 bg-amber-500/10'
+              : 'border-blue-500/30 bg-blue-500/10'
+          }`}
+        >
+          <p className="flex-1 text-xs leading-relaxed text-slate-200">{notice.text}</p>
+          <button
+            onClick={() => setNotice(null)}
+            className="text-slate-500 hover:text-slate-300 shrink-0"
+            aria-label={tx(lang, 'Dismiss', '关闭提示')}
+          >
+            <XCircle className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* 闲聊意图：AI 的一句引导 */}
+      {chatReply && !loading && (
+        <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-2">
+          <div className="text-xs font-semibold text-slate-200 flex items-center justify-between">
+            <span className="flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> {tx(lang, 'AI says', 'AI 说')}
+            </span>
+            <SpeakButton text={chatReply} lang={lang} />
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed">{chatReply}</p>
+          <button
+            onClick={() => setChatReply(null)}
+            className="text-[11px] text-slate-500 hover:text-slate-300"
+          >
+            {tx(lang, 'Got it', '知道了')}
+          </button>
+        </div>
+      )}
+
+      {adviceLoading && (
+        <div className="flex items-center justify-center space-x-2 text-slate-400 py-6 text-xs">
+          <Sparkles className="w-4 h-4 animate-spin text-emerald-400" />
+          <span>{tx(lang, 'Checking rhythm…', '正在按律动诊断…')}</span>
+        </div>
+      )}
+
+      {/* 咨询意图：按律动给出的买入候选 */}
+      {advice && !adviceLoading && (
+        <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
+            <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5" /> {tx(lang, 'Per rhythm — fine to buy without chasing', '按律动，现在买不算追高的')}
+            </span>
+            <span className="flex items-center gap-1">
+              <SpeakButton text={adviceSpeech(advice)} lang={lang} />
+              <span className="text-[10px] text-slate-500">{advice.asOf}</span>
+            </span>
+          </div>
+
+          {advice.candidates.length === 0 ? (
+            <p className="text-xs text-slate-300 leading-relaxed">
+              {tx(lang, "Per rhythm, none of your watchlist stocks are good fresh entries right now — don't chase, wait for a pullback.", '自选里的股票按律动现在都不适合新开仓，先不追，等回调。')}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {advice.candidates.map((c) => (
+                <div key={c.symbol} className="bg-slate-800/60 border border-slate-800 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-bold text-slate-100">
+                      {c.symbol}{' '}
+                      <span className="text-[11px] font-normal text-slate-400">{c.name}</span>
+                    </span>
+                    <span className="text-xs text-slate-300">
+                      ${c.price.toFixed(2)}{' '}
+                      {c.priceLive && <span className="text-emerald-400">●{tx(lang, 'live', '实时')}</span>}{' '}·{' '}
+                      <span className="text-emerald-400 font-bold">{tx(lang, `${c.score} pts`, `${c.score}分`)}</span>
+                    </span>
+                  </div>
+                  {c.blurb && (
+                    <div className="text-[10px] text-slate-500 mb-1">🏢 {c.blurb}</div>
+                  )}
+                  <div className="text-[10px] text-slate-500 mb-1">{tx(lang, 'Rhythm: ', '律动诊断：')}{c.status}</div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">{c.reason}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {advice.excluded.length > 0 && (
+            <div className="pt-1">
+              <div className="text-[10px] text-slate-500 mb-1">{tx(lang, 'Excluded (no chasing / no falling knives):', '已排除（拦追高 / 不接飞刀）：')}</div>
+              {advice.excluded.map((e) => (
+                <p key={e.symbol} className="text-[11px] text-slate-500 leading-relaxed">
+                  · {e.symbol} {e.reason}
+                </p>
+              ))}
+            </div>
+          )}
+
+          <p className="text-[10px] text-slate-600 leading-relaxed border-t border-slate-800 pt-2">
+            {tx(lang, "Rhythm only helps you avoid chasing highs — it never predicts moves. Reference only, not investment advice.", '律动只帮你避开追高，不预测涨跌；仅供参考，不构成投资建议。')}
+          </p>
+          <button
+            onClick={() => setAdvice(null)}
+            className="text-[11px] text-slate-500 hover:text-slate-300"
+          >
+            {tx(lang, 'Collapse', '收起')}
+          </button>
+        </div>
+      )}
+
+      {/* 单只咨询：按律动给这只股票的买卖结论 */}
+      {singleAdvice && !adviceLoading && (
+        <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
+            <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5" />
+              {tx(lang, singleAdvice.side === 'sell' ? 'Per rhythm — OK to sell now?' : 'Per rhythm — OK to buy this now?', singleAdvice.side === 'sell' ? '按律动，现在能不能卖' : '按律动，这只现在能不能买')}
+            </span>
+            <SpeakButton text={singleSpeech(singleAdvice)} lang={lang} />
+          </div>
+          <div className="bg-slate-800/60 border border-slate-800 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-bold text-slate-100">
+                {singleAdvice.symbol}{' '}
+                <span className="text-[11px] font-normal text-slate-400">{singleAdvice.name}</span>
+              </span>
+              <span className="text-xs text-slate-300">
+                ${singleAdvice.price.toFixed(2)}{' '}
+                {singleAdvice.priceLive && <span className="text-emerald-400">●{tx(lang, 'live', '实时')}</span>}{' '}·{' '}
+                <span className="text-emerald-400 font-bold">{tx(lang, `${singleAdvice.score} pts`, `${singleAdvice.score}分`)}</span>
+              </span>
+            </div>
+            {singleAdvice.blurb && (
+              <div className="text-[10px] text-slate-500 mb-1">🏢 {singleAdvice.blurb}</div>
+            )}
+            <div className="text-[10px] text-slate-500 mb-1">{tx(lang, 'Rhythm: ', '律动诊断：')}{singleAdvice.status}</div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">{singleAdvice.verdict}</p>
+          </div>
+          <p className="text-[10px] text-slate-600 leading-relaxed border-t border-slate-800 pt-2">
+            {tx(lang, "Rhythm only helps you avoid chasing highs and selling the bottom — it never predicts moves. Reference only, not investment advice.", '律动只帮你避开追高割肉，不预测涨跌；仅供参考，不构成投资建议。')}
+          </p>
+          <button
+            onClick={() => setSingleAdvice(null)}
+            className="text-[11px] text-slate-500 hover:text-slate-300"
+          >
+            {tx(lang, 'Collapse', '收起')}
+          </button>
+        </div>
+      )}
+
 
       {/* 查重复：疑似重复的成组列出，多的那条点 🗑 亲手删 */}
       {auditGroups && auditGroups.length > 0 && !loading && (

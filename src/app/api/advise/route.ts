@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildJudgment, statusLabel, type StatusKey } from '@/lib/rhythm';
-import { getFullSeries } from '@/lib/marketData';
+import { getFullSeries, getLiveQuote, pickDisplayPrice } from '@/lib/marketData';
 import { symbolToName } from '@/lib/stockAliases';
 import { findStock } from '@/lib/stockList';
 import type { Lang } from '@/lib/i18n';
@@ -174,13 +174,30 @@ function singleVerdict(
   return `律动 ${s} 分，${label}。`;
 }
 
+/**
+ * 展示价：盘中/盘后/盘前用实时报价，否则用日线收盘价。
+ * 口径与 /api/rhythm 共用 marketData.pickDisplayPrice（诊断永远走日线收盘序列）。
+ * live 接口失败时静默降级为收盘价。
+ */
+async function priceForDisplay(
+  symbol: string,
+  series: { date: string; close: number }[],
+): Promise<{ price: number; priceLive: boolean }> {
+  const last = series[series.length - 1];
+  const live = await getLiveQuote(symbol).catch(() => null);
+  const { price, session } = pickDisplayPrice(last.close, last.date, live);
+  return { price, priceLive: session !== 'close' };
+}
+
 async function judgeOne(symbol: string, lang: Lang) {
   const { series, source } = await getFullSeries(symbol);
   const closes = series.map((p) => p.close);
   if (closes.length === 0) return null;
   const j = buildJudgment(closes, lang);
+  const { price, priceLive } = await priceForDisplay(symbol, series);
   return {
-    price: closes[closes.length - 1],
+    price,
+    priceLive,
     score: j.score,
     statusKey: j.statusKey,
     status: j.status,
@@ -224,6 +241,7 @@ export async function POST(req: NextRequest) {
           symbol,
           name,
           price: Number(judged.price.toFixed(2)),
+          priceLive: judged.priceLive,
           score: Math.round(judged.score),
           status: judged.status,
           side,
@@ -260,11 +278,13 @@ export async function POST(req: NextRequest) {
           const closes = series.map((p) => p.close);
           if (closes.length === 0) return { symbol, name, ok: false as const };
           const j = buildJudgment(closes, lang);
+          const { price, priceLive } = await priceForDisplay(symbol, series);
           return {
             symbol,
             name,
             ok: true as const,
-            price: closes[closes.length - 1],
+            price,
+            priceLive,
             score: j.score,
             statusKey: j.statusKey,
             status: j.status,
@@ -291,6 +311,7 @@ export async function POST(req: NextRequest) {
         symbol: r.symbol,
         name: r.name,
         price: Number(r.price.toFixed(2)),
+        priceLive: r.priceLive,
         score: Math.round(r.score),
         status: r.status,
         reason: r.statusKey ? excludedReason(r.statusKey, r.score, lang) : tx(lang, 'Not enough data to judge.', '数据不足，无法判断。'),
@@ -310,6 +331,7 @@ export async function POST(req: NextRequest) {
         symbol: r.symbol,
         name: r.name,
         price: Number(r.price.toFixed(2)),
+        priceLive: r.priceLive,
         score: Math.round(r.score),
         status: r.status,
         reason: candidateReason(r.statusKey as StatusKey, r.score, r.hot, lang),

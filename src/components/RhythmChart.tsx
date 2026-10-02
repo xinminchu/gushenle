@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { RotateCcw } from 'lucide-react';
 import {
   AreaSeries,
   CandlestickSeries,
@@ -10,7 +11,7 @@ import {
   createChart,
   createSeriesMarkers,
 } from 'lightweight-charts';
-import type { CreatePriceLineOptions, ISeriesApi, SeriesMarker, SeriesType, Time } from 'lightweight-charts';
+import type { CreatePriceLineOptions, IChartApi, ISeriesApi, SeriesMarker, SeriesType, Time } from 'lightweight-charts';
 import type { RhythmPoint } from '@/lib/rhythm';
 import type { ColorScheme } from '@/lib/colorScheme';
 import { upHex, downHex } from '@/lib/colorScheme';
@@ -78,6 +79,9 @@ export default function RhythmChart({
   lang = 'zh',
 }: RhythmChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartApiRef = useRef<IChartApi | null>(null);
+  // 用户双指缩放/拖动过图表后，露出「重置缩放」按钮（之前有人放大后找不到缩回去的办法）
+  const [zoomed, setZoomed] = useState(false);
   const UP = upHex(scheme);
   const DOWN = downHex(scheme);
   // 区间高低点数值：画在左上角 HTML 图例里，避免压住右侧价格轴
@@ -87,6 +91,7 @@ export default function RhythmChart({
   useEffect(() => {
     const el = containerRef.current;
     if (!el || series.length === 0) return;
+    setZoomed(false);
 
     const chart = createChart(el, {
       width: el.clientWidth,
@@ -321,6 +326,18 @@ export default function RhythmChart({
       if (scalerData.length > 0) scaler.setData(scalerData);
     }
     chart.timeScale().fitContent();
+    chartApiRef.current = chart;
+    // 缩放/平移检测：跟 fitContent 后的 home 区间比，偏离超过 1 根 bar 即认为用户动过图表，露出重置按钮
+    const ts = chart.timeScale();
+    const homeRange = ts.getVisibleLogicalRange();
+    const checkZoom = () => {
+      const r = ts.getVisibleLogicalRange();
+      if (!r || !homeRange) return;
+      const z = Math.abs(r.from - homeRange.from) > 1 || Math.abs(r.to - homeRange.to) > 1;
+      setZoomed((prev) => (prev === z ? prev : z));
+    };
+    ts.subscribeVisibleLogicalRangeChange(checkZoom);
+    checkZoom();
 
     const ro = new ResizeObserver((entries) => {
       const w = entries[0].contentRect.width;
@@ -329,10 +346,20 @@ export default function RhythmChart({
     ro.observe(el);
 
     return () => {
+      ts.unsubscribeVisibleLogicalRangeChange(checkZoom);
       ro.disconnect();
+      chartApiRef.current = null;
       chart.remove();
     };
   }, [series, height, chartType, showRangeHL, fibLevels, fibScaleLevels, scheme, UP, DOWN, prevCloseLabel, keyLevels, showKeyLevels, eventMarkers, lang]);
+
+  /** 一键回到初始全量视图：时间轴全显 + 价格轴自动缩放 */
+  const resetZoom = () => {
+    const c = chartApiRef.current;
+    if (!c) return;
+    c.timeScale().fitContent();
+    c.priceScale('right').applyOptions({ autoScale: true });
+  };
 
   if (series.length === 0) {
     return (
@@ -348,6 +375,17 @@ export default function RhythmChart({
   return (
     <div className="relative w-full" style={{ height }}>
       <div ref={containerRef} className="w-full h-full" />
+      {/* 用户缩放/平移过图表后，右下角露出重置按钮，一键回到全量视图 */}
+      {zoomed && (
+        <button
+          onClick={() => { resetZoom(); setZoomed(false); }}
+          className="absolute bottom-2 right-2 z-10 flex items-center gap-1 bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-[11px] px-2.5 py-1.5 rounded-lg border border-slate-700 shadow-lg transition-colors"
+          aria-label={tx(lang, 'Reset zoom', '重置缩放')}
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          {tx(lang, 'Reset zoom', '重置缩放')}
+        </button>
+      )}
       {/* 区间高低点图例：放左上角，不压右侧价格轴 */}
       {(hl ||
         (fibLevels && fibLevels.length > 0) ||
