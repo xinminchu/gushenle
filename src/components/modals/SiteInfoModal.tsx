@@ -75,9 +75,9 @@ function Guide() {
     ],
     [
       '资讯',
-      '盘前瞻、盘后总结每天两报；最新快讯看美股 / 国内快讯，财经日历看 FOMC、CPI、财报日。朋友圈发买入逻辑、避坑经验，顺手给朋友点赞。登录后可用。',
+      '盘前瞻、盘后总结每天两报；最新快讯看美股 / 国内快讯，财经日历看 FOMC、CPI、财报日。朋友圈发买入逻辑、卖出逻辑、避坑经验，顺手给朋友点赞。登录后可用。',
       'News',
-      'Pre-market outlook and post-market recap, twice a day; Latest news for US / China headlines; the economic calendar for FOMC, CPI and earnings dates. The friends\' circle is for sharing buy logic and lessons learned — drop a like on friends\' posts. Login required.',
+      'Pre-market outlook and post-market recap, twice a day; Latest news for US / China headlines; the economic calendar for FOMC, CPI and earnings dates. The friends\' circle is for sharing buy logic, sell logic and lessons learned — drop a like on friends\' posts. Login required.',
     ],
     [
       '娱乐',

@@ -274,8 +274,8 @@ export default function HoldingAnalysis({
             {myPosts.map((p) => (
               <div key={p.id} className="text-[11px] leading-relaxed">
                 <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-                  <span>{p.post_type === 'thesis' ? '💡' : '⚠️'}</span>
-                  <span>{p.post_type === 'thesis' ? tx(lang, 'Buy logic', '买入逻辑') : tx(lang, 'Lesson', '避坑经验')}</span>
+                  <span>{p.post_type === 'thesis' ? '💡' : p.post_type === 'sell' ? '📤' : '⚠️'}</span>
+                  <span>{p.post_type === 'thesis' ? tx(lang, 'Buy logic', '买入逻辑') : p.post_type === 'sell' ? tx(lang, 'Sell logic', '卖出逻辑') : tx(lang, 'Lesson', '避坑经验')}</span>
                   <span>·</span>
                   <span>{relativeTime(p.created_at, lang)}</span>
                 </div>

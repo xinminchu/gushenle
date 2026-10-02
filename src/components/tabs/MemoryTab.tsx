@@ -731,7 +731,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       await createPost({
         user_id: user.id,
         nickname,
-        post_type: op.action === 'buy' ? 'thesis' : 'lesson',
+        post_type: op.action === 'buy' ? 'thesis' : 'sell',
         symbol: op.symbol,
         content: op.thesis ? `${tradeLine}\n${op.thesis}` : tradeLine,
       });

@@ -39,6 +39,23 @@ import {
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { saveOperation, todayStr } from '@/lib/operations';
 
+/** 发帖类型：买入逻辑 / 卖出逻辑 / 避坑经验（卖出 ≠ 避坑，止盈调仓是正当逻辑） */
+type PostKind = 'thesis' | 'sell' | 'lesson';
+function postKindLabel(t: string, lang: string): string {
+  return t === 'thesis'
+    ? tx(lang, '💡 Buy logic', '💡 买入逻辑')
+    : t === 'sell'
+      ? tx(lang, '📤 Sell logic', '📤 卖出逻辑')
+      : tx(lang, '⚠️ Lessons learned', '⚠️ 避坑经验');
+}
+function postKindBadge(t: string): string {
+  return t === 'thesis'
+    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+    : t === 'sell'
+      ? 'bg-sky-500/20 text-sky-400 border-sky-500/30'
+      : 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+}
+
 /** 昵称首字配色 */
 function avatarColor(name: string): string {
   const colors = [
@@ -62,7 +79,7 @@ export default function CommunityTab() {
   const [notice, setNotice] = useState<string | null>(null);
 
   // 发帖表单
-  const [postType, setPostType] = useState<'thesis' | 'lesson'>('thesis');
+  const [postType, setPostType] = useState<PostKind>('thesis');
   const [symbol, setSymbol] = useState('');
   const [content, setContent] = useState('');
   // 昵称全局同步：顶栏、帖子署名都跟着变
@@ -88,7 +105,7 @@ export default function CommunityTab() {
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState('');
   const [editSymbol, setEditSymbol] = useState('');
-  const [editType, setEditType] = useState<'thesis' | 'lesson'>('thesis');
+  const [editType, setEditType] = useState<PostKind>('thesis');
   const [savingEdit, setSavingEdit] = useState(false);
 
   // 投票
@@ -366,7 +383,7 @@ export default function CommunityTab() {
       <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4 flex items-center gap-3">
         <Users className="w-8 h-8 text-emerald-400 flex-shrink-0" />
         <div className="text-xs text-slate-300 space-y-0.5">
-          <p className="font-semibold text-emerald-400">{tx(lang, '💬 Moments · only "buy logic" and "lessons learned"', '💬 朋友圈 · 只分享"买入逻辑"与"避坑经验"')}</p>
+          <p className="font-semibold text-emerald-400">{tx(lang, '💬 Moments · "buy logic", "sell logic" and "lessons learned" only', '💬 朋友圈 · 只分享"买入逻辑"、"卖出逻辑"与"避坑经验"')}</p>
           <p className="text-slate-400">{tx(lang, 'No trade calls, no stock tips — rational discussion, growing together.', '不喊单、不荐股，理性交流共同成长。')}</p>
         </div>
       </div>
@@ -414,6 +431,16 @@ export default function CommunityTab() {
                   {tx(lang, '💡 Buy logic', '💡 买入逻辑')}
                 </button>
                 <button
+                  onClick={() => { setPostType('sell'); setLogAction('sell'); }}
+                  className={`text-[11px] px-3 py-1.5 rounded-full border font-medium ${
+                    postType === 'sell'
+                      ? 'bg-sky-500/20 text-sky-400 border-sky-500/40'
+                      : 'text-slate-500 border-slate-700'
+                  }`}
+                >
+                  {tx(lang, '📤 Sell logic', '📤 卖出逻辑')}
+                </button>
+                <button
                   onClick={() => { setPostType('lesson'); setLogAction('sell'); }}
                   className={`text-[11px] px-3 py-1.5 rounded-full border font-medium ${
                     postType === 'lesson'
@@ -457,7 +484,7 @@ export default function CommunityTab() {
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value.slice(0, 500))}
-              placeholder={postType === 'thesis' ? tx(lang, 'Share why you bought… (within 500 chars)', '说说这次买入的逻辑…（500字以内）') : tx(lang, 'Share the pitfall so others can avoid it… (within 500 chars)', '说说这次踩的坑，给大家提个醒…（500字以内）')}
+              placeholder={postType === 'thesis' ? tx(lang, 'Share why you bought… (within 500 chars)', '说说这次买入的逻辑…（500字以内）') : postType === 'sell' ? tx(lang, 'Share why you sold… (within 500 chars)', '说说这次卖出的逻辑…（500字以内）') : tx(lang, 'Share the pitfall so others can avoid it… (within 500 chars)', '说说这次踩的坑，给大家提个醒…（500字以内）')}
               className="w-full h-20 bg-slate-800/60 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
             />
             {/* 发帖→记一笔：把这次分享同步成操作记忆 */}
@@ -554,32 +581,26 @@ export default function CommunityTab() {
                       </div>
                     </div>
                     <span
-                      className={`text-[10px] px-2 py-0.5 rounded font-medium border ${
-                        post.post_type === 'thesis'
-                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                          : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                      }`}
+                      className={`text-[10px] px-2 py-0.5 rounded font-medium border ${postKindBadge(post.post_type)}`}
                     >
-                      {post.post_type === 'thesis' ? tx(lang, '💡 Buy logic', '💡 买入逻辑') : tx(lang, '⚠️ Lessons learned', '⚠️ 避坑经验')}
+                      {postKindLabel(post.post_type, lang)}
                     </span>
                   </div>
 
                   {isEditing ? (
                     <div className="space-y-2 bg-slate-900/60 border border-amber-500/30 rounded-lg p-3">
                       <div className="flex gap-1.5">
-                        {(['thesis', 'lesson'] as const).map((t) => (
+                        {(['thesis', 'sell', 'lesson'] as const).map((t) => (
                           <button
                             key={t}
                             onClick={() => setEditType(t)}
                             className={`text-[11px] px-3 py-1 rounded-full border font-medium ${
                               editType === t
-                                ? t === 'thesis'
-                                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                                  : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                                ? postKindBadge(t).replace('/30', '/40')
                                 : 'text-slate-500 border-slate-700'
                             }`}
                           >
-                            {t === 'thesis' ? tx(lang, '💡 Buy logic', '💡 买入逻辑') : tx(lang, '⚠️ Lessons learned', '⚠️ 避坑经验')}
+                            {postKindLabel(t, lang)}
                           </button>
                         ))}
                       </div>

@@ -7,7 +7,7 @@ export interface FamilyPost {
   id: number;
   user_id: string;
   nickname: string;
-  post_type: 'thesis' | 'lesson';
+  post_type: 'thesis' | 'sell' | 'lesson';
   symbol: string;
   content: string;
   created_at: string;
@@ -83,7 +83,7 @@ export async function deleteReply(id: number): Promise<void> {
 /** 本人编辑帖子（内容/标的/类型；RLS 只允许改自己的） */
 export async function updatePost(
   id: number,
-  input: { content: string; symbol: string; post_type: 'thesis' | 'lesson' },
+  input: { content: string; symbol: string; post_type: 'thesis' | 'sell' | 'lesson' },
 ): Promise<void> {
   const db = needDb();
   const { error } = await db
@@ -174,7 +174,7 @@ export async function fetchPosts(myUserId: string | null): Promise<FamilyPost[]>
 export async function createPost(input: {
   user_id: string;
   nickname: string;
-  post_type: 'thesis' | 'lesson';
+  post_type: 'thesis' | 'sell' | 'lesson';
   symbol: string;
   content: string;
 }): Promise<void> {
