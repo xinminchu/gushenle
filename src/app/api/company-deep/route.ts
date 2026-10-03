@@ -109,7 +109,10 @@ export async function POST(req: NextRequest) {
     }
     return out({ success: true, cached: false, ...data });
   } catch (error: any) {
-    console.error('company-deep 失败:', error?.message || error);
-    return out({ error: tx(lang, 'AI lookup failed — try again later', 'AI 查询失败，稍后再试') }, 500);
+    const raw = error?.message || String(error);
+    // 抹掉可能混入的 key 再返回，方便定位是 key 问题还是模型问题
+    const detail = raw.replace(/key=[A-Za-z0-9_\-]+/gi, 'key=***').slice(0, 300);
+    console.error('company-deep 失败:', detail);
+    return out({ error: tx(lang, 'AI lookup failed', 'AI 查询失败'), detail }, 500);
   }
 }
