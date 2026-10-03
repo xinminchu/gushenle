@@ -168,6 +168,11 @@ export async function POST(req: NextRequest) {
               .map((s: any) => ({ title: String(s.title).slice(0, 20), body: String(s.body).slice(0, 600) }))
           : [];
         if (sections.length === 0) throw new Error('empty sections');
+        // 四段全是"信息不足" = 实质失败，不缓存，降级走重试
+        const allEmpty = sections.every((s: { body: string }) =>
+          /公开信息不足|Insufficient public information/i.test(s.body.trim()),
+        );
+        if (allEmpty) throw new Error('all sections empty');
         // 缓存到 UTC 明天 00:10
         const tomorrow = new Date();
         tomorrow.setUTCHours(24, 10, 0, 0);
