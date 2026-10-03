@@ -77,19 +77,20 @@ export default function WatchlistSearch({
     return STOCK_LIST.some((s) => s.code === fixed) ? fixed : null;
   }, [q]);
 
-  // 精选没有 → 懒加载全市场库兜底
+  // 没有强匹配 → 懒加载全市场库兜底（弱匹配/无匹配时都补；
+  // 之前是 candidates.length===0，有弱命中时全市场被短路，HPE 这类非精选股永远搜不出）
   const [universe, setUniverse] = useState<UniverseEntry[] | null>(null);
   useEffect(() => {
-    if (q.trim() && candidates.length === 0 && universe === null) {
+    if (q.trim() && !strongFirst && universe === null) {
       loadUniverse().then(setUniverse).catch(() => {});
     }
-  }, [q, candidates.length, universe]);
+  }, [q, strongFirst, universe]);
   const uniCandidates = useMemo(
     () =>
-      universe && q.trim() && candidates.length === 0
+      universe && q.trim() && !strongFirst
         ? searchUniverse(universe, q.trim(), CURATED_CODES, 5)
         : [],
-    [universe, q, candidates.length],
+    [universe, q, strongFirst],
   );
 
   // 精确匹配上：停 600ms 自动切走势（组词中/输入法未完成不触发）
