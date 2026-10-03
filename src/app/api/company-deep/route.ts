@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { findStock } from '@/lib/stockList';
+import { getFullSeries } from '@/lib/marketData';
+import { getNewsItems } from '@/lib/news';
 import type { Lang } from '@/lib/i18n';
 import { toHantDeep, tx } from '@/lib/hant';
 
 /**
  * AI 公司深挖：只做"事实层"，不做"观点层"。
  *
- * 产品红线（与"华尔街式研报"的区别）：
- * ① 只整理公开事实：商业模式 / 收入来源 / 主营产品 / 主要风险；
- * ② 严禁买卖建议、目标价、评级、涨跌预测 —— 那是荐股红线，也是"不假装预测"；
- * ③ 不知道就写"公开信息不足"，不许编。
+ * 版块：
+ * ① 📰 最近动态 —— 真实快讯标题（华尔街见闻 7x24，按代码/中英文名过滤），可点原文，零 AI 编造；
+ * ② 📈 近期走势 —— 本地确定性计算（近20个交易日涨跌/区间），零 token、零幻觉；
+ * ③ AI 档案 —— 商业模式 / 收入来源 / 主营产品 / 主要风险（Gemini 整理，一天一烧）。
  *
- * 成本控制：按 symbol+UTC日期 服务端缓存，一天只烧一次 token；
- * 前端折叠懒加载，用户不点开不调接口；没配 GEMINI_API_KEY 时 503，前端静默隐藏。
+ * 产品红线：严禁买卖建议、目标价、评级、涨跌预测。
+ * 没配 GEMINI_API_KEY 时 503，前端静默隐藏。
  */
 
 const MODEL = 'gemini-3.6-flash';
@@ -46,10 +48,55 @@ async function generateWithFallback(
   }
 }
 
-/** symbol+UTC日期 缓存，一天一烧 */
+/** symbol+UTC日期 缓存（只缓存 AI 档案部分，一天一烧）；动态部分每次新鲜算 */
 const cache = new Map<string, { data: Record<string, any>; expires: number }>();
 function cacheKey(symbol: string): string {
   return `${symbol}:${new Date().toISOString().slice(0, 10)}`;
+}
+
+/** 最近动态：从快讯里按代码/中英文名过滤，取最新 4 条 */
+async function getRecentNews(symbol: string, names: string[]) {
+  try {
+    const items = await getNewsItems('us');
+    const matchers = [symbol, ...names].filter(Boolean).map((n) => n.trim()).filter((n) => n.length >= 1);
+    const matched = items.filter((it) => {
+      const text = `${it.title} ${it.content}`;
+      return matchers.some((m) =>
+        /[\u4e00-\u9fff]/.test(m)
+          ? text.includes(m) // 中文名：包含即命中
+          : new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(text),
+      );
+    });
+    return matched.slice(0, 4).map((it) => ({ title: it.title || it.content.slice(0, 60), time: it.time, uri: it.uri }));
+  } catch {
+    return [];
+  }
+}
+
+/** 近期走势：近20个交易日涨跌幅 + 区间，本地确定性计算 */
+async function getTrend(symbol: string) {
+  try {
+    const { series, source } = await getFullSeries(symbol);
+    if (!series || series.length < 2 || source === 'simulated') return null;
+    const closes = series.slice(-21);
+    if (closes.length < 2) return null;
+    const first = closes[0].close;
+    const last = closes[closes.length - 1].close;
+    const window = closes.slice(-20);
+    const high = Math.max(...window.map((p) => p.high ?? p.close));
+    const low = Math.min(...window.map((p) => p.low ?? p.close));
+    return {
+      pct: first > 0 ? ((last - first) / first) * 100 : 0,
+      from: first,
+      to: last,
+      high,
+      low,
+      lastDate: closes[closes.length - 1].date,
+      days: closes.length - 1,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function buildPrompt(symbol: string, name: string, lang: Lang): string {
@@ -91,47 +138,55 @@ export async function POST(req: NextRequest) {
     }
 
     const key = cacheKey(symbol);
-    const hit = cache.get(key);
-    if (hit && hit.expires > Date.now()) {
-      return out({ success: true, cached: true, ...hit.data });
-    }
-
     const info = findStock(symbol);
+    const names = info ? [info.zh, info.en].filter(Boolean) : [];
     const name = info ? (lang === 'en' ? info.en : info.zh) : symbol;
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const { text } = await generateWithFallback(ai, buildPrompt(symbol, name, lang === 'hant' ? 'zh' : lang));
-    const parsed = JSON.parse(text);
-    const sections = Array.isArray(parsed.sections)
-      ? parsed.sections
-          .filter((s: any) => s && typeof s.title === 'string' && typeof s.body === 'string')
-          .slice(0, 6)
-          .map((s: any) => ({ title: String(s.title).slice(0, 20), body: String(s.body).slice(0, 600) }))
-      : [];
-    if (sections.length === 0) {
-      return out({ error: tx(lang, 'AI returned nothing usable', 'AI 没返回可用内容') }, 502);
+
+    // 动态部分每次新鲜算（快讯 5 分钟缓存、日线 60 秒缓存，开销很小）
+    const [news, trend] = await Promise.all([getRecentNews(symbol, names), getTrend(symbol)]);
+
+    let facts = cache.get(key);
+    let factsCached = true;
+    if (!facts || facts.expires <= Date.now()) {
+      factsCached = false;
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const { text } = await generateWithFallback(ai, buildPrompt(symbol, name, lang === 'hant' ? 'zh' : lang));
+      const parsed = JSON.parse(text);
+      const sections = Array.isArray(parsed.sections)
+        ? parsed.sections
+            .filter((s: any) => s && typeof s.title === 'string' && typeof s.body === 'string')
+            .slice(0, 6)
+            .map((s: any) => ({ title: String(s.title).slice(0, 20), body: String(s.body).slice(0, 600) }))
+        : [];
+      if (sections.length === 0) {
+        return out({ error: tx(lang, 'AI returned nothing usable', 'AI 没返回可用内容') }, 502);
+      }
+      // 缓存到 UTC 明天 00:10
+      const tomorrow = new Date();
+      tomorrow.setUTCHours(24, 10, 0, 0);
+      facts = { data: { sections }, expires: tomorrow.getTime() };
+      cache.set(key, facts);
+      // 防止 Map 无限增长
+      if (cache.size > 500) {
+        const first = cache.keys().next().value;
+        if (first) cache.delete(first);
+      }
     }
 
     const data = {
       symbol,
       name,
       asOf: new Date().toISOString().slice(0, 10),
-      sections,
+      news,
+      trend,
+      sections: facts.data.sections,
       disclaimer: tx(
         lang,
-        'Compiled by AI from public information. Reference only — not investment advice.',
-        'AI 根据公开信息整理，仅供参考，不构成投资建议。',
+        'Facts compiled by AI from public information; news headlines from market wires. Reference only — not investment advice.',
+        '档案由 AI 根据公开信息整理，快讯来自市场资讯源，仅供参考，不构成投资建议。',
       ),
     };
-    // 缓存到 UTC 明天 00:10
-    const tomorrow = new Date();
-    tomorrow.setUTCHours(24, 10, 0, 0);
-    cache.set(key, { data, expires: tomorrow.getTime() });
-    // 防止 Map 无限增长
-    if (cache.size > 500) {
-      const first = cache.keys().next().value;
-      if (first) cache.delete(first);
-    }
-    return out({ success: true, cached: false, ...data });
+    return out({ success: true, cached: factsCached, ...data });
   } catch (error: any) {
     const raw = error?.message || String(error);
     // 抹掉可能混入的 key 再返回，方便定位是 key 问题还是模型问题
