@@ -17,6 +17,34 @@ import { toHantDeep, tx } from '@/lib/hant';
  */
 
 const MODEL = 'gemini-3.6-flash';
+/** 3.6 过载时的降级模型：更快更便宜，事实整理够用 */
+const FALLBACK_MODEL = 'gemini-3.5-flash-lite';
+
+async function generateWithFallback(
+  ai: GoogleGenAI,
+  prompt: string,
+): Promise<{ text: string; model: string }> {
+  try {
+    const r = await ai.models.generateContent({
+      model: MODEL,
+      contents: prompt,
+      config: { responseMimeType: 'application/json' },
+    });
+    return { text: r.text || '{}', model: MODEL };
+  } catch (e: any) {
+    const msg = e?.message || '';
+    // 只有过载/不可用时才降级，key 无效等配置问题直接抛
+    if (/503|UNAVAILABLE|overloaded|high demand/i.test(msg)) {
+      const r = await ai.models.generateContent({
+        model: FALLBACK_MODEL,
+        contents: prompt,
+        config: { responseMimeType: 'application/json' },
+      });
+      return { text: r.text || '{}', model: FALLBACK_MODEL };
+    }
+    throw e;
+  }
+}
 
 /** symbol+UTC日期 缓存，一天一烧 */
 const cache = new Map<string, { data: Record<string, any>; expires: number }>();
@@ -71,12 +99,8 @@ export async function POST(req: NextRequest) {
     const info = findStock(symbol);
     const name = info ? (lang === 'en' ? info.en : info.zh) : symbol;
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: MODEL,
-      contents: buildPrompt(symbol, name, lang === 'hant' ? 'zh' : lang),
-      config: { responseMimeType: 'application/json' },
-    });
-    const parsed = JSON.parse(response.text || '{}');
+    const { text } = await generateWithFallback(ai, buildPrompt(symbol, name, lang === 'hant' ? 'zh' : lang));
+    const parsed = JSON.parse(text);
     const sections = Array.isArray(parsed.sections)
       ? parsed.sections
           .filter((s: any) => s && typeof s.title === 'string' && typeof s.body === 'string')
