@@ -33,6 +33,7 @@ export const STOCK_ALIASES: Record<string, string> = {
   '超微电脑': 'SMCI', 'smci': 'SMCI',
   '戴尔': 'DELL', 'dell': 'DELL',
   '惠普': 'HPQ', 'hp': 'HPQ',
+  '惠普企业': 'HPE', 'hpe': 'HPE',
   '思科': 'CSCO', 'cisco': 'CSCO',
   '奈飞公司': 'NFLX',
   '沃尔玛': 'WMT', 'walmart': 'WMT',

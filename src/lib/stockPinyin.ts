@@ -33,6 +33,10 @@ export const STOCK_PINYIN: Record<string, { full: string; initials: string }> = 
     "full": "huipu",
     "initials": "hp"
   },
+  "HPE": {
+    "full": "huipuqiye",
+    "initials": "hpqy"
+  },
   "SMCI": {
     "full": "chaoweidiannao",
     "initials": "cwdn"

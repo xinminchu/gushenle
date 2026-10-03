@@ -47,6 +47,7 @@ export const STOCK_LIST: StockInfo[] = [
   { code: 'CSCO', en: 'Cisco', zh: '思科', sector: '科技', themes: ['云计算'], blurb: '卖网络设备（路由器交换机）的老牌厂商' },
   { code: 'DELL', en: 'Dell', zh: '戴尔', sector: '科技', themes: ['AI'], blurb: '卖服务器和PC，AI服务器是新增长点' },
   { code: 'HPQ', en: 'HP', zh: '惠普', sector: '科技', themes: [], blurb: '卖打印机和PC，靠耗材和订阅续命' },
+  { code: 'HPE', en: 'Hewlett Packard Enterprise', zh: '惠普企业', sector: '科技', themes: ['云计算', 'AI'], blurb: '企业级服务器和网络设备，GreenLake云平台按需付费' },
   { code: 'SMCI', en: 'Supermicro', zh: '超微电脑', sector: '科技', themes: ['AI'], blurb: '组装AI服务器的，英伟达概念股，波动大' },
   { code: 'ANET', en: 'Arista', zh: 'Arista', sector: '科技', themes: ['云计算', 'AI'], blurb: '给数据中心做高速网络设备，AI算力受益' },
   { code: 'PANW', en: 'Palo Alto Networks', zh: '派拓网络', sector: '科技', themes: ['网络安全'], blurb: '网络安全龙头，卖防火墙和云安全' },
