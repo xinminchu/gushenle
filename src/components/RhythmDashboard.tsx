@@ -15,6 +15,7 @@ import { getRhythm, invalidateRhythm } from '@/lib/market';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 import { useWatchlist } from './WatchlistContext';
 import CompanyIntro from './CompanyIntro';
+import CompanyDeepDive from './CompanyDeepDive';
 import { findStock, displayStockName } from '@/lib/stockList';
 import { fmtMoney } from '@/lib/currency';
 import { todayStr, type OpAction } from '@/lib/operations';
@@ -1019,6 +1020,9 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
             const info = findStock(symbol);
             return info ? <CompanyIntro info={info} lang={lang} /> : null;
           })()}
+
+          {/* 🔍 AI 深挖：基本面事实卡（折叠懒加载，只讲事实不给建议） */}
+          <CompanyDeepDive symbol={symbol} lang={lang} />
 
           {/* 筹码分布 + 资金流向：并排小面板 */}
           <div className="grid grid-cols-2 gap-2">
