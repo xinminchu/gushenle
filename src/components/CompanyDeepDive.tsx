@@ -34,7 +34,7 @@ interface DeepData {
   disclaimer: string;
 }
 
-const LS_KEY = 'gushenle:company_deep_v2';
+const LS_KEY = 'gushenle:company_deep_v3';
 const LS_TTL = 30 * 60 * 1000; // 动态部分 30 分钟新鲜度
 function readCache(symbol: string): DeepData | null {
   try {
