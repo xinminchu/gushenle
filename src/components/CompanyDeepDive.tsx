@@ -30,6 +30,7 @@ interface DeepData {
   news: NewsHeadline[];
   trend: TrendInfo | null;
   sections: DeepSection[];
+  factsOk: boolean;
   disclaimer: string;
 }
 
@@ -49,6 +50,13 @@ function writeCache(symbol: string, data: DeepData) {
     all[symbol] = { at: Date.now(), data };
     const keys = Object.keys(all);
     if (keys.length > 60) delete all[keys[0]];
+    localStorage.setItem(LS_KEY, JSON.stringify(all));
+  } catch {}
+}
+function clearCache(symbol: string) {
+  try {
+    const all = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+    delete all[symbol];
     localStorage.setItem(LS_KEY, JSON.stringify(all));
   } catch {}
 }
@@ -72,16 +80,15 @@ export default function CompanyDeepDive({ symbol, lang = 'zh' }: { symbol: strin
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<DeepData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [dead, setDead] = useState(false); // 没 key / 失败：当不存在，不打扰
+  const [dead, setDead] = useState(false); // 没 key / 致命失败：当不存在，不打扰
 
-  const toggle = async () => {
-    const next = !open;
-    setOpen(next);
-    if (!next || data || loading || dead) return;
-    const cached = readCache(symbol);
-    if (cached) {
-      setData(cached);
-      return;
+  const load = async (ignoreCache = false) => {
+    if (!ignoreCache) {
+      const cached = readCache(symbol);
+      if (cached) {
+        setData(cached);
+        return;
+      }
     }
     setLoading(true);
     try {
@@ -91,14 +98,18 @@ export default function CompanyDeepDive({ symbol, lang = 'zh' }: { symbol: strin
         body: JSON.stringify({ symbol, lang }),
       });
       const json = await res.json();
-      if (json.success && Array.isArray(json.sections) && json.sections.length > 0) {
+      const news = Array.isArray(json.news) ? json.news : [];
+      const hasContent =
+        json.success && (json.sections?.length > 0 || news.length > 0 || json.trend);
+      if (hasContent) {
         const d: DeepData = {
           symbol: json.symbol,
           name: json.name,
           asOf: json.asOf,
-          news: Array.isArray(json.news) ? json.news : [],
+          news,
           trend: json.trend || null,
-          sections: json.sections,
+          sections: Array.isArray(json.sections) ? json.sections : [],
+          factsOk: json.factsOk !== false,
           disclaimer: json.disclaimer,
         };
         setData(d);
@@ -111,6 +122,19 @@ export default function CompanyDeepDive({ symbol, lang = 'zh' }: { symbol: strin
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggle = async () => {
+    const next = !open;
+    setOpen(next);
+    if (!next || data || loading || dead) return;
+    await load();
+  };
+
+  const retryFacts = async () => {
+    clearCache(symbol);
+    setData(null);
+    await load(true);
   };
 
   if (dead) return null;
@@ -204,12 +228,25 @@ export default function CompanyDeepDive({ symbol, lang = 'zh' }: { symbol: strin
                 <div className="text-[11px] font-semibold text-slate-200">
                   {tx(lang, '🏢 Company file', '🏢 公司档案')}
                 </div>
-                {data.sections.map((s) => (
-                  <div key={s.title}>
-                    <div className="text-[11px] font-medium text-slate-300 mb-0.5">{s.title}</div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">{s.body}</p>
-                  </div>
-                ))}
+                {data.sections.length > 0 ? (
+                  data.sections.map((s) => (
+                    <div key={s.title}>
+                      <div className="text-[11px] font-medium text-slate-300 mb-0.5">{s.title}</div>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">{s.body}</p>
+                    </div>
+                  ))
+                ) : (
+                  <button
+                    onClick={retryFacts}
+                    className="text-[11px] text-amber-300/80 hover:text-amber-200"
+                  >
+                    {tx(
+                      lang,
+                      'AI profile failed to load — tap to retry',
+                      'AI 档案这次没整理出来，点我重试',
+                    )}
+                  </button>
+                )}
               </div>
 
               <p className="text-[10px] text-slate-600 leading-relaxed border-t border-slate-800 pt-1.5">

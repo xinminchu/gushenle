@@ -54,10 +54,10 @@ function cacheKey(symbol: string): string {
   return `${symbol}:${new Date().toISOString().slice(0, 10)}`;
 }
 
-/** 最近动态：从快讯里按代码/中英文名过滤，取最新 4 条 */
+/** 最近动态：从快讯里按代码/中英文名过滤，取最新 4 条（匹配池放宽到 60 条） */
 async function getRecentNews(symbol: string, names: string[]) {
   try {
-    const items = await getNewsItems('us');
+    const items = await getNewsItems('us', 60);
     const matchers = [symbol, ...names].filter(Boolean).map((n) => n.trim()).filter((n) => n.length >= 1);
     const matched = items.filter((it) => {
       const text = `${it.title} ${it.content}`;
@@ -99,7 +99,7 @@ async function getTrend(symbol: string) {
   }
 }
 
-function buildPrompt(symbol: string, name: string, lang: Lang): string {
+function buildPrompt(symbol: string, name: string, lang: Lang, localCtx: string): string {
   const target = lang === 'en'
     ? `the company ${symbol} (${name})`
     : `这家公司：${symbol}（${name}）`;
@@ -107,7 +107,7 @@ function buildPrompt(symbol: string, name: string, lang: Lang): string {
   return `You are a factual company-profile compiler, NOT an analyst. You give NO investment advice.
 
 Using public information only, describe ${target}.
-Facts only, no opinions. If public information is insufficient for a section, write "公开信息不足" (or "Insufficient public information" in English) — never invent.
+${localCtx ? `Local reference (may be partial, use it as grounding): ${localCtx}\n` : ''}Facts only, no opinions. If public information is insufficient for a section, write "公开信息不足" (or "Insufficient public information" in English) — never invent.
 
 Output JSON only, nothing else:
 {"sections":[
@@ -146,30 +146,44 @@ export async function POST(req: NextRequest) {
     const [news, trend] = await Promise.all([getRecentNews(symbol, names), getTrend(symbol)]);
 
     let facts = cache.get(key);
-    let factsCached = true;
+    let factsOk = true;
     if (!facts || facts.expires <= Date.now()) {
-      factsCached = false;
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const { text } = await generateWithFallback(ai, buildPrompt(symbol, name, lang === 'hant' ? 'zh' : lang));
-      const parsed = JSON.parse(text);
-      const sections = Array.isArray(parsed.sections)
-        ? parsed.sections
-            .filter((s: any) => s && typeof s.title === 'string' && typeof s.body === 'string')
-            .slice(0, 6)
-            .map((s: any) => ({ title: String(s.title).slice(0, 20), body: String(s.body).slice(0, 600) }))
-        : [];
-      if (sections.length === 0) {
-        return out({ error: tx(lang, 'AI returned nothing usable', 'AI 没返回可用内容') }, 502);
-      }
-      // 缓存到 UTC 明天 00:10
-      const tomorrow = new Date();
-      tomorrow.setUTCHours(24, 10, 0, 0);
-      facts = { data: { sections }, expires: tomorrow.getTime() };
-      cache.set(key, facts);
-      // 防止 Map 无限增长
-      if (cache.size > 500) {
-        const first = cache.keys().next().value;
-        if (first) cache.delete(first);
+      try {
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        // 本地资料做 grounding：太新的公司（如 SPCX）AI 知识库里可能没有
+        const localCtx = info
+          ? [info.blurb, info.sector ? `板块:${info.sector}` : '', info.themes?.length ? `主题:${info.themes.join('/')}` : '']
+              .filter(Boolean)
+              .join('；')
+          : '';
+        const { text } = await generateWithFallback(
+          ai,
+          buildPrompt(symbol, name, lang === 'hant' ? 'zh' : lang, localCtx),
+        );
+        const parsed = JSON.parse(text);
+        const sections = Array.isArray(parsed.sections)
+          ? parsed.sections
+              .filter((s: any) => s && typeof s.title === 'string' && typeof s.body === 'string')
+              .slice(0, 6)
+              .map((s: any) => ({ title: String(s.title).slice(0, 20), body: String(s.body).slice(0, 600) }))
+          : [];
+        if (sections.length === 0) throw new Error('empty sections');
+        // 缓存到 UTC 明天 00:10
+        const tomorrow = new Date();
+        tomorrow.setUTCHours(24, 10, 0, 0);
+        facts = { data: { sections }, expires: tomorrow.getTime() };
+        cache.set(key, facts);
+        // 防止 Map 无限增长
+        if (cache.size > 500) {
+          const first = cache.keys().next().value;
+          if (first) cache.delete(first);
+        }
+      } catch (e: any) {
+        // AI 挂了只降级档案部分，快讯+走势照常返回，卡片不消失
+        const raw = e?.message || String(e);
+        console.error('company-deep 档案失败:', raw.replace(/key=[A-Za-z0-9_\-]+/gi, 'key=***').slice(0, 200));
+        facts = undefined;
+        factsOk = false;
       }
     }
 
@@ -179,14 +193,15 @@ export async function POST(req: NextRequest) {
       asOf: new Date().toISOString().slice(0, 10),
       news,
       trend,
-      sections: facts.data.sections,
+      factsOk,
+      sections: facts?.data.sections || [],
       disclaimer: tx(
         lang,
         'Facts compiled by AI from public information; news headlines from market wires. Reference only — not investment advice.',
         '档案由 AI 根据公开信息整理，快讯来自市场资讯源，仅供参考，不构成投资建议。',
       ),
     };
-    return out({ success: true, cached: factsCached, ...data });
+    return out({ success: true, cached: factsOk && !!cache.get(key), ...data });
   } catch (error: any) {
     const raw = error?.message || String(error);
     // 抹掉可能混入的 key 再返回，方便定位是 key 问题还是模型问题

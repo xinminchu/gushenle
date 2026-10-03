@@ -19,13 +19,15 @@ const CHANNELS: Record<string, string> = {
 const caches = new Map<string, { at: number; items: NewsItem[] }>();
 const TTL = 5 * 60 * 1000;
 
-export async function getNewsItems(market: 'us' | 'cn' = 'us'): Promise<NewsItem[]> {
+export async function getNewsItems(market: 'us' | 'cn' = 'us', keep = 20): Promise<NewsItem[]> {
   const key = market === 'cn' ? 'cn' : 'us';
-  const hit = caches.get(key);
+  const cacheKey = `${key}:${keep}`;
+  const hit = caches.get(cacheKey);
   if (hit && Date.now() - hit.at < TTL) return hit.items;
   try {
+    const fetchLimit = Math.min(100, Math.max(30, keep + 20));
     const r = await fetch(
-      `https://api-one-wscn.awtmt.com/apiv1/content/lives?channel=${CHANNELS[key]}&client=pc&limit=30`,
+      `https://api-one-wscn.awtmt.com/apiv1/content/lives?channel=${CHANNELS[key]}&client=pc&limit=${fetchLimit}`,
       { headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)' } },
     );
     if (!r.ok) throw new Error(`wscn ${r.status}`);
@@ -49,9 +51,9 @@ export async function getNewsItems(market: 'us' | 'cn' = 'us'): Promise<NewsItem
         content: content.slice(0, 800),
         uri: String(it.uri || ''),
       });
-      if (items.length >= 20) break;
+      if (items.length >= keep) break;
     }
-    caches.set(key, { at: Date.now(), items });
+    caches.set(cacheKey, { at: Date.now(), items });
     return items;
   } catch (e) {
     console.error('getNewsItems 失败:', e instanceof Error ? e.message : e);
