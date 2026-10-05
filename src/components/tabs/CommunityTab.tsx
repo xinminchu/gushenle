@@ -14,6 +14,7 @@ import FamilyNews from '../FamilyNews';
 import DailyBrief from '../DailyBrief';
 import DenominatorStrip from '../DenominatorStrip';
 import MarketSentimentStrip from '../MarketSentimentStrip';
+import PiisWeekly from '../PiisWeekly';
 import {
   fetchPosts,
   createPost,
@@ -384,6 +385,9 @@ export default function CommunityTab() {
 
       {/* 市场情绪：VIX + 贪婪指数（取不到自动隐藏） */}
       <MarketSentimentStrip />
+
+      {/* PIIS 本周解读：先给视角，再看下面的新闻 */}
+      <PiisWeekly />
 
       {/* 今日大事 + 财经日历：免登录可看 */}
       <FamilyNews />
