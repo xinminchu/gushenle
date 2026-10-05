@@ -30,7 +30,7 @@ import { useFocusList } from '@/hooks/useFocusList';
 import { FOCUS_MAX } from '@/lib/focus';
 import BuyCheckup from './BuyCheckup';
 import { useWatchlistData } from '@/hooks/useWatchlistData';
-import { getStaticEvents } from '@/lib/financeCalendar';
+import { getStaticEvents, calEventTitle } from '@/lib/financeCalendar';
 import type { SymbolReactions } from '@/app/api/earnings/route';
 import { bullBearLines, computeKeyLevels, actualHighLow } from '@/lib/brief';
 import type { Lang } from '@/lib/i18n';
@@ -315,23 +315,34 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     };
   }, [symbol]);
 
-  /** K 线图事件标记：落在当前区间内的财报日（紫点）与宏观事件（黄点） */
+  /** K 线图事件标记：落在当前区间内的财报日（紫点）与宏观事件（黄点），圆点旁直接标注事件名 */
   const eventMarkers = useMemo(() => {
     const s = data?.series;
     if (!s || s.length === 0) return null;
     const inRange = new Set(s.map((p) => p.date));
-    const out: { time: string; kind: 'earnings' | 'macro' }[] = [];
+    const out: { time: string; kind: 'earnings' | 'macro'; title: string; titleEn: string }[] = [];
     if (earnReact) {
       for (const p of earnReact.past) {
-        if (inRange.has(p.date)) out.push({ time: p.date, kind: 'earnings' });
+        if (inRange.has(p.date))
+          out.push({ time: p.date, kind: 'earnings', title: '财报', titleEn: 'Earnings' });
       }
       if (earnReact.upcoming && inRange.has(earnReact.upcoming)) {
-        out.push({ time: earnReact.upcoming, kind: 'earnings' });
+        out.push({
+          time: earnReact.upcoming,
+          kind: 'earnings',
+          title: '财报·预',
+          titleEn: 'Earnings (est.)',
+        });
       }
     }
     for (const e of getStaticEvents()) {
       if ((e.kind === 'fomc' || e.kind === 'cpi' || e.kind === 'nonfarm') && inRange.has(e.date)) {
-        out.push({ time: e.date, kind: 'macro' });
+        out.push({
+          time: e.date,
+          kind: 'macro',
+          title: calEventTitle(e, 'zh'),
+          titleEn: calEventTitle(e, 'en'),
+        });
       }
     }
     return out.length > 0 ? out : null;
