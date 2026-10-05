@@ -72,7 +72,7 @@ function avatarColor(name: string): string {
   return colors[h % colors.length];
 }
 
-export default function CommunityTab() {
+export default function CommunityTab({ calendarFocus }: { calendarFocus?: string | null }) {
   const { user, loading: authLoading } = useAuth();
   const { lang } = useLanguage();
   const [loginOpen, setLoginOpen] = useState(false);
@@ -390,7 +390,7 @@ export default function CommunityTab() {
       <PiisWeekly />
 
       {/* 今日大事 + 财经日历：免登录可看 */}
-      <FamilyNews />
+      <FamilyNews focusDate={calendarFocus} />
 
       {/* 理念卡片 */}
       <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4 flex items-center gap-3">

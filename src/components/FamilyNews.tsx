@@ -29,7 +29,7 @@ function fmtTime(ms: number): string {
 const NEWS_MARKET_KEY = 'gushenle:news-market';
 type NewsMarket = 'us' | 'cn';
 
-export default function FamilyNews() {
+export default function FamilyNews({ focusDate }: { focusDate?: string | null }) {
   const { lang } = useLanguage();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [newsOpen, setNewsOpen] = useState(false);
@@ -45,6 +45,10 @@ export default function FamilyNews() {
   });
   const [weekEvents, setWeekEvents] = useState<CalEvent[]>([]);
   const [yearOpen, setYearOpen] = useState(false);
+  // 从 K 线图事件圆点跳过来：自动展开全年大事记，高亮对准的日期
+  useEffect(() => {
+    if (focusDate) setYearOpen(true);
+  }, [focusDate]);
   // 财报后反应实测（GoMoon 式"事件后市场走了多远"的日线版）
   const [reactions, setReactions] = useState<Record<string, SymbolReactions>>({});
   const [reactOpenKey, setReactOpenKey] = useState<string | null>(null);
@@ -247,7 +251,7 @@ export default function FamilyNews() {
       </section>
 
       {/* 未来7天 */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+      <section id="finance-calendar" className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 scroll-mt-24">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
           <CalendarDays className="w-3.5 h-3.5 text-amber-400" /> {tx(lang, 'Next 7 days', '未来7天')}
           <span className="text-[10px] text-slate-500 font-normal">{tx(lang, "Know what's coming, before it happens", '大事发生前，心里先有数')}</span>
@@ -256,7 +260,7 @@ export default function FamilyNews() {
           <p className="text-[11px] text-slate-500 py-1">{tx(lang, 'Nothing major in the next 7 days — just follow the rhythm.', '未来7天没有重要日程，可以安心看律动。')}</p>
         ) : (          <div className="space-y-2.5">
             {[...dayGroups.entries()].map(([date, evts]) => (
-              <div key={date} className="flex gap-2.5">
+              <div key={date} className={`flex gap-2.5 ${date === focusDate ? 'bg-amber-500/15 rounded-lg px-2 -mx-2 py-1 ring-1 ring-amber-500/50' : ''}`}>
                 <div className="shrink-0 w-20 pt-0.5">
                   <p className={`text-[11px] font-semibold ${date === today ? 'text-emerald-400' : 'text-slate-300'}`}>
                     {date === today ? tx(lang, 'Today', '今天') : formatDateCN(date, lang)}
@@ -373,7 +377,7 @@ export default function FamilyNews() {
                       const meta = kindMeta(e.kind, lang);
                       const past = e.date < today;
                       return (
-                        <div key={i} className={`flex items-center gap-1.5 text-[11px] ${past ? 'opacity-40' : ''}`}>
+                        <div key={i} className={`flex items-center gap-1.5 text-[11px] ${past ? 'opacity-40' : ''} ${e.date === focusDate ? 'bg-amber-500/15 rounded px-1 -mx-1 ring-1 ring-amber-500/50 opacity-100' : ''}`}>
                           <span className="text-slate-500 w-14 shrink-0">{e.date.slice(5).replace('-', '/')}</span>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded border ${meta.chip}`}>{meta.label}</span>
                           <span className="text-slate-300 truncate">{calEventTitle(e, lang)}</span>

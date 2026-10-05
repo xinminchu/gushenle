@@ -292,11 +292,14 @@ export function fibKindLabel(kind: FibLevelKind, lang: Lang = 'zh'): string {
 }
 
 /**
- * 展示用比率：下行扩展目标带负号（如 -1.272），表示从锚点向下再走 1.272 倍波段幅度；
- * 回调位（支撑/压力）与上行目标沿用常规正数。
+ * 展示用比率：线在现价上方（压力/上行目标）带正号，下方（支撑/下行目标）带负号——
+ * 符号表示"从现价往哪个方向走能碰到这条线"，跟随全站涨跌配色（绿涨红跌/红涨绿跌）一起看。
+ * kind 本身已按现价位置定（retrace 有 nowPrice 翻转；extension 目标恒在波段极值之外），
+ * 常规情况下 kind 的上下与相对现价的上下一致。
  */
 export function fibRatioLabel(lv: FibLevel): string {
-  return `${lv.kind === 'target-down' ? '-' : ''}${lv.ratio}`;
+  const up = lv.kind === 'resistance' || lv.kind === 'target-up';
+  return `${up ? '+' : '-'}${lv.ratio}`;
 }
 
 export interface FibPlainAdviceInput {

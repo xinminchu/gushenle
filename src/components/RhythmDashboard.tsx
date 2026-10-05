@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { Flame, ShieldAlert, TrendingUp, RefreshCw, ChevronRight } from 'lucide-react';
-import RhythmChart, { type ChartType } from './RhythmChart';
+import RhythmChart, { type ChartType, type ChartEventMarker } from './RhythmChart';
 import AccuracyPanel from './AccuracyPanel';
 import ScoreSparkline from './ScoreSparkline';
 import ChipPanel from './ChipPanel';
@@ -126,7 +126,14 @@ function buildZenHoldings(symbol: string, price: number | null, lang: Lang = 'zh
   };
 }
 
-export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () => void }) {
+export default function RhythmDashboard({
+  onGoPortfolio,
+  onGoCalendar,
+}: {
+  onGoPortfolio?: () => void;
+  /** 点图表事件圆点 → 弹窗里"去资讯页财经日历查看" → 跳到资讯页日历 */
+  onGoCalendar?: (date: string) => void;
+}) {
   const {
     items: watchlist,
     nameOf,
@@ -168,6 +175,8 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
   const anchorLabel = anchorRangeDef ? rangeLabel(anchorRangeDef, lang) : '3M';
   // 高波/稳健说明的展开状态
   const [showTierInfo, setShowTierInfo] = useState(false);
+  // 图上事件圆点详情弹窗：点圆点 → 显示事件内容 + 去资讯页财经日历的链接
+  const [eventSheet, setEventSheet] = useState<ChartEventMarker | null>(null);
   // 图表类型：3M 及以内默认 K线，长区间默认收盘线；用户手动切换后记住选择（切区间时重置）
   const [chartTypeOverride, setChartTypeOverride] = useState<ChartType | null>(null);
   const [showRangeHL, setShowRangeHL] = useState(true);
@@ -315,23 +324,28 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
     };
   }, [symbol]);
 
-  /** K 线图事件标记：落在当前区间内的财报日（紫点）与宏观事件（黄点），圆点旁直接标注事件名 */
+  /** K 线图事件标记：落在当前区间内的财报日（紫点）与宏观事件（黄点），点圆点看事件详情 */
   const eventMarkers = useMemo(() => {
     const s = data?.series;
     if (!s || s.length === 0) return null;
     const inRange = new Set(s.map((p) => p.date));
-    const out: { time: string; kind: 'earnings' | 'macro'; title: string; titleEn: string }[] = [];
+    const out: ChartEventMarker[] = [];
     if (earnReact) {
       for (const p of earnReact.past) {
         if (inRange.has(p.date))
-          out.push({ time: p.date, kind: 'earnings', title: '财报', titleEn: 'Earnings' });
+          out.push({
+            time: p.date,
+            kind: 'earnings',
+            title: `${symbol.toUpperCase()} 财报`,
+            titleEn: `${symbol.toUpperCase()} Earnings`,
+          });
       }
       if (earnReact.upcoming && inRange.has(earnReact.upcoming)) {
         out.push({
           time: earnReact.upcoming,
           kind: 'earnings',
-          title: '财报·预',
-          titleEn: 'Earnings (est.)',
+          title: `${symbol.toUpperCase()} 财报·预`,
+          titleEn: `${symbol.toUpperCase()} Earnings (est.)`,
         });
       }
     }
@@ -340,13 +354,14 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
         out.push({
           time: e.date,
           kind: 'macro',
+          macroKind: e.kind,
           title: calEventTitle(e, 'zh'),
           titleEn: calEventTitle(e, 'en'),
         });
       }
     }
     return out.length > 0 ? out : null;
-  }, [data, earnReact]);
+  }, [data, earnReact, symbol]);
 
   // 若当前区间对该标的不可用（如上市不足），切回主判断区间
   useEffect(() => {
@@ -688,6 +703,7 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
               keyLevels={keyLevels}
               showKeyLevels={showKeyLevels}
               eventMarkers={eventMarkers}
+              onEventMarkerClick={setEventSheet}
               lang={lang}
             />
             {/* 黄金分割说明：组合的具体文字放图下方 */}
@@ -1287,6 +1303,65 @@ export default function RhythmDashboard({ onGoPortfolio }: { onGoPortfolio?: () 
           </div>
         </div>
       )}
+      {/* 📅 图上事件圆点详情：点圆点 → 事件内容 + 去资讯页财经日历的链接 */}
+      {eventSheet &&
+        (() => {
+          const m = eventSheet;
+          const icon =
+            m.kind === 'earnings' ? '📢' : m.macroKind === 'fomc' ? '🏦' : m.macroKind === 'cpi' ? '📊' : '💼';
+          const explainer =
+            m.kind === 'earnings'
+              ? tx(lang, 'Earnings day — volatility often spikes around earnings.', '财报日——财报日前后，股价波动常常放大。')
+              : m.macroKind === 'fomc'
+                ? tx(lang, 'Fed rate decision — when rates move, funding costs move everywhere.', '美联储议息决议——利率一动，全市场的资金成本跟着动。')
+                : m.macroKind === 'cpi'
+                  ? tx(lang, 'Key inflation data — shapes Fed rate-cut expectations directly.', '通胀关键数据——直接左右美联储的降息预期。')
+                  : tx(lang, 'US nonfarm payrolls — labor-market heat often swings the market.', '美国非农就业数据——就业冷热，常引发市场大波动。');
+          return (
+            <div
+              className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+              onClick={() => setEventSheet(null)}
+            >
+              <div
+                className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl p-5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-2xl">{icon}</span>
+                    <div>
+                      <h3 className="font-bold text-slate-100 text-base">
+                        {lang === 'en' ? m.titleEn : m.title}
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        {m.time} · {m.kind === 'earnings' ? tx(lang, 'Earnings', '财报') : tx(lang, 'Macro event', '宏观事件')}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setEventSheet(null)}
+                    className="text-slate-500 hover:text-slate-300 p-1 text-lg leading-none"
+                    aria-label={tx(lang, 'Close', '关闭')}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed mt-3">{explainer}</p>
+                {onGoCalendar && (
+                  <button
+                    onClick={() => {
+                      onGoCalendar(m.time);
+                      setEventSheet(null);
+                    }}
+                    className="mt-4 w-full text-center text-xs font-semibold text-sky-300 bg-sky-500/10 border border-sky-500/30 rounded-xl py-2.5 hover:bg-sky-500/20 transition-colors"
+                  >
+                    {tx(lang, 'View in finance calendar →', '去资讯页财经日历查看 →')}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       {/* 🩺 买入前体检：5 道检查，拦住一时冲动 */}
       {showCheckup && data && judgment && (
         <BuyCheckup

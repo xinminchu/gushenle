@@ -11,7 +11,7 @@ import {
   createChart,
   createSeriesMarkers,
 } from 'lightweight-charts';
-import type { CreatePriceLineOptions, IChartApi, ISeriesApi, SeriesMarker, SeriesType, Time } from 'lightweight-charts';
+import type { CreatePriceLineOptions, IChartApi, ISeriesApi, MouseEventParams, SeriesMarker, SeriesType, Time } from 'lightweight-charts';
 import type { RhythmPoint } from '@/lib/rhythm';
 import type { ColorScheme } from '@/lib/colorScheme';
 import { upHex, downHex } from '@/lib/colorScheme';
@@ -42,9 +42,21 @@ interface RhythmChartProps {
   keyLevels?: KeyLevel[] | null;
   /** 是否显示关键价位线 */
   showKeyLevels?: boolean;
-  /** 事件标记：财报 / 宏观事件（议息/CPI/非农）在图上的小圆点，圆点旁直接标注事件名 */
-  eventMarkers?: { time: string; kind: 'earnings' | 'macro'; title: string; titleEn: string }[] | null;
+  /** 事件标记：财报 / 宏观事件（议息/CPI/非农）在图上的小圆点，点圆点看事件详情 */
+  eventMarkers?: ChartEventMarker[] | null;
+  /** 点中事件圆点时的回调（轻量图表库的圆点本身不可点，用整图 click 按时间匹配） */
+  onEventMarkerClick?: (m: ChartEventMarker) => void;
   lang?: Lang;
+}
+
+/** 图上事件圆点：财报 / 宏观事件（议息/CPI/非农），点圆点看事件详情 */
+export interface ChartEventMarker {
+  time: string;
+  kind: 'earnings' | 'macro';
+  /** 宏观事件细分：fomc=议息，cpi=CPI，nonfarm=非农（决定弹窗图标与一句话说明） */
+  macroKind?: 'fomc' | 'cpi' | 'nonfarm';
+  title: string;
+  titleEn: string;
 }
 
 /** 四线图图例颜色（中性色，不跟涨跌配色走） */
@@ -76,6 +88,7 @@ export default function RhythmChart({
   keyLevels,
   showKeyLevels = false,
   eventMarkers,
+  onEventMarkerClick,
   lang = 'zh',
 }: RhythmChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -173,9 +186,9 @@ export default function RhythmChart({
       }
     };
 
-    /** 事件标记：小圆点落在对应 bar 上方，圆点旁直接标注事件名（v5 markers 的 text 字段）。
-     * 时间必须精确命中一根 bar，否则标记画不出来，所以先过滤。
-     * 宏观事件用深 amber，保证浅色主题下文字也看得清。 */
+    /** 事件标记：小圆点落在对应 bar 上方（v5 走 series-markers 插件）。
+     * 圆点本身不可点：整图订阅 click，按时间匹配到圆点后走 onEventMarkerClick。
+     * 时间必须精确命中一根 bar，否则标记画不出来，所以先过滤。 */
     const applyEventMarkers = <T extends SeriesType>(s: ISeriesApi<T, Time>) => {
       if (!eventMarkers || eventMarkers.length === 0) return;
       const inRange = new Set(series.map((p) => p.date));
@@ -188,7 +201,7 @@ export default function RhythmChart({
           position: 'aboveBar',
           shape: 'circle',
           color: isEarn ? 'rgba(167, 139, 250, 0.9)' : 'rgba(217, 119, 6, 0.95)',
-          text: lang === 'en' ? m.titleEn : m.title,
+          size: 1.6,
         });
       }
       if (ms.length > 0) createSeriesMarkers(s, ms);
@@ -348,13 +361,23 @@ export default function RhythmChart({
     });
     ro.observe(el);
 
+    // 点事件圆点：按点击时间匹配圆点（库的 marker 本身不可点）
+    const handleClick = (param: MouseEventParams<Time>) => {
+      if (!onEventMarkerClick || !eventMarkers || param.time == null) return;
+      const t = String(param.time);
+      const hit = eventMarkers.find((m) => m.time === t);
+      if (hit) onEventMarkerClick(hit);
+    };
+    chart.subscribeClick(handleClick);
+
     return () => {
+      chart.unsubscribeClick(handleClick);
       ts.unsubscribeVisibleLogicalRangeChange(checkZoom);
       ro.disconnect();
       chartApiRef.current = null;
       chart.remove();
     };
-  }, [series, height, chartType, showRangeHL, fibLevels, fibScaleLevels, scheme, UP, DOWN, prevCloseLabel, keyLevels, showKeyLevels, eventMarkers, lang]);
+  }, [series, height, chartType, showRangeHL, fibLevels, fibScaleLevels, scheme, UP, DOWN, prevCloseLabel, keyLevels, showKeyLevels, eventMarkers, onEventMarkerClick, lang]);
 
   /** 一键回到初始全量视图：时间轴全显 + 价格轴自动缩放 */
   const resetZoom = () => {

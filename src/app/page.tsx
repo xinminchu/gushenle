@@ -63,6 +63,16 @@ function HomeInner() {
     }, 80);
   };
 
+  // K 线图事件圆点 -> 跳到资讯页财经日历，对准该日期并高亮
+  const [calendarFocus, setCalendarFocus] = useState<string | null>(null);
+  const goCalendar = (date: string) => {
+    setCalendarFocus(date);
+    setActiveTab('community');
+    setTimeout(() => {
+      document.getElementById('finance-calendar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  };
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 selection:bg-emerald-500/30 relative pb-32">
       {/* 全页面共用顶栏：所有 tab 顶部都显示 */}
@@ -72,12 +82,12 @@ function HomeInner() {
       <div className="w-full">
         {activeTab === 'today' && (
           <section className="p-4 max-w-md mx-auto">
-            <RhythmDashboard onGoPortfolio={() => setActiveTab('portfolio')} />
+            <RhythmDashboard onGoPortfolio={() => setActiveTab('portfolio')} onGoCalendar={goCalendar} />
           </section>
         )}
         {activeTab === 'portfolio' && <PortfolioTab onViewSymbol={viewSymbol} onGoMemory={goMemory} />}
         {activeTab === 'memory' && <MemoryTab prefillSymbol={memoryPrefill} />}
-        {activeTab === 'community' && <CommunityTab />}
+        {activeTab === 'community' && <CommunityTab calendarFocus={calendarFocus} />}
         {activeTab === 'fun' && <FunTab />}
       </div>
 
