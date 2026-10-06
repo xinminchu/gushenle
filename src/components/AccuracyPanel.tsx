@@ -140,13 +140,16 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-      <h2 className="text-base font-semibold mb-3 text-slate-200 flex items-center gap-2">
+      <h2 className="text-base font-semibold mb-2 text-slate-200 flex items-center gap-2">
         <History className="w-4 h-4 text-slate-400" /> {tx(lang, 'Backtest', '判断复盘')}
         <span className="text-[10px] font-normal text-slate-500">{symbol}</span>
         <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
           {tx(lang, '1Y signals · next-day verified', '近一年信号 · 次日验证')}
         </span>
       </h2>
+      <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
+        {tx(lang, 'Not a prediction — it answers one question: were past “don’t chase / don’t catch the knife” warnings actually right?', '不预测涨跌，只回答一个问题：过去的“别追 / 别抄底”警告，到底准不准？')}
+      </p>
 
       <div className="flex items-center gap-5">
         <div className="text-center shrink-0">
@@ -176,6 +179,17 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
                 : st.edge < 0
                   ? 'text-rose-400'
                   : 'text-slate-400';
+          // 一句人话结论：这个警告到底值不值得听
+          const verdict =
+            st.total === 0
+              ? { text: tx(lang, 'Never triggered in the past year', '过去一年没出现过'), cls: 'text-slate-500' }
+              : st.edge == null || st.accuracy == null
+                ? null
+                : st.edge >= 5
+                  ? { text: tx(lang, 'Reliable warning — worth heeding', '这个警告比较准，出现时多掂量一下'), cls: 'text-emerald-400' }
+                  : st.edge <= -5
+                    ? { text: tx(lang, 'Often wrong — take with a grain of salt', '这个警告经常报错，别太当真'), cls: 'text-rose-400' }
+                    : { text: tx(lang, 'Barely better than guessing', '跟瞎猜差不多，参考价值不大'), cls: 'text-slate-500' };
           return (
             <div key={key} className="bg-slate-800/50 rounded-lg px-3 py-2">
               <div className="flex items-center justify-between">
@@ -186,13 +200,20 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
                 <span className="text-sm font-bold text-slate-100">{fmtPct(st.accuracy)}</span>
                 <span className={`text-[10px] ${edgeColor}`}>{tx(lang, `vs baseline ${fmtEdge(st.edge)}%`, `超基线 ${fmtEdge(st.edge)}%`)}</span>
               </div>
+              {verdict && (
+                <div className={`mt-0.5 text-[10px] leading-snug ${verdict.cls}`}>{verdict.text}</div>
+              )}
             </div>
           );
         })}
       </div>
 
       {recent.length > 0 && (
-        <div className="mt-3 space-y-1">
+        <div className="mt-3">
+          <div className="text-[10px] text-slate-600 mb-1">
+            {tx(lang, '✓ = warning proved right · ✗ = warning proved wrong (grades the warning, not the move)', '✓ = 警告应验了 · ✗ = 警告报错了（评的是警告准不准，不是涨跌好坏）')}
+          </div>
+          <div className="space-y-1">
           {recent.slice(0, 5).map((s) => (
             <div
               key={s.date}
@@ -215,6 +236,7 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
               </span>
             </div>
           ))}
+          </div>
         </div>
       )}
 
