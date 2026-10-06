@@ -148,7 +148,7 @@ export default function AccuracyPanel({ symbol }: { symbol: string }) {
         </span>
       </h2>
       <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
-        {tx(lang, 'Not a prediction — it answers one question: were past “don’t chase / don’t catch the knife” warnings actually right?', '不预测涨跌，只回答一个问题：过去的“别追 / 别抄底”警告，到底准不准？')}
+        {tx(lang, 'Not a prediction — for this stock only: were its past “don’t chase / don’t catch the knife” warnings actually right?', '不预测涨跌，只回答一个问题：对这只股票，过去的“别追 / 别抄底”警告到底准不准？（换只股票，结论可能完全不同）')}
       </p>
 
       <div className="flex items-center gap-5">
