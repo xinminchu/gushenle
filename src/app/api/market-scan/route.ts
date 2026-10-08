@@ -220,6 +220,47 @@ export async function GET(req: Request) {
     // 大盘
     const idx = (s: string) => primary.find((i) => i.symbol === s) || null;
 
+    // ---- 潜力发现：前后两天对比找"刚转折"，不是按位置挑 ----
+    // 趋势初起：昨天 50 分下方（非热），今天转入 risingAccel/hotStrong
+    // 止跌回升：昨天是 oversoldBottom/bottomUp/weakLow，今天转入 risingAccel/hotStrong
+    // 每只带昨天分数 + 作废线（前端展示），只摆数据不做推荐
+    let discovery: {
+      emerging: Array<ScanItem & { prevScore: number; prevStatusKey: string }>;
+      rebounding: Array<ScanItem & { prevScore: number; prevStatusKey: string }>;
+      prevDate: string | null;
+    } = { emerging: [], rebounding: [], prevDate: null };
+    try {
+      const prevDate = dates.find((d) => d < scanDate) ?? null;
+      if (prevDate) {
+        const prevItems = await loadItems(prevDate);
+        const prevMap = new Map(prevItems.map((p) => [p.symbol, p]));
+        const HOT = new Set(['risingAccel', 'hotStrong']);
+        const COLD = new Set(['oversoldBottom', 'bottomUp', 'weakLow']);
+        const emerging: Array<ScanItem & { prevScore: number; prevStatusKey: string }> = [];
+        const rebounding: Array<ScanItem & { prevScore: number; prevStatusKey: string }> = [];
+        for (const t of primary) {
+          const p = prevMap.get(t.symbol);
+          if (!p || !HOT.has(t.statusKey)) continue;
+          const item = { ...t, prevScore: p.score, prevStatusKey: p.statusKey };
+          if (COLD.has(p.statusKey)) rebounding.push(item);
+          else if (p.score < 50) emerging.push(item);
+        }
+        const byJump = (
+          a: { score: number; prevScore: number },
+          b: { score: number; prevScore: number },
+        ) => b.score - b.prevScore - (a.score - a.prevScore);
+        rebounding.sort(byJump);
+        const rbSyms = new Set(rebounding.map((r) => r.symbol));
+        discovery = {
+          emerging: emerging.filter((e) => !rbSyms.has(e.symbol)).sort(byJump).slice(0, 5),
+          rebounding: rebounding.slice(0, 5),
+          prevDate,
+        };
+      }
+    } catch {
+      /* 前日快照读不到就空着，不影响主流程 */
+    }
+
     // 昨日资金异动：估算净流入/流出各前 3（标"估算"）
     const withFlow = primary.filter((i) => i.inflowEst != null);
     const inflowTop = [...withFlow].sort((a, b) => (b.inflowEst ?? 0) - (a.inflowEst ?? 0)).slice(0, 3);
@@ -237,6 +278,8 @@ export async function GET(req: Request) {
       cold,
       /** 每行实际用的数据日期（空行回补时与 scanDate 不同，前端标注） */
       rowDates,
+      /** 潜力发现：前后两天对比的转折（趋势初起/止跌回升），只摆数据不做推荐 */
+      discovery,
       /** 中间行是否经过"近20天净流入为正"过滤（有真实 flow_20d 数据时才为 true） */
       flowFilter,
       qqq: idx('QQQ'),
