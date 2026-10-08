@@ -496,8 +496,8 @@ export default function RhythmDashboard({
     fetch(`/api/accuracy?symbol=${encodeURIComponent(symbol)}&lang=${lang}`)
       .then((r) => r.json())
       .then((j) => {
-        if (!alive || !j?.available || !j?.statuses || !judgment?.statusKey) return;
-        const s = j.statuses[judgment.statusKey];
+        if (!alive || !j?.available || !j?.stats?.statuses || !judgment?.statusKey) return;
+        const s = j.stats.statuses[judgment.statusKey];
         if (s && s.total > 0) setSignalStats({ total: s.total, accuracy: s.accuracy });
       })
       .catch(() => {});
