@@ -10,7 +10,7 @@ import ChipPanel from './ChipPanel';
 import FlowPanel from './FlowPanel';
 import type { RhythmResponse } from '@/lib/rhythm';
 import { RANGE_DEFS, RANGE_MAP, ANCHOR_RANGE_ID, scoreGradient, rangeLabel } from '@/lib/rhythm';
-import { adviceWithPosition } from '@/lib/rhythm';
+import { adviceWithPosition, convictionOf, type Conviction } from '@/lib/rhythm';
 import { getRhythm, invalidateRhythm } from '@/lib/market';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 import { useWatchlist } from './WatchlistContext';
@@ -18,7 +18,7 @@ import CompanyIntro from './CompanyIntro';
 import CompanyDeepDive from './CompanyDeepDive';
 import { findStock, displayStockName } from '@/lib/stockList';
 import { fmtMoney } from '@/lib/currency';
-import { todayStr, type OpAction } from '@/lib/operations';
+import { todayStr, type OpAction, loadOperations } from '@/lib/operations';
 import { loadPositions, saveOperationAndSync } from '@/lib/positions';
 import { useColorScheme, schemeLabel, upText, downText } from '@/lib/colorScheme';
 import { useLanguage } from '@/context/LanguageContext';
@@ -32,7 +32,7 @@ import BuyCheckup from './BuyCheckup';
 import { useWatchlistData } from '@/hooks/useWatchlistData';
 import { getStaticEvents, calEventTitle } from '@/lib/financeCalendar';
 import type { SymbolReactions } from '@/app/api/earnings/route';
-import { bullBearLines, computeKeyLevels, actualHighLow } from '@/lib/brief';
+import { computeKeyLevels, actualHighLow } from '@/lib/brief';
 import type { Lang } from '@/lib/i18n';
 import { tx } from '@/lib/hant';
 import {
@@ -479,12 +479,71 @@ export default function RhythmDashboard({
       y1: actualHighLow(s)?.high ?? null,
     };
   }, [wlData, symbol]);
-  /** 诊断卡多空一句话：由律动三因子自动拼 */
-  const bullBear = useMemo(
-    () => (judgment ? bullBearLines(judgment.pos, judgment.trend, judgment.vel, lang) : null),
+  /** 信号确信度：极端值才有行动价值，中部诚实标注 */
+  const conviction: Conviction | null = useMemo(
+    () => (judgment ? convictionOf(judgment.score, judgment.thresholds) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [judgment?.pos, judgment?.trend, judgment?.vel, lang],
+    [judgment?.score, judgment?.thresholds.hot, judgment?.thresholds.cold],
   );
+  /** 信号可信度：这个判断在该标的上过去准不准（判断复盘 API 的分状态统计） */
+  const [signalStats, setSignalStats] = useState<{
+    total: number;
+    accuracy: number | null;
+  } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setSignalStats(null);
+    fetch(`/api/accuracy?symbol=${encodeURIComponent(symbol)}&lang=${lang}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (!alive || !j?.available || !j?.statuses || !judgment?.statusKey) return;
+        const s = j.statuses[judgment.statusKey];
+        if (s && s.total > 0) setSignalStats({ total: s.total, accuracy: s.accuracy });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol, lang, judgment?.statusKey]);
+  /** 你的计划：最近一次买入操作及当时理由 */
+  const lastBuy = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const ops = loadOperations().filter(
+        (o) => o.symbol.toUpperCase() === symbol.toUpperCase() && o.action === 'buy',
+      );
+      return ops.length > 0 ? ops[0] : null;
+    } catch {
+      return null;
+    }
+  }, [symbol]);
+  /** 参谋价位：离现价最近的上方压力 / 下方支撑（关键价位 + 黄金分割合并） */
+  const counselLevels = useMemo(() => {
+    if (!data?.price) return null;
+    const price = data.price;
+    const cands: Array<{ label: string; price: number }> = [];
+    if (keyLevels) {
+      for (const k of keyLevels) cands.push({ label: k.label, price: k.price });
+    }
+    if (fibChartLevels) {
+      for (const lv of fibChartLevels) {
+        if (lv.kind === 'resistance' || lv.kind === 'target-up')
+          cands.push({ label: `Fib ${lv.ratio}`, price: lv.price });
+        else if (lv.kind === 'support' || lv.kind === 'target-down')
+          cands.push({ label: `Fib ${lv.ratio}`, price: lv.price });
+      }
+    }
+    if (data.prevClose) cands.push({ label: tx(lang, 'Prev close', '昨收'), price: data.prevClose });
+    const above = cands
+      .filter((c) => c.price > price * 1.001)
+      .sort((a, b) => a.price - b.price)[0];
+    const below = cands
+      .filter((c) => c.price < price * 0.999)
+      .sort((a, b) => b.price - a.price)[0];
+    return { above: above ?? null, below: below ?? null };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyLevels, fibChartLevels, data?.price, data?.prevClose, lang]);
 
 
   return (
@@ -915,6 +974,16 @@ export default function RhythmDashboard({
                     {judgment.score}
                   </div>
                   <div className="text-[10px] text-slate-400">{judgment.status}</div>
+                  {conviction === 'weak' && (
+                    <div className="mt-0.5 inline-block text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                      {tx(lang, 'Weak signal', '弱信号')}
+                    </div>
+                  )}
+                  {conviction === 'none' && (
+                    <div className="mt-0.5 inline-block text-[9px] px-1.5 py-0.5 rounded-full bg-slate-700/60 text-slate-400 border border-slate-600/50">
+                      {tx(lang, 'No clear signal', '无明确信号')}
+                    </div>
+                  )}
                   <div className="mt-1 flex justify-end" title={tx(lang, 'Score trend, last 10 days', '近10天分数走势')}>
                     <ScoreSparkline
                       closes={(data.series ?? []).map((p) => p.close)}
@@ -988,18 +1057,100 @@ export default function RhythmDashboard({
               <div className="mt-2 text-[10px] text-slate-500">
                 {tx(lang, `Position ${judgment.pos} · Trend ${judgment.trend} · Speed ${judgment.vel}`, `位置 ${judgment.pos} · 趋势 ${judgment.trend} · 速度 ${judgment.vel}`)}
               </div>
-              {bullBear && (
-                <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed">
-                  <div>
-                    <span className="text-slate-500">{tx(lang, 'Bullish:', '多头：')}</span>
-                    <span className="text-slate-300">{bullBear.bull}</span>
+              {/* 参谋区：每句都跟你的钱/计划/可验证的价位有关，替代泛泛的多空话术 */}
+              <div className="mt-3 rounded-xl bg-slate-800/40 border border-slate-700/50 p-3 space-y-2">
+                {/* 1. 你的处境：持仓、成本、浮亏、回本线 */}
+                {myPosition && data && myPnlPct != null && (
+                  <div className="text-[11px] leading-relaxed">
+                    <span className="text-slate-500">{tx(lang, '📍 Your position: ', '📍 你的处境：')}</span>
+                    <span className="text-slate-200">
+                      {tx(lang, `Holding ${myPosition.shares} shares @ ${fmtPrice(myPosition.avgCost)}, now ${fmtPrice(data.price)}`, `持有 ${myPosition.shares} 股 @ ${fmtPrice(myPosition.avgCost)}，现价 ${fmtPrice(data.price)}`)}
+                      {' · '}
+                      <span className={myPnlPct >= 0 ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}>
+                        {myPnlPct >= 0
+                          ? tx(lang, `up ${myPnlPct.toFixed(1)}%`, `浮盈 ${myPnlPct.toFixed(1)}%`)
+                          : tx(lang, `down ${Math.abs(myPnlPct).toFixed(1)}%`, `浮亏 ${Math.abs(myPnlPct).toFixed(1)}%`)}
+                      </span>
+                      {myPnlPct < 0 && data.price > 0 && (
+                        <span className="text-slate-400">
+                          {tx(lang, ` · breakeven needs +${(((myPosition.avgCost / data.price) - 1) * 100).toFixed(1)}%`, ` · 回本需 +${(((myPosition.avgCost / data.price) - 1) * 100).toFixed(1)}%`)}
+                        </span>
+                      )}
+                    </span>
                   </div>
-                  <div>
-                    <span className="text-slate-500">{tx(lang, 'Bearish:', '空头：')}</span>
-                    <span className="text-slate-300">{bullBear.bear}</span>
+                )}
+                {/* 2. 信号可信度：这个判断在该标的上过去准不准 */}
+                {signalStats && (
+                  <div className="text-[11px] leading-relaxed">
+                    <span className="text-slate-500">{tx(lang, '📊 Signal track record: ', '📊 信号可信度：')}</span>
+                    <span className="text-slate-300">
+                      {tx(lang, `"${judgment.status}" on ${symbol}: ${signalStats.total} past occurrences`, `“${judgment.status}”在 ${symbol} 过去出现 ${signalStats.total} 次`)}
+                      {signalStats.accuracy != null ? (
+                        <>
+                          {' · '}
+                          <span className={signalStats.accuracy >= 60 ? 'text-emerald-400 font-medium' : signalStats.accuracy >= 50 ? 'text-amber-300' : 'text-rose-400'}>
+                            {tx(lang, `${signalStats.accuracy.toFixed(0)}% played out`, `${signalStats.accuracy.toFixed(0)}% 之后应验`)}
+                          </span>
+                        </>
+                      ) : (
+                        tx(lang, ' · too few samples', ' · 样本太少')
+                      )}
+                    </span>
                   </div>
-                </div>
-              )}
+                )}
+                {/* 3. 你的计划：上次买入的理由 */}
+                {lastBuy && (
+                  <div className="text-[11px] leading-relaxed">
+                    <span className="text-slate-500">{tx(lang, '📝 Your plan: ', '📝 你的计划：')}</span>
+                    <span className="text-slate-300">
+                      {tx(lang, `On ${lastBuy.date} you bought at ${fmtPrice(lastBuy.price)}`, `${lastBuy.date} 你以 ${fmtPrice(lastBuy.price)} 买入`)}
+                      {lastBuy.thesis
+                        ? tx(lang, ` — thesis was "${lastBuy.thesis}". Still true?`, `，理由是“${lastBuy.thesis}”——这个逻辑变了吗？`)
+                        : tx(lang, ' — no thesis recorded. Still true?', '——当时没记理由，现在还拿得住吗？')}
+                    </span>
+                  </div>
+                )}
+                {/* 4. 具体价位：可证伪的上方/下方 */}
+                {(() => {
+                  const isDown = ['bottomUp', 'weakLow', 'oversoldBottom'].includes(
+                    judgment.statusKey ?? '',
+                  );
+                  return (
+                    <>
+                      {counselLevels?.above && (
+                        <div className="text-[11px] leading-relaxed">
+                          <span className="text-slate-500">{tx(lang, '⬆️ Above: ', '⬆️ 上方：')}</span>
+                          <span className="text-slate-300">
+                            {fmtPrice(counselLevels.above.price)}
+                            <span className="text-slate-500">（{counselLevels.above.label}）</span>
+                            {isDown
+                              ? tx(lang, ' — reclaim it and the slide may ease', '——站上则跌势可能缓和')
+                              : tx(lang, ' — approaching it, chasing gets riskier', '——接近则追高风险加大')}
+                          </span>
+                        </div>
+                      )}
+                      {counselLevels?.below && (
+                        <div className="text-[11px] leading-relaxed">
+                          <span className="text-slate-500">{tx(lang, '⬇️ Below: ', '⬇️ 下方：')}</span>
+                          <span className="text-slate-300">
+                            {fmtPrice(counselLevels.below.price)}
+                            <span className="text-slate-500">（{counselLevels.below.label}）</span>
+                            {tx(lang, ` — break it and the "${judgment.status}" call is invalid`, `——跌破则“${judgment.status}”判断失效`)}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+                {/* 5. 确信度：弱/无信号诚实标注，不包装成买卖依据 */}
+                {conviction !== 'strong' && (
+                  <div className="text-[11px] leading-relaxed text-amber-300/90">
+                    {conviction === 'weak'
+                      ? tx(lang, `⚠️ Weak signal (${judgment.score} pts) — don't treat it as a buy/sell call`, `⚠️ 当前是弱信号（${judgment.score} 分），别当成抄底/逃顶依据`)
+                      : tx(lang, `⚠️ No clear signal (${judgment.score} pts) — sitting out is also a position`, `⚠️ 当前没有明确信号（${judgment.score} 分），中场休息也是一种操作`)}
+                  </div>
+                )}
+              </div>
 
               <div className="mt-2 text-xs text-slate-400 leading-relaxed">{displayAdvice}</div>
               {!myPosition && onGoPortfolio && (

@@ -307,6 +307,18 @@ const ADVICE: Record<StatusKey, { zh: string; en: string }> = {
   },
 };
 
+/**
+ * 信号确信度：模型的行动价值集中在极端值，中部分数是噪音。
+ * 强 = 到达过热/超卖线；弱 = 在阈值上下 10 分内；无 = 中部。
+ * 诊断卡必须诚实标注，弱/无信号不得包装成买卖依据。
+ */
+export type Conviction = 'strong' | 'weak' | 'none';
+export function convictionOf(score: number, th: RhythmThresholds): Conviction {
+  if (score >= th.hot || score <= th.cold) return 'strong';
+  if (score >= th.hot - 10 || score <= th.cold + 10) return 'weak';
+  return 'none';
+}
+
 export function judgeFromScore(
   score: number,
   trend: number,
