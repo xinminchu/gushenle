@@ -10,7 +10,7 @@ interface Signal {
   date: string;
   score: number;
   status: string;
-  statusKey: 'hotStrong' | 'overheated' | 'oversoldBottom' | 'weakLow';
+  statusKey: 'hotStrong' | 'overheated' | 'oversoldBottom' | 'weakLow' | 'bottomUp';
   tier: 'high' | 'stable';
   nextReturn: number;
   hit: boolean;
@@ -38,7 +38,7 @@ interface AccuracyData {
   rule?: string;
 }
 
-const STATUS_ORDER: Signal['statusKey'][] = ['hotStrong', 'overheated', 'oversoldBottom', 'weakLow'];
+const STATUS_ORDER: Signal['statusKey'][] = ['hotStrong', 'overheated', 'oversoldBottom', 'bottomUp', 'weakLow'];
 
 function fmtPct(v: number | null): string {
   return v == null ? '—' : `${v}%`;

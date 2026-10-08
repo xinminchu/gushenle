@@ -29,6 +29,7 @@ export const SIGNAL_KEYS: readonly SignalStatusKey[] = [
   'hotStrong',
   'weakLow',
   'oversoldBottom',
+  'bottomUp',
 ];
 
 const STATUS_META: Record<SignalStatusKey, { baseline: 'chase' | 'bounce' }> = {
@@ -36,6 +37,7 @@ const STATUS_META: Record<SignalStatusKey, { baseline: 'chase' | 'bounce' }> = {
   overheated: { baseline: 'chase' },
   weakLow: { baseline: 'chase' },
   oversoldBottom: { baseline: 'bounce' },
+  bottomUp: { baseline: 'bounce' },
 };
 
 export interface AccuracySignal {

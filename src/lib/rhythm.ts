@@ -222,8 +222,13 @@ export type StatusKey =
   | 'weakLow' // 还在往下跌
   | 'oversoldBottom'; // 跌过头了
 
-/** 有明确交易信号的四种状态（复盘计入；中间三种不记信号） */
-export type SignalStatusKey = 'overheated' | 'hotStrong' | 'weakLow' | 'oversoldBottom';
+/** 有明确交易信号的状态（复盘计入；sideways/risingAccel 不记信号） */
+export type SignalStatusKey =
+  | 'overheated'
+  | 'hotStrong'
+  | 'weakLow'
+  | 'oversoldBottom'
+  | 'bottomUp';
 
 /** 状态 key -> 中文展示（全站唯一映射，改词只改这里） */
 export const STATUS_LABELS: Record<StatusKey, string> = {
