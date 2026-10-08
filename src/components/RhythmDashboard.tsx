@@ -506,18 +506,24 @@ export default function RhythmDashboard({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, lang, judgment?.statusKey]);
-  /** 你的计划：最近一次买入操作及当时理由 */
-  const lastBuy = useMemo(() => {
+  /** 你的计划：看完整买卖流水，不只看买入——卖完了就别再问"拿得住吗" */
+  const lastOp = useMemo(() => {
     if (typeof window === 'undefined') return null;
     try {
       const ops = loadOperations().filter(
-        (o) => o.symbol.toUpperCase() === symbol.toUpperCase() && o.action === 'buy',
+        (o) => o.symbol.toUpperCase() === symbol.toUpperCase(),
       );
       return ops.length > 0 ? ops[0] : null;
     } catch {
       return null;
     }
   }, [symbol]);
+  /** 持仓时的最近一次买入（只有还拿着，买入理由才值得追问） */
+  const lastBuy = useMemo(
+    () => (myPosition && lastOp?.action === 'buy' ? lastOp : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [myPosition?.symbol, lastOp?.id],
+  );
   /** 参谋价位：离现价最近的上方压力 / 下方支撑（关键价位 + 黄金分割合并） */
   const counselLevels = useMemo(() => {
     if (!data?.price) return null;
@@ -1098,7 +1104,7 @@ export default function RhythmDashboard({
                     </span>
                   </div>
                 )}
-                {/* 3. 你的计划：上次买入的理由 */}
+                {/* 3. 你的计划：还拿着才追问买入理由；卖完了就复盘卖得好不好 */}
                 {lastBuy && (
                   <div className="text-[11px] leading-relaxed">
                     <span className="text-slate-500">{tx(lang, '📝 Your plan: ', '📝 你的计划：')}</span>
@@ -1107,6 +1113,31 @@ export default function RhythmDashboard({
                       {lastBuy.thesis
                         ? tx(lang, ` — thesis was "${lastBuy.thesis}". Still true?`, `，理由是“${lastBuy.thesis}”——这个逻辑变了吗？`)
                         : tx(lang, ' — no thesis recorded. Still true?', '——当时没记理由，现在还拿得住吗？')}
+                    </span>
+                  </div>
+                )}
+                {!myPosition && lastOp?.action === 'sell' && data && (
+                  <div className="text-[11px] leading-relaxed">
+                    <span className="text-slate-500">{tx(lang, '📝 Sold: ', '📝 已卖出：')}</span>
+                    <span className="text-slate-300">
+                      {tx(lang, `On ${lastOp.date} you sold${lastOp.qty ? ` ${lastOp.qty} shares` : ''} at ${fmtPrice(lastOp.price)} — flat now`, `${lastOp.date} 你以 ${fmtPrice(lastOp.price)} 卖出${lastOp.qty ? `${lastOp.qty} 股` : ''}，目前空仓`)}
+                      {data.price > 0 && lastOp.price > 0 && (
+                        <>
+                          {' · '}
+                          {(() => {
+                            const diff = ((data.price - lastOp.price) / lastOp.price) * 100;
+                            return diff >= 0 ? (
+                              <span className="text-amber-300">
+                                {tx(lang, `now ${fmtPrice(data.price)}, +${diff.toFixed(1)}% since — sold a bit early`, `现价 ${fmtPrice(data.price)}，比卖出价高 ${diff.toFixed(1)}%——卖早了一点`)}
+                              </span>
+                            ) : (
+                              <span className="text-emerald-400">
+                                {tx(lang, `now ${fmtPrice(data.price)}, ${diff.toFixed(1)}% since — well timed`, `现价 ${fmtPrice(data.price)}，比卖出价低 ${Math.abs(diff).toFixed(1)}%——卖得不亏`)}
+                              </span>
+                            );
+                          })()}
+                        </>
+                      )}
                     </span>
                   </div>
                 )}
