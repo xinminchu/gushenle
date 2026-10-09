@@ -45,10 +45,12 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-/** 全部真实源都不可用时的兜底：生成多年确定性模拟日线（含 OHLC，供 K线用） */
+/** 全部真实源都不可用时的兜底：生成多年确定性模拟日线（含 OHLC，供 K线用）
+ * 种子只用 symbol（不用日期）：同一只股票每天看到同一条假走势，
+ * 避免"昨天一个样今天一个样"制造假转折信号。2026-10-09 修。 */
 function simulatedFull(symbol: string): RhythmPoint[] {
   const base = BASE_PRICES[symbol] ?? 150;
-  const rand = mulberry32(hashSeed(`${symbol}:${isoDate(new Date())}`));
+  const rand = mulberry32(hashSeed(symbol));
   const points = 780; // ~3 年
   const now = Date.now();
   const series: RhythmPoint[] = [];

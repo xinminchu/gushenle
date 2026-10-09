@@ -808,4 +808,14 @@ end
 $$;
 `,
   },
+  {
+    version: "037_market_scan_source",
+    name: "market_scan 加 source 列（区分真数据/假数据兜底）",
+    sql: `-- 037_market_scan_source.sql
+-- 2026-10-09：market_scan 之前不记数据源，simulated 假数据混进真数据，
+-- 导致"潜力发现"把退市股 ANSS 的假走势推成"趋势初起"。加 source 列区分。
+alter table public.market_scan
+  add column if not exists source text not null default 'nasdaq';
+`,
+  },
 ];

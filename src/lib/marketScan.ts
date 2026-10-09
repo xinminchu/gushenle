@@ -1,7 +1,7 @@
 // src/lib/marketScan.ts
 // 每日市场扫描：收盘后把精选池每只股票的律动分/信号/涨跌/昨日估算资金流算好，
 // 写入 market_scan 表。首页「今日信号」和盘前盘后两报直接读表，不实时算。
-import { getFullSeries } from './marketData';
+import { getFullSeries, type DataSource } from './marketData';
 import { buildJudgment } from './rhythm';
 import { estimateFlows } from './flows';
 import { STOCK_LIST, findStock } from './stockList';
@@ -34,14 +34,17 @@ export interface ScanRow {
   downStreak: number;
   /** 最新一根日线的日期 YYYY-MM-DD（即本次扫描的数据日期） */
   barDate: string;
+  /** 数据源：nasdaq/yahoo/naver 为真数据，simulated 为假数据兜底（不进 discovery/信号行） */
+  source: DataSource;
 }
 
 /** 扫一只：拿日线 -> 律动打分 -> 昨日涨跌 -> 昨日估算资金流 */
 export async function scanOne(symbol: string): Promise<ScanRow | null> {
   const sym = symbol.toUpperCase();
   let series;
+  let source: DataSource = 'simulated';
   try {
-    ({ series } = await getFullSeries(sym));
+    ({ series, source } = await getFullSeries(sym));
   } catch {
     return null;
   }
@@ -84,6 +87,7 @@ export async function scanOne(symbol: string): Promise<ScanRow | null> {
     upStreak,
     downStreak,
     barDate: series[n - 1].date.slice(0, 10),
+    source,
   };
 }
 
@@ -115,6 +119,7 @@ export async function upsertScanRows(rows: ScanRow[]): Promise<{ ok: boolean; er
     flow_20d: r.flow20d,
     up_streak: r.upStreak,
     down_streak: r.downStreak,
+    source: r.source,
   }));
   const { error } = await sb.from('market_scan').upsert(payload, {
     onConflict: 'symbol,scan_date',

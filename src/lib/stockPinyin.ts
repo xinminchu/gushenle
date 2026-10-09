@@ -605,10 +605,6 @@ export const STOCK_PINYIN: Record<string, { full: string; initials: string }> = 
     "full": "balike",
     "initials": "blk"
   },
-  "ANSS": {
-    "full": "anxisi",
-    "initials": "axs"
-  },
   "RIVN": {
     "full": "liweian",
     "initials": "lwa"

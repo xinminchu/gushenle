@@ -17,6 +17,8 @@ export interface ScanItem {
   downStreak?: number | null;
   /** 近20天累计净流入（031 未执行时为 null，中间行退回不过滤） */
   flow20d?: number | null;
+  /** 数据源：simulated 为假数据兜底，不进任何信号行/discovery */
+  source?: string | null;
   /** 捡漏形态：rebound=昨天跌今天涨 / streak=连跌两天 */
   pattern?: 'rebound' | 'streak';
 }
@@ -59,20 +61,26 @@ export async function GET(req: Request) {
     }
     // ?pool=1：轻量返回全扫描池（symbol/name/score），供掷骰子"换一批"等取"律动分结果里的股票"
     if (new URL(req.url).searchParams.get('pool') === '1') {
-      const r = await sb.from('market_scan').select('symbol,name,score').eq('scan_date', scanDate);
+      const r1 = await sb.from('market_scan').select('symbol,name,score,source').eq('scan_date', scanDate);
+      // 037 未执行：source 列不存在，退回无 source 版（不过滤）
+      const r = r1.error
+        ? await sb.from('market_scan').select('symbol,name,score').eq('scan_date', scanDate)
+        : r1;
       if (r.error) throw r.error;
-      const pool = ((r.data || []) as { symbol: string; name: string; score: number }[]).map(
-        (x) => ({ symbol: x.symbol, name: x.name, score: x.score }),
-      );
+      const pool = ((r.data || []) as { symbol: string; name: string; score: number; source?: string }[])
+        .filter((x) => x.source !== 'simulated')
+        .map((x) => ({ symbol: x.symbol, name: x.name, score: x.score }));
       return NextResponse.json({ ok: true, scanDate, total: pool.length, pool });
     }
     // 031 没执行时（flow_20d 列不存在）降级：中间行退回"离50最近"不过滤；
     // 030 没执行时（up_streak/down_streak 不存在）降级：连涨连跌标不显示
     const COLS_FULL =
-      'symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est,up_streak,down_streak,flow_20d';
+      'symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est,up_streak,down_streak,flow_20d,source';
     const COLS_NO_FLOW20 =
-      'symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est,up_streak,down_streak';
-    const COLS_BASE = 'symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est';
+      'symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est,up_streak,down_streak,source';
+    const COLS_BASE = 'symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est,source';
+    // 037 未执行时（source 列不存在）终极降级：不带 source，按真数据处理
+    const COLS_LEGACY = 'symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est';
     let cols = COLS_FULL;
     let rows: Record<string, unknown>[] | null = null;
     let withStreak = true;
@@ -91,11 +99,23 @@ export async function GET(req: Request) {
       } catch {
         withStreak = false;
         cols = COLS_BASE;
-        const r3 = await sb.from('market_scan').select(COLS_BASE).eq('scan_date', scanDate);
-        if (r3.error) throw r3.error;
-        rows = r3.data;
+        try {
+          const r3 = await sb.from('market_scan').select(COLS_BASE).eq('scan_date', scanDate);
+          if (r3.error) throw r3.error;
+          rows = r3.data;
+        } catch {
+          // 037 未执行：source 列不存在
+          withStreak = false;
+          cols = COLS_LEGACY;
+          const r4 = await sb.from('market_scan').select(COLS_LEGACY).eq('scan_date', scanDate);
+          if (r4.error) throw r4.error;
+          rows = r4.data;
+        }
       }
     }
+    // 假数据兜底（source=simulated）不进任何信号行/discovery/资金异动；
+    // source 为空（037 未执行的老快照）按真数据处理
+    const isReal = (i: ScanItem) => i.source !== 'simulated';
     const toItems = (rs: Record<string, unknown>[] | null): ScanItem[] =>
       (rs || []).map((r) => ({
         symbol: r.symbol as string,
@@ -108,6 +128,7 @@ export async function GET(req: Request) {
         upStreak: withStreak ? (r.up_streak as number | null) : null,
         downStreak: withStreak ? (r.down_streak as number | null) : null,
         flow20d: withFlow20 ? (r.flow_20d as number | null) : null,
+        source: (r.source as string) || null,
       }));
     const loadItems = async (d: string): Promise<ScanItem[]> => {
       const r = await sb.from('market_scan').select(cols).eq('scan_date', d);
@@ -179,7 +200,9 @@ export async function GET(req: Request) {
       return { hot, middle, cold, flowFilter: hasFlowData };
     }
 
-    const primary = toItems(rows);
+    const primary = toItems(rows).filter(isReal);
+    /** 假数据行数（监控用：突然增多说明数据源出问题） */
+    const simulatedCount = toItems(rows).length - primary.length;
     const computed = computeRows(primary);
     let hot = computed.hot;
     let middle = computed.middle;
@@ -287,6 +310,8 @@ export async function GET(req: Request) {
       inflowTop,
       outflowTop,
       counts,
+      /** 当日假数据行数（突然增多说明数据源出问题） */
+      simulatedCount,
     });
   } catch (e) {
     return NextResponse.json(
