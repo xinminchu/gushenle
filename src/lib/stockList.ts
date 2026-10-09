@@ -117,6 +117,7 @@ export const STOCK_LIST: StockInfo[] = [
   { code: 'CDNS', en: 'Cadence', zh: '铿腾', sector: '半导体', themes: ['芯片'], blurb: '芯片设计EDA软件（铿腾）' },
   { code: 'GFS', en: 'GlobalFoundries', zh: '格芯', sector: '半导体', themes: ['芯片'], blurb: '美国本土芯片代工厂，格罗方德，成熟制程' },
   { code: 'ON', en: 'ON Semiconductor', zh: '安森美', sector: '半导体', themes: ['芯片'], blurb: '功率半导体（电动车和工业）' },
+  { code: 'ONDS', en: 'Ondas Holdings', zh: 'Ondas', sector: '科技', themes: ['无人机'], blurb: '无人机和无线组网，自主系统' },
   { code: 'NXPI', en: 'NXP', zh: '恩智浦', sector: '半导体', themes: ['芯片'], blurb: '汽车和物联网芯片，车用半导体大户' },
   { code: 'TXN', en: 'Texas Instruments', zh: '德州仪器', sector: '半导体', themes: ['芯片'], blurb: '模拟芯片老牌，工业和汽车电子的隐形冠军' },
   { code: 'ADI', en: 'Analog Devices', zh: '亚德诺', sector: '半导体', themes: ['芯片'], blurb: '模拟芯片大厂，信号链芯片龙头' },

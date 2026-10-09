@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { X, Plus, RotateCcw } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { X, Plus, RotateCcw, GripVertical } from 'lucide-react';
 import { useWatchlist } from '../WatchlistContext';
 import DiscoverStocks from '../DiscoverStocks';
 import { useLanguage } from '@/context/LanguageContext';
@@ -30,7 +30,39 @@ export default function WatchlistModal({
   onViewSymbol: (s: string) => void;
 }) {
   const { lang } = useLanguage();
-  const { items: watchlist, isDefault, addItem, removeItem, resetToDefault } = useWatchlist();
+  const { items: watchlist, isDefault, addItem, removeItem, resetToDefault, moveItem } = useWatchlist();
+
+  /** 拖拽排序（Pointer Events，手机/桌面通用） */
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const onDragStart = (idx: number) => (e: React.PointerEvent) => {
+    // 只响应拖拽手柄
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    setDragIdx(idx);
+    e.preventDefault();
+  };
+  const onDragMove = (e: React.PointerEvent) => {
+    if (dragIdx === null || !listRef.current) return;
+    const rows = listRef.current.querySelectorAll('[data-wl-idx]');
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i] as HTMLElement;
+      const rect = r.getBoundingClientRect();
+      if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
+        const idx = Number(r.dataset.wlIdx);
+        if (idx !== dragOverIdx) setDragOverIdx(idx);
+        break;
+      }
+    }
+  };
+  const onDragEnd = () => {
+    if (dragIdx !== null && dragOverIdx !== null && dragIdx !== dragOverIdx) {
+      moveItem(dragIdx, dragOverIdx);
+    }
+    setDragIdx(null);
+    setDragOverIdx(null);
+  };
 
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [newSymbol, setNewSymbol] = useState('');
@@ -157,18 +189,29 @@ export default function WatchlistModal({
         </div>
 
         <div className="overflow-y-auto p-5 space-y-3">
-          {/* 全部列表：一行两个，点行直接看走势 */}
-          <div className="grid grid-cols-2 gap-1.5">
-            {watchlist.map((item) => (
+          {/* 全部列表：单列，拖拽手柄排序，点行直接看走势 */}
+          <div ref={listRef} className="space-y-1.5" onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}>
+            {watchlist.map((item, idx) => (
               <div
                 key={item.symbol}
+                data-wl-idx={idx}
                 onClick={() => {
+                  if (dragIdx !== null) return; // 拖拽中不触发跳转
                   onClose();
                   onViewSymbol(item.symbol);
                 }}
-                className="flex items-center justify-between bg-slate-800/60 rounded-lg pl-2.5 pr-1 py-1.5 min-w-0 cursor-pointer hover:bg-slate-800"
+                className={`flex items-center gap-1 bg-slate-800/60 rounded-lg pl-1 pr-1 py-1.5 min-w-0 cursor-pointer hover:bg-slate-800 transition-colors ${
+                  dragIdx === idx ? 'opacity-40' : ''
+                } ${dragOverIdx === idx && dragIdx !== idx ? 'ring-2 ring-emerald-500/60' : ''}`}
               >
-                <div className="min-w-0 truncate">
+                <span
+                  onPointerDown={onDragStart(idx)}
+                  className="p-1.5 text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing touch-none shrink-0"
+                  aria-label={tx(lang, 'Drag to reorder', '拖拽排序')}
+                >
+                  <GripVertical className="w-4 h-4" />
+                </span>
+                <div className="min-w-0 truncate flex-1">
                   <span className="text-xs font-semibold text-slate-100">{item.symbol}</span>
                   <span className="ml-1.5 text-[10px] text-slate-400">{displayStockName(item.symbol, lang, item.name)}</span>
                 </div>
@@ -186,6 +229,7 @@ export default function WatchlistModal({
               </div>
             ))}
           </div>
+          <p className="text-[10px] text-slate-600">{tx(lang, 'Drag the handle to reorder', '按住 ⋮⋮ 拖拽可排序')}</p>
 
           {/* 手动添加 */}
           <div className="flex gap-2">

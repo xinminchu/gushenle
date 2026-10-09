@@ -18,6 +18,8 @@ interface WatchlistContextValue {
   addItem: (symbol: string, name?: string) => 'ok' | 'exists' | 'invalid';
   removeItem: (symbol: string) => void;
   resetToDefault: () => void;
+  /** 拖拽排序：把 from 位置的移到 to 位置 */
+  moveItem: (from: number, to: number) => void;
   nameOf: (symbol: string) => string;
   /** 跨 tab 跳转：持仓页点某只 -> 今日页看它的诊断 */
   focusSymbol: string | null;
@@ -70,11 +72,19 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
     setIsDefault(true);
   };
 
+  const moveItem = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length) return;
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    persist(next);
+  };
+
   const nameOf = (symbol: string) => items.find((i) => i.symbol === symbol)?.name ?? symbol;
 
   return (
     <WatchlistContext.Provider
-      value={{ items, isDefault, addItem, removeItem, resetToDefault, nameOf, focusSymbol, setFocusSymbol }}
+      value={{ items, isDefault, addItem, removeItem, resetToDefault, moveItem, nameOf, focusSymbol, setFocusSymbol }}
     >
       {children}
     </WatchlistContext.Provider>
