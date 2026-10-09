@@ -4,7 +4,7 @@
 
 import type { RhythmPoint } from '@/lib/rhythm';
 
-export type DataSource = 'nasdaq' | 'yahoo' | 'naver' | 'fred' | 'coingecko' | 'simulated';
+export type DataSource = 'nasdaq' | 'yahoo' | 'naver' | 'fred' | 'coinbase' | 'simulated';
 
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -260,32 +260,32 @@ async function fetchFred(symbol: string): Promise<RhythmPoint[]> {
   return series;
 }
 
-/* ---------- CoinGecko（加密货币免 key；BTC 等） ---------- */
-async function fetchCoinGecko(symbol: string): Promise<RhythmPoint[]> {
-  // symbol 如 BTC-USD -> coin id "bitcoin"
-  const coinId = symbol.split('-')[0]?.toLowerCase();
-  if (!coinId) throw new Error('bad crypto symbol');
-  const url =
-    `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart` +
-    `?vs_currency=usd&days=365&interval=daily`; // 免费版最多 365 天
+/* ---------- Coinbase（加密货币免 key；BTC 等） ---------- */
+async function fetchCoinbase(symbol: string): Promise<RhythmPoint[]> {
+  // symbol 如 BTC-USD -> Coinbase product BTC-USD
+  const product = symbol.toUpperCase();
+  if (!/^[A-Z]{2,10}-USD$/.test(product)) throw new Error('bad crypto symbol');
+  const url = `https://api.exchange.coinbase.com/products/${product}/candles?granularity=86400`;
   const res = await fetch(url, {
     headers: { 'User-Agent': UA },
     next: { revalidate: 3600 },
   });
-  if (!res.ok) throw new Error(`CoinGecko status ${res.status}`);
-  const json = (await res.json()) as { prices?: [number, number][] };
-  const prices = json.prices || [];
+  if (!res.ok) throw new Error(`Coinbase status ${res.status}`);
+  const json = (await res.json()) as number[][];
+  if (!Array.isArray(json) || json.length < 2) throw new Error('Coinbase returned too few points');
+  // 返回 [timestamp, low, high, open, close, volume]，按时间倒序
   const series: RhythmPoint[] = [];
-  for (const [ts, price] of prices) {
+  for (const c of json) {
+    const [ts, low, high, open, close] = c;
     series.push({
-      date: isoDate(new Date(ts)),
-      close: Number(price.toFixed(2)),
-      open: Number(price.toFixed(2)),
-      high: Number(price.toFixed(2)),
-      low: Number(price.toFixed(2)),
+      date: isoDate(new Date(ts * 1000)),
+      close: Number(close.toFixed(2)),
+      open: Number(open.toFixed(2)),
+      high: Number(high.toFixed(2)),
+      low: Number(low.toFixed(2)),
     });
   }
-  if (series.length < 2) throw new Error('CoinGecko returned too few points');
+  series.sort((a, b) => (a.date < b.date ? -1 : 1));
   return series;
 }
 
@@ -423,12 +423,12 @@ export async function getFullSeries(symbol: string): Promise<{
       errors.fred = e1 instanceof Error ? e1.message : String(e1);
     }
   } else if (isCrypto) {
-    // 加密货币：CoinGecko（免 key）
+    // 加密货币：Coinbase（免 key）
     try {
-      series = await fetchCoinGecko(key);
-      source = 'coingecko';
+      series = await fetchCoinbase(key);
+      source = 'coinbase';
     } catch (e1) {
-      errors.coingecko = e1 instanceof Error ? e1.message : String(e1);
+      errors.coinbase = e1 instanceof Error ? e1.message : String(e1);
       try {
         series = await fetchYahooFull(key);
         source = 'yahoo';
