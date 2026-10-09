@@ -267,7 +267,7 @@ async function fetchCoinGecko(symbol: string): Promise<RhythmPoint[]> {
   if (!coinId) throw new Error('bad crypto symbol');
   const url =
     `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart` +
-    `?vs_currency=usd&days=1095&interval=daily`;
+    `?vs_currency=usd&days=365&interval=daily`; // 免费版最多 365 天
   const res = await fetch(url, {
     headers: { 'User-Agent': UA },
     next: { revalidate: 3600 },
