@@ -10,8 +10,10 @@ export interface AccountInfo {
   brokerage: string;
   /** 投入本金（初始投入金额），美元；追加资金就改大这个数 */
   capital: number;
-  /** 累计已实现盈亏（美元）：卖出经操作同步时自动累加，撤销时扣回 */
+  /** 累计已实现盈亏总额（美元）：卖出经操作同步时自动累加，撤销时扣回 */
   realized?: number;
+  /** 每只股票累计已实现盈亏（大写 symbol → 美元），与 realized 同步更新，供明细展开用 */
+  realizedBySymbol?: Record<string, number>;
   /** 最后更新 YYYY-MM-DD */
   updatedAt: string;
 }
@@ -25,10 +27,17 @@ export function loadAccount(): AccountInfo | null {
     if (!raw) return null;
     const p = JSON.parse(raw) as unknown;
     if (!p || typeof p !== 'object') return null;
-    const o = p as { brokerage?: unknown; capital?: unknown; realized?: unknown; updatedAt?: unknown };
+    const o = p as { brokerage?: unknown; capital?: unknown; realized?: unknown; realizedBySymbol?: unknown; updatedAt?: unknown };
     const capital = Number(o.capital);
     if (typeof o.brokerage !== 'string' || !Number.isFinite(capital) || capital <= 0) return null;
     const realized = Number(o.realized);
+    const bySymbol: Record<string, number> = {};
+    if (o.realizedBySymbol && typeof o.realizedBySymbol === 'object') {
+      for (const [k, v] of Object.entries(o.realizedBySymbol as Record<string, unknown>)) {
+        const n = Number(v);
+        if (k && Number.isFinite(n)) bySymbol[k.toUpperCase()] = Math.round(n * 100) / 100;
+      }
+    }
     const updatedAt =
       typeof o.updatedAt === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.updatedAt)
         ? o.updatedAt
@@ -37,6 +46,7 @@ export function loadAccount(): AccountInfo | null {
       brokerage: o.brokerage.trim(),
       capital,
       ...(Number.isFinite(realized) ? { realized: Math.round(realized * 100) / 100 } : {}),
+      ...(Object.keys(bySymbol).length ? { realizedBySymbol: bySymbol } : {}),
       updatedAt,
     };
   } catch {
@@ -61,13 +71,17 @@ export function clearAccount(): void {
   }
 }
 
-/** 累加已实现盈亏（卖出时调用，delta 可正可负；没设账户时静默跳过） */
-export function addRealized(delta: number): void {
+/** 累加某只股票的已实现盈亏（卖出时调用，delta 可正可负；没设账户时静默跳过） */
+export function addRealized(symbol: string, delta: number): void {
   if (!Number.isFinite(delta) || delta === 0) return;
   const a = loadAccount();
   if (!a) return;
-  const next = Math.round(((a.realized ?? 0) + delta) * 100) / 100;
-  saveAccount({ ...a, realized: next, updatedAt: todayStr() });
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const sym = symbol.toUpperCase();
+  const bySymbol = { ...(a.realizedBySymbol ?? {}) };
+  bySymbol[sym] = r2((bySymbol[sym] ?? 0) + delta);
+  const total = r2((a.realized ?? 0) + delta);
+  saveAccount({ ...a, realized: total, realizedBySymbol: bySymbol, updatedAt: todayStr() });
 }
 
 /** 今天 YYYY-MM-DD（本地） */

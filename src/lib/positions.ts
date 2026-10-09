@@ -166,8 +166,8 @@ export function applyOperationToPositions(input: SyncInput): { ok: boolean; msg:
   if (input.qty > p.shares) {
     return { ok: false, msg: `卖出 ${input.qty} 股超出持仓（仅 ${p.shares} 股）` };
   }
-  // 已实现盈亏落袋：(卖出价 − 成本) × 股数，记入账户；否则卖出后这部分钱会从账上"消失"
-  addRealized((input.price - p.avgCost) * input.qty);
+  // 已实现盈亏落袋：(卖出价 − 成本) × 股数，按股票记入账户；否则卖出后这部分钱会从账上"消失"
+  addRealized(sym, (input.price - p.avgCost) * input.qty);
   const left = p.shares - input.qty;
   if (left <= 0) {
     positions.splice(idx, 1);
@@ -232,7 +232,7 @@ export function undoSaveAndSync(res: SaveAndSyncResult): void {
   // 撤销的是卖出：把当时记入的已实现盈亏扣回去（按卖出时的成本快照精确反算）
   if (res.rec.action === 'sell' && res.prevPosition) {
     const qty = res.rec.qty && res.rec.qty > 0 ? res.rec.qty : 0;
-    if (qty > 0) addRealized(-(res.rec.price - res.prevPosition.avgCost) * qty);
+    if (qty > 0) addRealized(res.rec.symbol, -(res.rec.price - res.prevPosition.avgCost) * qty);
   }
   const sym = res.rec.symbol.toUpperCase();
   const positions = loadPositions();

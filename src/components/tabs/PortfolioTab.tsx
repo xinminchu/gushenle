@@ -67,6 +67,7 @@ export default function PortfolioTab({
   const [positions, setPositions] = useState<Position[]>([]);
   const [account, setAccount] = useState<AccountInfo | null>(() => loadAccount());
   const [showAccount, setShowAccount] = useState(false);
+  const [showPnlDetail, setShowPnlDetail] = useState(false);
   const [acctBrokerage, setAcctBrokerage] = useState('');
   const [acctCapital, setAcctCapital] = useState('');
   const [acctRealized, setAcctRealized] = useState('');
@@ -267,6 +268,53 @@ export default function PortfolioTab({
   const totalEquity = cashValue != null ? cashValue + totalValue : totalValue;
   // 仓位分母：设了账户就用总资产，没设回退到持仓总市值
   const weightDenom = account && account.capital > 0 ? totalEquity : totalValue;
+
+  // 分股票盈亏明细：持仓中的（浮动+已实现）∪ 已清仓但有已实现盈亏的
+  const pnlRows = useMemo(() => {
+    const rows: {
+      symbol: string;
+      status: string;
+      floating: number | null;
+      floatingPct: number | null;
+      realized: number | null;
+      total: number;
+    }[] = [];
+    const seen = new Set<string>();
+    positions.forEach((p) => {
+      const sym = p.symbol.toUpperCase();
+      seen.add(sym);
+      const q = quotes[p.symbol];
+      const floating = q ? (q.price - p.avgCost) * p.shares : null;
+      const floatingPct = q && p.avgCost > 0 ? ((q.price - p.avgCost) / p.avgCost) * 100 : null;
+      const realized = account?.realizedBySymbol?.[sym] ?? null;
+      rows.push({
+        symbol: sym,
+        status: `${p.shares}${tx(lang, ' shares', '股')} · ${tx(lang, 'cost', '成本')} $${p.avgCost.toFixed(2)}`,
+        floating,
+        floatingPct,
+        realized,
+        total: (floating ?? 0) + (realized ?? 0),
+      });
+    });
+    const bySym = account?.realizedBySymbol ?? {};
+    Object.keys(bySym).forEach((sym) => {
+      if (seen.has(sym)) return;
+      rows.push({
+        symbol: sym,
+        status: tx(lang, 'Closed', '已清仓'),
+        floating: null,
+        floatingPct: null,
+        realized: bySym[sym],
+        total: bySym[sym],
+      });
+    });
+    return rows;
+  }, [positions, quotes, account, lang]);
+
+  // 已实现盈亏里手动校准的部分（总数 − 分项加总），非零时在明细里单列一行
+  const realizedAdjust =
+    (account?.realized ?? 0) -
+    Object.values(account?.realizedBySymbol ?? {}).reduce((s, v) => s + v, 0);
 
   // 板块分布（按市值）
   const sectorValue: Record<string, number> = {};
@@ -496,11 +544,65 @@ export default function PortfolioTab({
       {positions.length > 0 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
           <div className="flex items-baseline justify-between">
-            <span className="text-xs text-slate-400">{tx(lang, 'Total equity', '总资产')}</span>
+            <span className="text-xs text-slate-400">
+              {tx(lang, 'Total equity', '总资产')}
+              {pnlRows.length > 0 && (
+                <button
+                  onClick={() => setShowPnlDetail((v) => !v)}
+                  className="ml-2 text-[10px] text-slate-500 underline underline-offset-2 hover:text-slate-300"
+                >
+                  {tx(lang, 'Details', '明细')} {showPnlDetail ? '▾' : '▸'}
+                </button>
+              )}
+            </span>
             <span className="text-2xl font-extrabold text-slate-100">
               ${totalEquity.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}
             </span>
           </div>
+          {showPnlDetail && pnlRows.length > 0 && (
+            <div className="mt-2 rounded-lg bg-slate-800/50 px-3 py-1">
+              {pnlRows.map((r) => (
+                <div key={r.symbol} className="py-2 border-b border-slate-800/60 last:border-0">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-xs font-bold text-slate-200">{r.symbol}</span>
+                    <span className="text-[10px] text-slate-500">{r.status}</span>
+                  </div>
+                  <div className="mt-1 grid grid-cols-3 gap-1 text-center">
+                    <div>
+                      <div className="text-[10px] text-slate-500">{tx(lang, 'Floating', '浮动')}</div>
+                      <div className={`text-[11px] font-semibold ${r.floating == null ? 'text-slate-600' : r.floating >= 0 ? upText(scheme) : downText(scheme)}`}>
+                        {r.floating == null
+                          ? '—'
+                          : `${r.floating >= 0 ? '+' : ''}$${r.floating.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}${r.floatingPct != null ? ` (${r.floatingPct >= 0 ? '+' : ''}${r.floatingPct.toFixed(2)}%)` : ''}`}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-slate-500">{tx(lang, 'Realized', '已实现')}</div>
+                      <div className={`text-[11px] font-semibold ${r.realized == null ? 'text-slate-600' : r.realized >= 0 ? upText(scheme) : downText(scheme)}`}>
+                        {r.realized == null
+                          ? '—'
+                          : `${r.realized >= 0 ? '+' : ''}$${r.realized.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-slate-500">{tx(lang, 'Total', '合计')}</div>
+                      <div className={`text-[11px] font-semibold ${r.total >= 0 ? upText(scheme) : downText(scheme)}`}>
+                        {`${r.total >= 0 ? '+' : ''}$${r.total.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {Math.abs(realizedAdjust) >= 0.005 && (
+                <div className="py-2 flex items-baseline justify-between text-[11px]">
+                  <span className="text-slate-500">{tx(lang, 'Manual adjustment', '手动校准')}</span>
+                  <span className={`font-semibold ${realizedAdjust >= 0 ? upText(scheme) : downText(scheme)}`}>
+                    {`${realizedAdjust >= 0 ? '+' : ''}$${realizedAdjust.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
           <div className="mt-1 flex items-baseline justify-between">
             <span className="text-xs text-slate-400">{tx(lang, 'Positions value', '总市值')}</span>
             <span className="text-sm font-semibold text-slate-200">
