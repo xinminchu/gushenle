@@ -124,6 +124,17 @@ export async function upsertScanRows(rows: ScanRow[]): Promise<{ ok: boolean; er
   const { error } = await sb.from('market_scan').upsert(payload, {
     onConflict: 'symbol,scan_date',
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    // 037 未执行（source 列不存在）：去掉 source 重试
+    if (/source/i.test(error.message)) {
+      const legacy = payload.map(({ source: _s, ...rest }) => rest);
+      const r2 = await sb.from('market_scan').upsert(legacy, {
+        onConflict: 'symbol,scan_date',
+      });
+      if (r2.error) return { ok: false, error: r2.error.message };
+      return { ok: true };
+    }
+    return { ok: false, error: error.message };
+  }
   return { ok: true };
 }
