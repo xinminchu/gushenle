@@ -107,11 +107,14 @@ export default function HoldingAnalysis({
   }, [position.symbol]);
 
   // 你的行为画像：这只股票的操作统计（来自操作记忆）
+  // 买入均价：有持仓时以持仓成本为准（用户可能手动修正过成本，持仓是最新真相）；
+  // 无持仓（已清仓）时回退到操作记录的均价。
   const portrait = useMemo(() => {
     const buys = history.filter((o) => o.action === 'buy');
     const sells = history.filter((o) => o.action === 'sell');
     const buyPrices = buys.map((o) => o.price).filter((p) => p > 0);
-    const avgBuy = buyPrices.length > 0 ? buyPrices.reduce((a, b) => a + b, 0) / buyPrices.length : null;
+    const opsAvg = buyPrices.length > 0 ? buyPrices.reduce((a, b) => a + b, 0) / buyPrices.length : null;
+    const avgBuy = position.avgCost > 0 ? position.avgCost : opsAvg;
     const emotions: string[] = [];
     for (const o of history) {
       const e = (o.emotion || '').trim();
@@ -119,7 +122,8 @@ export default function HoldingAnalysis({
     }
     const latestAdvice = history.find((o) => o.adviceSnapshot)?.adviceSnapshot ?? null;
     return { buys: buys.length, sells: sells.length, avgBuy, emotions, latestAdvice };
-  }, [history]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history, position.avgCost]);
 
   // 律动足迹：近 30 天每天的状态分布（客户端无未来函数回算，口径与诊断一致）
   const trail = useMemo(() => {
