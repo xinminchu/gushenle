@@ -1,5 +1,6 @@
 import { markUserDataDirty } from './userSync';
 import { saveOperation, deleteOperation, type OperationRecord } from './operations';
+import { addRealized } from './account';
 // 持仓记录：用户手动录入（代码 / 股数 / 成本价 / 建仓日期），持久化在 localStorage。
 // 行情（现价 / 涨跌）走全 app 共享的 market 缓存，与今日页同源。
 // 操作记忆（买入/卖出）可同步到这里：买入加权平均成本，卖出扣减股数。
@@ -165,6 +166,8 @@ export function applyOperationToPositions(input: SyncInput): { ok: boolean; msg:
   if (input.qty > p.shares) {
     return { ok: false, msg: `卖出 ${input.qty} 股超出持仓（仅 ${p.shares} 股）` };
   }
+  // 已实现盈亏落袋：(卖出价 − 成本) × 股数，记入账户；否则卖出后这部分钱会从账上"消失"
+  addRealized((input.price - p.avgCost) * input.qty);
   const left = p.shares - input.qty;
   if (left <= 0) {
     positions.splice(idx, 1);
@@ -225,7 +228,12 @@ export function saveOperationAndSync(
  */
 export function undoSaveAndSync(res: SaveAndSyncResult): void {
   deleteOperation(res.rec.id);
-  if (res.prevPosition === undefined) return; // 当时没同步，不动持仓
+  if (res.prevPosition === undefined || !res.syncOk) return; // 没同步或同步失败，不动持仓和账户
+  // 撤销的是卖出：把当时记入的已实现盈亏扣回去（按卖出时的成本快照精确反算）
+  if (res.rec.action === 'sell' && res.prevPosition) {
+    const qty = res.rec.qty && res.rec.qty > 0 ? res.rec.qty : 0;
+    if (qty > 0) addRealized(-(res.rec.price - res.prevPosition.avgCost) * qty);
+  }
   const sym = res.rec.symbol.toUpperCase();
   const positions = loadPositions();
   const idx = positions.findIndex((p) => p.symbol.toUpperCase() === sym);

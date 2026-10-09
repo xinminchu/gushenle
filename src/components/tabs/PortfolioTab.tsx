@@ -69,6 +69,7 @@ export default function PortfolioTab({
   const [showAccount, setShowAccount] = useState(false);
   const [acctBrokerage, setAcctBrokerage] = useState('');
   const [acctCapital, setAcctCapital] = useState('');
+  const [acctRealized, setAcctRealized] = useState('');
   const [acctError, setAcctError] = useState('');
   const [quotes, setQuotes] = useState<Record<string, RhythmResponse | null>>({});
   const [refreshing, setRefreshing] = useState(false);
@@ -249,13 +250,23 @@ export default function PortfolioTab({
       if (dc != null) totalDayPnl += p.shares * q.price * (dc / 100);
     }
   });
-  const totalPnl = totalValue - totalCost;
-  const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+  const realized = account?.realized ?? 0;
+  // 总盈亏 = 持仓浮动盈亏 + 已落袋的：股票涨了，总资产可以超过投入本金
+  const totalPnl = totalValue - totalCost + realized;
+  const totalPnlPct =
+    account && account.capital > 0
+      ? (totalPnl / account.capital) * 100
+      : totalCost > 0
+        ? (totalPnl / totalCost) * 100
+        : 0;
   const totalDayPnlPct = totalValue - totalDayPnl > 0 ? (totalDayPnl / (totalValue - totalDayPnl)) * 100 : 0;
 
-  // 仓位分母：设了账户总资金就用它（市值/总资金），没设回退到持仓总市值
-  const weightDenom = account && account.capital > 0 ? account.capital : totalValue;
-  const cashValue = account ? account.capital - totalValue : null;
+  // 现金 = 投入本金 − 持仓总成本 + 已实现盈亏：只随买卖变，不随涨跌变
+  const cashValue = account ? account.capital - totalCost + realized : null;
+  // 总资产 = 现金 + 持仓总市值：浮动，股票涨了可超本金
+  const totalEquity = cashValue != null ? cashValue + totalValue : totalValue;
+  // 仓位分母：设了账户就用总资产，没设回退到持仓总市值
+  const weightDenom = account && account.capital > 0 ? totalEquity : totalValue;
 
   // 板块分布（按市值）
   const sectorValue: Record<string, number> = {};
@@ -322,10 +333,11 @@ export default function PortfolioTab({
     setShowAdd(false);
   };
 
-  // 账户编辑：券商 + 总资金；追加资金直接改大这个数就行
+  // 账户编辑：券商 + 投入本金 + 已实现盈亏；追加资金直接改大本金就行
   const openAccountEditor = () => {
     setAcctBrokerage(account?.brokerage ?? '');
     setAcctCapital(account ? String(account.capital) : '');
+    setAcctRealized(account?.realized ? String(account.realized) : '');
     setAcctError('');
     setShowAccount(true);
   };
@@ -337,10 +349,21 @@ export default function PortfolioTab({
       return;
     }
     if (!(c > 0)) {
-      setAcctError(tx(lang, 'Capital must be above 0', '总资金填一个大于 0 的数字'));
+      setAcctError(tx(lang, 'Capital must be above 0', '投入本金填一个大于 0 的数字'));
       return;
     }
-    const info: AccountInfo = { brokerage: b, capital: c, updatedAt: todayStr() };
+    const rRaw = String(acctRealized).replace(/,/g, '').trim();
+    const r = rRaw === '' ? 0 : Number(rRaw);
+    if (!Number.isFinite(r)) {
+      setAcctError(tx(lang, 'Realized P&L must be a number', '已实现盈亏填个数字'));
+      return;
+    }
+    const info: AccountInfo = {
+      brokerage: b,
+      capital: c,
+      realized: Math.round(r * 100) / 100,
+      updatedAt: todayStr(),
+    };
     saveAccount(info);
     setAccount(info);
     setShowAccount(false);
@@ -363,7 +386,7 @@ export default function PortfolioTab({
         </button>
       </header>
 
-      {/* 账户条：券商 + 总资金 + 现金 */}
+      {/* 账户条：券商 + 投入本金 + 现金 */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           {account ? (
@@ -371,7 +394,7 @@ export default function PortfolioTab({
               <span className="text-slate-200 font-semibold">{account.brokerage}</span>
               <span className="text-slate-500">
                 {' · '}
-                {tx(lang, 'Capital', '总资金')} $
+                {tx(lang, 'Initial capital', '投入本金')} $
                 {account.capital.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}
                 {cashValue != null && (
                   <>
@@ -386,7 +409,7 @@ export default function PortfolioTab({
             </div>
           ) : (
             <div className="text-xs text-slate-500">
-              {tx(lang, 'Set your brokerage & capital for true position weights', '设置券商和总资金，才能看真实仓位占比')}
+              {tx(lang, 'Set your brokerage & capital for true position weights', '设置券商和投入本金，才能看真实仓位占比')}
             </div>
           )}
           <button
@@ -398,7 +421,7 @@ export default function PortfolioTab({
         </div>
         {cashValue != null && cashValue < 0 && (
           <div className="text-[11px] text-amber-400/90 mt-1.5">
-            {tx(lang, 'Cash shows negative — capital may be under-recorded; top it up in fund management.', '现金算出来是负的，可能是总资金没录全，去资金管理里补一下。')}
+            {tx(lang, 'Cash shows negative — capital may be under-recorded; top it up in fund management.', '现金算出来是负的，可能是投入本金没录全，去资金管理里补一下。')}
           </div>
         )}
       </div>
@@ -420,7 +443,7 @@ export default function PortfolioTab({
           </div>
           <div>
             <label className="text-[11px] text-slate-400">
-              {tx(lang, 'Total capital $ (edit this number when you add funds)', '总资金 $（以后追加资金，直接改大这个数）')}
+              {tx(lang, 'Initial capital $ (edit this number when you add funds)', '投入本金 $（以后追加资金，直接改大这个数）')}
             </label>
             <input
               value={acctCapital}
@@ -430,6 +453,21 @@ export default function PortfolioTab({
               }}
               inputMode="decimal"
               placeholder={tx(lang, 'e.g. 5000', '如 5000')}
+              className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="text-[11px] text-slate-400">
+              {tx(lang, 'Realized P&L $ (auto-tracked on sells; adjust if needed)', '已实现盈亏 $（卖出自动累计，可手动校准）')}
+            </label>
+            <input
+              value={acctRealized}
+              onChange={(e) => {
+                setAcctRealized(e.target.value);
+                setAcctError('');
+              }}
+              inputMode="decimal"
+              placeholder="0"
               className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
             />
           </div>
@@ -458,8 +496,14 @@ export default function PortfolioTab({
       {positions.length > 0 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
           <div className="flex items-baseline justify-between">
-            <span className="text-xs text-slate-400">{tx(lang, 'Total value', '总市值')}</span>
+            <span className="text-xs text-slate-400">{tx(lang, 'Total equity', '总资产')}</span>
             <span className="text-2xl font-extrabold text-slate-100">
+              ${totalEquity.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}
+            </span>
+          </div>
+          <div className="mt-1 flex items-baseline justify-between">
+            <span className="text-xs text-slate-400">{tx(lang, 'Positions value', '总市值')}</span>
+            <span className="text-sm font-semibold text-slate-200">
               ${totalValue.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}
             </span>
           </div>
@@ -495,7 +539,7 @@ export default function PortfolioTab({
             <div className="text-xs font-semibold text-slate-200">{tx(lang, 'By sector', '板块分布')}</div>
             <div className="text-[10px] text-slate-600">
               {account
-                ? tx(lang, 'Left: sector · right: % of account capital', '左：板块 · 右：占总资金')
+                ? tx(lang, 'Left: sector · right: % of total equity', '左：板块 · 右：占总资产')
                 : tx(lang, 'Left: sector · right: % of value', '左：板块 · 右：市值占比')}
             </div>
           </div>
