@@ -471,3 +471,40 @@ export function filterStocks(sector?: string, theme?: string): StockInfo[] {
       (!theme || s.themes.includes(theme)),
   );
 }
+
+/* ---------- 宏观品种（2026-10-09 新增）：对股市有明显影响的期货/指数 ---------- */
+// 数据源：Yahoo Finance（CL=F 等期货代码）。不在精选池扫描范围内，仅供搜索查看。
+// kind: future=期货，index=指数，crypto=加密货币
+export interface MacroInfo {
+  code: string;
+  zh: string;
+  en: string;
+  kind: 'future' | 'index' | 'crypto';
+  unit: string; // 计价单位说明
+  blurb: string;
+}
+
+export const MACRO_LIST: MacroInfo[] = [
+  { code: 'CL=F', zh: 'WTI原油', en: 'WTI Crude Oil', kind: 'future', unit: '美元/桶', blurb: '美国原油期货，油价涨→通胀预期升→加息压力' },
+  { code: 'BZ=F', zh: '布伦特原油', en: 'Brent Crude Oil', kind: 'future', unit: '美元/桶', blurb: '全球原油基准，欧洲/亚洲定价锚' },
+  { code: 'GC=F', zh: '黄金', en: 'Gold', kind: 'future', unit: '美元/盎司', blurb: '避险资产，涨→市场在担心风险' },
+  { code: 'SI=F', zh: '白银', en: 'Silver', kind: 'future', unit: '美元/盎司', blurb: '黄金小弟，波动更大' },
+  { code: 'HG=F', zh: '铜', en: 'Copper', kind: 'future', unit: '美元/磅', blurb: '“铜博士”，经济晴雨表，涨→需求旺' },
+  { code: 'NG=F', zh: '天然气', en: 'Natural Gas', kind: 'future', unit: '美元/百万英热', blurb: '美国天然气期货，冬季/ geopolitics 敏感' },
+  { code: 'DX-Y.NYB', zh: '美元指数', en: 'US Dollar Index', kind: 'index', unit: '点', blurb: '美元强→美企海外收入承压、新兴市场承压' },
+  { code: '^TNX', zh: '10年期美债收益率', en: '10Y Treasury Yield', kind: 'index', unit: '%', blurb: '全球资产定价之锚，涨→股票估值承压' },
+  { code: '^VIX', zh: 'VIX恐慌指数', en: 'VIX', kind: 'index', unit: '点', blurb: '市场恐慌度，飙升→避险情绪浓' },
+  { code: 'BTC-USD', zh: '比特币', en: 'Bitcoin', kind: 'crypto', unit: '美元', blurb: '风险情绪风向标，常与科技股同涨跌' },
+];
+
+/** 宏观品种中文名/代码匹配（搜"原油""黄金""美元""美债""恐慌""比特币"等） */
+export function searchMacro(t: string): MacroInfo[] {
+  const q = t.trim().toLowerCase();
+  if (!q) return [];
+  return MACRO_LIST.filter(
+    (m) =>
+      m.zh.toLowerCase().includes(q) ||
+      m.en.toLowerCase().includes(q) ||
+      m.code.toLowerCase().includes(q.replace('main', '')),
+  );
+}

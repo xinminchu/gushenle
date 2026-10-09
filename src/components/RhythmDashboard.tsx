@@ -16,6 +16,7 @@ import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 import { useWatchlist } from './WatchlistContext';
 import CompanyIntro from './CompanyIntro';
 import CompanyDeepDive from './CompanyDeepDive';
+import EventSheet from './EventSheet';
 import { findStock, displayStockName } from '@/lib/stockList';
 import { fmtMoney } from '@/lib/currency';
 import { todayStr, type OpAction, loadOperations } from '@/lib/operations';
@@ -1486,64 +1487,14 @@ export default function RhythmDashboard({
         </div>
       )}
       {/* 📅 图上事件圆点详情：点圆点 → 事件内容 + 去资讯页财经日历的链接 */}
-      {eventSheet &&
-        (() => {
-          const m = eventSheet;
-          const icon =
-            m.kind === 'earnings' ? '📢' : m.macroKind === 'fomc' ? '🏦' : m.macroKind === 'cpi' ? '📊' : '💼';
-          const explainer =
-            m.kind === 'earnings'
-              ? tx(lang, 'Earnings day — volatility often spikes around earnings.', '财报日——财报日前后，股价波动常常放大。')
-              : m.macroKind === 'fomc'
-                ? tx(lang, 'Fed rate decision — when rates move, funding costs move everywhere.', '美联储议息决议——利率一动，全市场的资金成本跟着动。')
-                : m.macroKind === 'cpi'
-                  ? tx(lang, 'Key inflation data — shapes Fed rate-cut expectations directly.', '通胀关键数据——直接左右美联储的降息预期。')
-                  : tx(lang, 'US nonfarm payrolls — labor-market heat often swings the market.', '美国非农就业数据——就业冷热，常引发市场大波动。');
-          return (
-            <div
-              className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-              onClick={() => setEventSheet(null)}
-            >
-              <div
-                className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl p-5"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-2xl">{icon}</span>
-                    <div>
-                      <h3 className="font-bold text-slate-100 text-base">
-                        {lang === 'en' ? m.titleEn : m.title}
-                      </h3>
-                      <p className="text-[11px] text-slate-500">
-                        {m.time} · {m.kind === 'earnings' ? tx(lang, 'Earnings', '财报') : tx(lang, 'Macro event', '宏观事件')}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setEventSheet(null)}
-                    className="text-slate-500 hover:text-slate-300 p-1 text-lg leading-none"
-                    aria-label={tx(lang, 'Close', '关闭')}
-                  >
-                    ✕
-                  </button>
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed mt-3">{explainer}</p>
-                {onGoCalendar && (
-                  <button
-                    onClick={() => {
-                      onGoCalendar(m.time);
-                      setEventSheet(null);
-                    }}
-                    className="mt-4 w-full text-center text-xs font-semibold text-sky-300 bg-sky-500/10 border border-sky-500/30 rounded-xl py-2.5 hover:bg-sky-500/20 transition-colors"
-                  >
-                    {tx(lang, 'View in finance calendar →', '去资讯页财经日历查看 →')}
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })()}
+      {eventSheet && (
+        <EventSheet
+          marker={eventSheet}
+          lang={lang}
+          onClose={() => setEventSheet(null)}
+          onGoCalendar={onGoCalendar}
+        />
+      )}
       {/* 🩺 买入前体检：5 道检查，拦住一时冲动 */}
       {showCheckup && data && judgment && (
         <BuyCheckup

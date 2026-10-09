@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Plus, Check, X } from 'lucide-react';
-import { STOCK_LIST, CODE_CORRECTIONS, displayStockName, type StockInfo } from '@/lib/stockList';
+import { STOCK_LIST, CODE_CORRECTIONS, displayStockName, searchMacro, type StockInfo } from '@/lib/stockList';
 import { matchStrength } from './DiscoverStocks';
 import { loadUniverse, searchUniverse, type UniverseEntry } from '@/lib/universe';
 import { useWatchlist } from './WatchlistContext';
@@ -92,6 +92,8 @@ export default function WatchlistSearch({
         : [],
     [universe, q, strongFirst],
   );
+  // 宏观品种（原油/黄金/美元指数/美债收益率/VIX/比特币等）：Yahoo 期货数据
+  const macroCandidates = useMemo(() => searchMacro(q).slice(0, 4), [q]);
 
   // 精确匹配上：停 600ms 自动切走势（组词中/输入法未完成不触发）
   useEffect(() => {
@@ -106,14 +108,19 @@ export default function WatchlistSearch({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exactCode, imeComposing]);
 
-  const bestForAdd = exactCode ?? strongFirst ?? uniCandidates[0]?.code ?? null;
+  const bestForAdd = exactCode ?? strongFirst ?? macroCandidates[0]?.code ?? uniCandidates[0]?.code ?? null;
   const bestInList = bestForAdd ? inList.has(bestForAdd) : false;
 
   const handleAdd = () => {
     if (!bestForAdd || bestInList) return;
     const curated = STOCK_LIST.find((s) => s.code === bestForAdd);
+    const macro = macroCandidates.find((m) => m.code === bestForAdd);
     const uni = uniCandidates.find((u) => u.code === bestForAdd);
-    const name = curated ? displayStockName(curated.code, lang, curated.zh) : uni?.en;
+    const name = curated
+      ? displayStockName(curated.code, lang, curated.zh)
+      : macro
+        ? lang === 'en' ? macro.en : macro.zh
+        : uni?.en;
     addItem(bestForAdd, name);
   };
 
@@ -140,7 +147,7 @@ export default function WatchlistSearch({
             onBlur={() => setTimeout(() => setOpen(false), 150)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                const first = exactCode ?? strongFirst ?? uniCandidates[0]?.code;
+                const first = exactCode ?? strongFirst ?? macroCandidates[0]?.code ?? uniCandidates[0]?.code;
                 if (first) pick(first, true);
               }
             }}
@@ -177,7 +184,7 @@ export default function WatchlistSearch({
       </div>
 
       {/* 候选下拉 */}
-      {showDrop && (candidates.length > 0 || uniCandidates.length > 0) && (
+      {showDrop && (candidates.length > 0 || uniCandidates.length > 0 || macroCandidates.length > 0) && (
         <div className="absolute left-0 right-14 top-full mt-1.5 z-40 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden">
           {candidates.map((c) => (
             <CandidateRow
@@ -189,6 +196,20 @@ export default function WatchlistSearch({
               onPick={() => pick(c.code, true)}
               onAdd={() => {
                 addItem(c.code, displayStockName(c.code, lang, c.zh));
+              }}
+            />
+          ))}
+          {macroCandidates.map((m) => (
+            <CandidateRow
+              key={m.code}
+              code={m.code}
+              name={lang === 'en' ? m.en : m.zh}
+              inList={inList.has(m.code)}
+              active={m.code === symbol}
+              badge={tx(lang, 'Macro', '宏观')}
+              onPick={() => pick(m.code, true)}
+              onAdd={() => {
+                addItem(m.code, lang === 'en' ? m.en : m.zh);
               }}
             />
           ))}
@@ -208,7 +229,7 @@ export default function WatchlistSearch({
           ))}
         </div>
       )}
-      {showDrop && candidates.length === 0 && uniCandidates.length === 0 && universe !== null && (
+      {showDrop && candidates.length === 0 && uniCandidates.length === 0 && macroCandidates.length === 0 && universe !== null && (
         <div className="absolute left-0 right-14 top-full mt-1.5 z-40 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl px-3.5 py-3 text-xs text-slate-500">
           {tx(lang, 'No match — try the Discover tab in the watchlist panel.', '没找到，点「自选列表」标题进去，用发现股票按板块找找。')}
         </div>

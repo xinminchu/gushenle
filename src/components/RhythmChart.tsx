@@ -200,8 +200,8 @@ export default function RhythmChart({
           time: m.time,
           position: 'aboveBar',
           shape: 'circle',
-          color: isEarn ? 'rgba(167, 139, 250, 0.9)' : 'rgba(217, 119, 6, 0.95)',
-          size: 1.6,
+          color: isEarn ? 'rgba(167, 139, 250, 0.95)' : 'rgba(245, 158, 11, 0.95)',
+          size: 2.2,
         });
       }
       if (ms.length > 0) createSeriesMarkers(s, ms);
@@ -362,10 +362,25 @@ export default function RhythmChart({
     ro.observe(el);
 
     // 点事件圆点：按点击时间匹配圆点（库的 marker 本身不可点）
+    // 放宽匹配：点击位置前后 3 天内有事件即命中（圆点小，精确点中难）
     const handleClick = (param: MouseEventParams<Time>) => {
       if (!onEventMarkerClick || !eventMarkers || param.time == null) return;
       const t = String(param.time);
-      const hit = eventMarkers.find((m) => m.time === t);
+      let hit = eventMarkers.find((m) => m.time === t);
+      if (!hit && /^\d{4}-\d{2}-\d{2}$/.test(t)) {
+        const tMs = new Date(t + 'T12:00:00Z').getTime();
+        let best: ChartEventMarker | null = null;
+        let bestDist = 3 * 86400000 + 1;
+        for (const m of eventMarkers) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(m.time)) continue;
+          const d = Math.abs(new Date(m.time + 'T12:00:00Z').getTime() - tMs);
+          if (d < bestDist) {
+            bestDist = d;
+            best = m;
+          }
+        }
+        hit = best ?? undefined;
+      }
       if (hit) onEventMarkerClick(hit);
     };
     chart.subscribeClick(handleClick);
