@@ -4,7 +4,7 @@
 
 import type { RhythmPoint } from '@/lib/rhythm';
 
-export type DataSource = 'nasdaq' | 'yahoo' | 'naver' | 'simulated';
+export type DataSource = 'nasdaq' | 'yahoo' | 'naver' | 'fred' | 'coingecko' | 'simulated';
 
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -211,6 +211,84 @@ async function fetchYahooFull(symbol: string): Promise<RhythmPoint[]> {
   throw lastErr instanceof Error ? lastErr : new Error('Yahoo all hosts failed');
 }
 
+/* ---------- FRED（美联储经济数据；宏观品种专用，需 FRED_API_KEY） ---------- */
+// 免费 key：https://fred.stlouisfed.org/docs/api/api_key.html 注册 2 分钟即得
+const FRED_MAP: Record<string, string> = {
+  'CL=F': 'DCOILWTICO', // WTI 原油
+  'BZ=F': 'DCOILBRENTEU', // Brent 原油
+  'GC=F': 'GOLDAMGBD228NLBM', // 黄金
+  'SI=F': 'SILVERAMGBD228NLBM', // 白银（若无则降级）
+  'HG=F': 'PCOPPUSDM', // 铜
+  'NG=F': 'DHHNGSP', // 天然气（Henry Hub 现货）
+  '^TNX': 'DGS10', // 10年期美债收益率
+  '^VIX': 'VIXCLS', // VIX
+  'DX-Y.NYB': 'DTWEXBGS', // 美元指数
+};
+
+async function fetchFred(symbol: string): Promise<RhythmPoint[]> {
+  const apiKey = process.env.FRED_API_KEY;
+  if (!apiKey) throw new Error('FRED_API_KEY 未配置');
+  const seriesId = FRED_MAP[symbol];
+  if (!seriesId) throw new Error(`FRED 无映射: ${symbol}`);
+  const end = new Date();
+  const start = new Date();
+  start.setFullYear(end.getFullYear() - 3);
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const url =
+    `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}` +
+    `&observation_start=${fmt(start)}&observation_end=${fmt(end)}` +
+    `&file_type=json&api_key=${apiKey}`;
+  const res = await fetch(url, { next: { revalidate: 3600 } });
+  if (!res.ok) throw new Error(`FRED status ${res.status}`);
+  const json = (await res.json()) as {
+    observations?: { date: string; value: string }[];
+  };
+  const obs = json.observations || [];
+  const series: RhythmPoint[] = [];
+  for (const o of obs) {
+    const v = parseFloat(o.value);
+    if (isNaN(v)) continue; // FRED 用 "." 表示缺失
+    series.push({
+      date: o.date,
+      close: Number(v.toFixed(2)),
+      open: Number(v.toFixed(2)),
+      high: Number(v.toFixed(2)),
+      low: Number(v.toFixed(2)),
+    });
+  }
+  if (series.length < 2) throw new Error('FRED returned too few points');
+  return series;
+}
+
+/* ---------- CoinGecko（加密货币免 key；BTC 等） ---------- */
+async function fetchCoinGecko(symbol: string): Promise<RhythmPoint[]> {
+  // symbol 如 BTC-USD -> coin id "bitcoin"
+  const coinId = symbol.split('-')[0]?.toLowerCase();
+  if (!coinId) throw new Error('bad crypto symbol');
+  const url =
+    `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart` +
+    `?vs_currency=usd&days=1095&interval=daily`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': UA },
+    next: { revalidate: 3600 },
+  });
+  if (!res.ok) throw new Error(`CoinGecko status ${res.status}`);
+  const json = (await res.json()) as { prices?: [number, number][] };
+  const prices = json.prices || [];
+  const series: RhythmPoint[] = [];
+  for (const [ts, price] of prices) {
+    series.push({
+      date: isoDate(new Date(ts)),
+      close: Number(price.toFixed(2)),
+      open: Number(price.toFixed(2)),
+      high: Number(price.toFixed(2)),
+      low: Number(price.toFixed(2)),
+    });
+  }
+  if (series.length < 2) throw new Error('CoinGecko returned too few points');
+  return series;
+}
+
 // 按标的缓存全量日线（单实例内存；跨实例靠上面 fetch 的 Vercel Data Cache）
 const cache = new Map<
   string,
@@ -334,7 +412,31 @@ export async function getFullSeries(symbol: string): Promise<{
   const errors: Record<string, string> = {};
   let series: RhythmPoint[] | null = null;
   let source: DataSource = 'simulated';
-  if (key.endsWith('.KS')) {
+  const isMacroFuture = key in FRED_MAP;
+  const isCrypto = /-USD$/i.test(key);
+  if (isMacroFuture) {
+    // 宏观期货/指数：FRED（美联储官方，需 key）；Yahoo 从机房 IP 被限，不可用
+    try {
+      series = await fetchFred(key);
+      source = 'fred';
+    } catch (e1) {
+      errors.fred = e1 instanceof Error ? e1.message : String(e1);
+    }
+  } else if (isCrypto) {
+    // 加密货币：CoinGecko（免 key）
+    try {
+      series = await fetchCoinGecko(key);
+      source = 'coingecko';
+    } catch (e1) {
+      errors.coingecko = e1 instanceof Error ? e1.message : String(e1);
+      try {
+        series = await fetchYahooFull(key);
+        source = 'yahoo';
+      } catch (e2) {
+        errors.yahoo = e2 instanceof Error ? e2.message : String(e2);
+      }
+    }
+  } else if (key.endsWith('.KS')) {
     // 韩股：Nasdaq 不覆盖，直接走 Naver，失败再试 Yahoo
     try {
       series = await fetchNaverFull(key);

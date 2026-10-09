@@ -501,10 +501,21 @@ export const MACRO_LIST: MacroInfo[] = [
 export function searchMacro(t: string): MacroInfo[] {
   const q = t.trim().toLowerCase();
   if (!q) return [];
+  // 显式别名：主力合约叫法
+  const ALIAS: Record<string, string> = {
+    bzmain: 'BZ=F', // 布伦特原油主力
+    clmain: 'CL=F', // WTI原油主力
+    brent: 'BZ=F',
+    wti: 'CL=F',
+  };
+  if (ALIAS[q]) {
+    const hit = MACRO_LIST.find((m) => m.code === ALIAS[q]);
+    return hit ? [hit] : [];
+  }
   return MACRO_LIST.filter(
     (m) =>
       m.zh.toLowerCase().includes(q) ||
       m.en.toLowerCase().includes(q) ||
-      m.code.toLowerCase().includes(q.replace('main', '')),
+      m.code.toLowerCase().includes(q),
   );
 }
