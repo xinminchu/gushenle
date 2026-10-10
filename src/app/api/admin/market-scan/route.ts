@@ -4,7 +4,7 @@
 // 鉴权二选一：站长 JWT（requireAdmin）或 x-cron-secret（CRON_SECRET，Vercel 环境变量）。
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
-import { scanSymbols, scanChunk, upsertScanRows } from '@/lib/marketScan';
+import { scanSymbols, scanChunk, upsertScanRows, pruneStaleSymbols } from '@/lib/marketScan';
 
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-cron-secret') || '';
@@ -36,6 +36,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: saved.error }, { status: 500 });
   }
   const done = offset + limit >= symbols.length;
+  // 全量扫完后清理退市/已移出名单的 symbol 旧行（如 ANSS/CFLT）
+  let pruned: string[] | undefined;
+  if (done) {
+    const r = await pruneStaleSymbols();
+    if (r.ok) pruned = r.pruned;
+  }
   return NextResponse.json({
     ok: true,
     total: symbols.length,
@@ -43,5 +49,6 @@ export async function POST(req: NextRequest) {
     limit,
     scanned: rows.length,
     done,
+    pruned,
   });
 }

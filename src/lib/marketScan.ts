@@ -103,8 +103,7 @@ export async function scanChunk(symbols: string[], concurrency = 4): Promise<Sca
 }
 
 /** 写入 market_scan（按 symbol+scan_date 幂等，周末重跑不会产生新行） */
-export async function upsertScanRows(rows: ScanRow[]): Promise<{ ok: boolean; error?: string }> {
-  const sb = serviceClient();
+export async function upsertScanRows(rows: ScanRow[]): Promise<{ ok: boolean; error?: string }> {  const sb = serviceClient();
   if (!sb) return { ok: false, error: 'service_role 未配置' };
   if (rows.length === 0) return { ok: true };
   const payload = rows.map((r) => ({
@@ -137,4 +136,27 @@ export async function upsertScanRows(rows: ScanRow[]): Promise<{ ok: boolean; er
     return { ok: false, error: error.message };
   }
   return { ok: true };
+}
+
+/**
+ * 删除已不在 STOCK_LIST 里的 symbol 的所有扫描行。
+ * 名单移除退市股（如 ANSS/CFLT）后，旧扫描行仍留在表里，upsert 不会删它们；
+ * 每天全量扫描结束时调一次，保证首页信号牌不再出现退市股。
+ */
+export async function pruneStaleSymbols(): Promise<{
+  ok: boolean;
+  pruned?: string[];
+  error?: string;
+}> {
+  const sb = serviceClient();
+  if (!sb) return { ok: false, error: 'service_role 未配置' };
+  const valid = new Set(STOCK_LIST.map((s) => s.code.toUpperCase()));
+  const { data, error } = await sb.from('market_scan').select('symbol');
+  if (error) return { ok: false, error: error.message };
+  const inDb = [...new Set((data || []).map((r) => r.symbol as string))];
+  const stale = inDb.filter((s) => !valid.has(s.toUpperCase()));
+  if (stale.length === 0) return { ok: true, pruned: [] };
+  const { error: e2 } = await sb.from('market_scan').delete().in('symbol', stale);
+  if (e2) return { ok: false, error: e2.message };
+  return { ok: true, pruned: stale };
 }

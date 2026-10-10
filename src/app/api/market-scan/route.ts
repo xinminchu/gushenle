@@ -2,6 +2,10 @@
 // 公开读：最新一次扫描的结果 + 汇总。首页「今日信号」三行、盘前盘后两报都走这里。
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { STOCK_LIST } from '@/lib/stockList';
+
+// 名单里已移除的 symbol（如退市的 ANSS/CFLT）即使表里还有旧行也不展示
+const VALID_SYMBOLS = new Set(STOCK_LIST.map((s) => s.code.toUpperCase()));
 
 export interface ScanItem {
   symbol: string;
@@ -68,6 +72,7 @@ export async function GET(req: Request) {
         : r1;
       if (r.error) throw r.error;
       const pool = ((r.data || []) as { symbol: string; name: string; score: number; source?: string }[])
+        .filter((x) => VALID_SYMBOLS.has(x.symbol.toUpperCase()))
         .filter((x) => x.source !== 'simulated')
         .map((x) => ({ symbol: x.symbol, name: x.name, score: x.score }));
       return NextResponse.json({ ok: true, scanDate, total: pool.length, pool });
@@ -117,7 +122,9 @@ export async function GET(req: Request) {
     // source 为空（037 未执行的老快照）按真数据处理
     const isReal = (i: ScanItem) => i.source !== 'simulated';
     const toItems = (rs: Record<string, unknown>[] | null): ScanItem[] =>
-      (rs || []).map((r) => ({
+      (rs || [])
+        .filter((r) => VALID_SYMBOLS.has(String(r.symbol).toUpperCase()))
+        .map((r) => ({
         symbol: r.symbol as string,
         name: r.name as string,
         score: r.score as number,
