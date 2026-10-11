@@ -59,6 +59,23 @@ import {
 // 主判断锚定区间标签（组件内按语言算，见 anchorLabel）
 const anchorRangeDef = RANGE_MAP[ANCHOR_RANGE_ID];
 
+/** 探市全家桶：大额数字格式化（市值/股数），中英双语 */
+function fmtBigMoney(v: number, lang: Lang): string {
+  if (lang === 'en') {
+    if (v >= 1e12) return `$${(v / 1e12).toFixed(2)}T`;
+    if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+    return `$${(v / 1e6).toFixed(0)}M`;
+  }
+  if (v >= 1e12) return `${(v / 1e12).toFixed(2)}万亿美元`;
+  if (v >= 1e8) return `${(v / 1e8).toFixed(1)}亿美元`;
+  return `${(v / 1e4).toFixed(0)}万美元`;
+}
+function fmtSharesBucket(n: number, lang: Lang): string {
+  if (n >= 1e8) return lang === 'en' ? `${(n / 1e8).toFixed(1)}B shares` : `${(n / 1e8).toFixed(1)}亿股`;
+  if (n >= 1e4) return lang === 'en' ? `${(n / 1e4).toFixed(1)}K shares` : `${(n / 1e4).toFixed(1)}万股`;
+  return lang === 'en' ? `${Math.round(n)} shares` : `${Math.round(n)}股`;
+}
+
 /** 悬停气泡：鼠标挪上去，一句话说明这个按钮是干嘛的（桌面端 hover 生效） */
 function Tip({ text, children }: { text: string; children: React.ReactNode }) {
   return (
@@ -190,6 +207,10 @@ export default function RhythmDashboard({
   const [showKeyLevels, setShowKeyLevels] = useState(false);
   /** 财报后反应实测：当前标的的下次财报日 + 过去财报日（K线图事件标记用） */
   const [earnReact, setEarnReact] = useState<SymbolReactions | null>(null);
+  /** 探市全家桶 P0：SEC Form 4 内部人交易（拿不到就空着，不影响主流程） */
+  const [insider, setInsider] = useState<any>(null);
+  /** 探市全家桶 P1：基本面一行（PE/市值/营收同比，SEC companyfacts） */
+  const [fund, setFund] = useState<any>(null);
   /** 买入前体检弹窗 */
   const [showCheckup, setShowCheckup] = useState(false);
   /** 黄金分割参考线：开关 + 组合方案 + 波段窗口（调参用），默认打开 */
@@ -329,6 +350,38 @@ export default function RhythmDashboard({
       alive = false;
     };
   }, [symbol]);
+
+  // 探市全家桶 P0：内部人动向（SEC Form 4 公开披露）。无数据静默隐藏。
+  useEffect(() => {
+    let alive = true;
+    setInsider(null);
+    fetch(`/api/insider?symbol=${encodeURIComponent(symbol)}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (alive && !j.unavailable && j.summary) setInsider(j);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [symbol]);
+
+  // 探市全家桶 P1：基本面一行。price 传入算 PE/市值；无数据静默隐藏。
+  useEffect(() => {
+    let alive = true;
+    setFund(null);
+    const price = data?.price;
+    if (!symbol || !price || price <= 0) return () => {};
+    fetch(`/api/fundamentals?symbol=${encodeURIComponent(symbol)}&price=${price}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (alive && !j.unavailable) setFund(j);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [symbol, data?.price]);
 
   /** K 线图事件标记：落在当前区间内的财报日（紫点）与宏观事件（黄点），点圆点看事件详情 */
   const eventMarkers = useMemo(() => {
@@ -1074,6 +1127,30 @@ export default function RhythmDashboard({
                 </div>
               </div>
 
+              {/* 探市全家桶 P1：基本面一行（SEC companyfacts，有数据才显示） */}
+              {fund && (fund.peTTM != null || fund.marketCap != null || fund.revenueYoY != null) && (
+                <div className="mt-1.5 text-[10px] text-slate-500 flex items-center gap-2 flex-wrap">
+                  <span className="shrink-0">{tx(lang, '📋 Fundamentals', '📋 基本面')}</span>
+                  {fund.peTTM != null && (
+                    <span>PE <span className="text-slate-300">{fund.peTTM.toFixed(1)}</span></span>
+                  )}
+                  {fund.peTTM == null && fund.epsTTM != null && fund.epsTTM <= 0 && (
+                    <span>PE <span className="text-slate-300">{tx(lang, 'loss-making', '亏损')}</span></span>
+                  )}
+                  {fund.marketCap != null && (
+                    <span>{tx(lang, 'Mkt cap', '市值')} <span className="text-slate-300">{fmtBigMoney(fund.marketCap, lang)}</span></span>
+                  )}
+                  {fund.revenueYoY != null && (
+                    <span>
+                      {tx(lang, 'Rev YoY', '营收同比')}{' '}
+                      <span className={fund.revenueYoY >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                        {(fund.revenueYoY >= 0 ? '+' : '')}{(fund.revenueYoY * 100).toFixed(1)}%
+                      </span>
+                    </span>
+                  )}
+                </div>
+              )}
+
               <div className="mt-2 text-[10px] text-slate-500">
                 {tx(lang, `Position ${judgment.pos} · Trend ${judgment.trend} · Speed ${judgment.vel}`, `位置 ${judgment.pos} · 趋势 ${judgment.trend} · 速度 ${judgment.vel}`)}
               </div>
@@ -1195,7 +1272,50 @@ export default function RhythmDashboard({
                       : tx(lang, `⚠️ No clear signal (${judgment.score} pts) — sitting out is also a position`, `⚠️ 当前没有明确信号（${judgment.score} 分），中场休息也是一种操作`)}
                   </div>
                 )}
+                {/* 6. 探市全家桶 P0：内部人动向（SEC Form 4 公开事实，有数据才显示） */}
+                {insider && (insider.summary.buyShares > 0 || insider.summary.sellShares > 0) && (() => {
+                  const net = insider.summary.buyShares - insider.summary.sellShares;
+                  return (
+                    <div className="text-[11px] leading-relaxed">
+                      <span className="text-slate-500">{tx(lang, '🏦 Insider moves: ', '🏦 内部人动向：')}</span>
+                      <span className="text-slate-300">
+                        {tx(lang, `past 90d, ${insider.summary.insiderCount} insider${insider.summary.insiderCount > 1 ? 's' : ''} `, `近90天 ${insider.summary.insiderCount} 位内部人`)}
+                        {net > 0 && (
+                          <span className="text-emerald-400 font-medium">
+                            {tx(lang, `net bought ${fmtSharesBucket(net, lang)}`, `净买入 ${fmtSharesBucket(net, lang)}`)}
+                          </span>
+                        )}
+                        {net < 0 && (
+                          <span className="text-rose-400 font-medium">
+                            {tx(lang, `net sold ${fmtSharesBucket(-net, lang)}`, `净卖出 ${fmtSharesBucket(-net, lang)}`)}
+                          </span>
+                        )}
+                        {net === 0 && tx(lang, 'trades netted out', '买卖相抵')}
+                        <span className="text-slate-500">{tx(lang, ' (SEC Form 4 disclosures)', '（SEC Form 4 公开披露）')}</span>
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
+
+              {/* 探市全家桶 P2：公告原文直达（SEC EDGAR 外链，有 CIK 才显示） */}
+              {(insider?.cik || fund?.cik) && (
+                <div className="mt-2 text-[10px] text-slate-500 flex items-center gap-2 flex-wrap">
+                  <span className="shrink-0">{tx(lang, '📄 Filings:', '📄 公告原文：')}</span>
+                  {['10-K', '10-Q', '8-K', '4'].map((t) => (
+                    <a
+                      key={t}
+                      href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${insider?.cik || fund?.cik}&type=${encodeURIComponent(t)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sky-400/80 hover:text-sky-300 underline underline-offset-2"
+                    >
+                      {t === '4' ? 'Form 4' : t}
+                    </a>
+                  ))}
+                  <span className="text-slate-600">SEC EDGAR</span>
+                </div>
+              )}
 
               <div className="mt-2 text-xs text-slate-400 leading-relaxed">{displayAdvice}</div>
               {!myPosition && onGoPortfolio && (
