@@ -4,10 +4,12 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { tx } from '@/lib/hant';
 import { verdictFor, type OperationRecord } from '@/lib/operations';
 import { splitSymbols, type FamilyPost } from '@/lib/family';
+import { useAuth } from '@/context/AuthContext';
+import { trackFunnelEvent } from '@/lib/funnel';
 
 interface Review { r5: number | null; r20: number | null }
 
@@ -36,6 +38,14 @@ export default function SymbolReview({
   lang: 'zh' | 'hant' | 'en';
   loggedIn: boolean;
 }) {
+  const { user } = useAuth();
+  // 习惯漏斗 v1：复盘区挂载即记一次 review_view（挂载一次记一次）
+  const funnelDoneRef = useRef(false);
+  useEffect(() => {
+    if (funnelDoneRef.current) return;
+    funnelDoneRef.current = true;
+    trackFunnelEvent('review_view', { userId: user?.id ?? null });
+  }, [user?.id]);
   const stats = useMemo<SymStat[]>(() => {
     const map = new Map<string, SymStat>();
     const get = (symbol: string): SymStat => {

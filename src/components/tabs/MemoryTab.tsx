@@ -18,6 +18,7 @@ import {
 } from '@/lib/operations';
 import { applyOperationToPositions } from '@/lib/positions';
 import { loadPositions } from '@/lib/positions';
+import { trackFunnelEvent } from '@/lib/funnel';
 import { lastSyncAt, markSynced, SYNC_DUP_WINDOW_MS, saveOperationAndSync, undoSaveAndSync, type SaveAndSyncResult } from '@/lib/positions';
 import { loadWatchlist } from '@/lib/watchlist';
 import { findSimilarRecord, findDuplicateGroups, type SimilarHit } from '@/lib/memoryParse';
@@ -297,6 +298,8 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
             thesis: d.thesis || undefined,
             emotion: d.emotion || undefined,
           });
+          // 习惯漏斗 v1：记一笔完成
+          trackFunnelEvent('operation_log', { symbol, userId: user?.id ?? null, meta: { action } });
           setOps(loadOperations());
           setInputText('');
           setJustSaved(res);
@@ -527,6 +530,8 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       thesis: parsedResult.thesis || undefined,
       emotion: parsedResult.emotion || undefined,
     });
+    // 习惯漏斗 v1：记一笔完成
+    trackFunnelEvent('operation_log', { symbol, userId: user?.id ?? null, meta: { action: actionEdit } });
     setOps(loadOperations());
     setParsedResult(null);
     setInputText('');

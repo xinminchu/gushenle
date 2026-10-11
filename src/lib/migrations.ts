@@ -818,4 +818,32 @@ alter table public.market_scan
   add column if not exists source text not null default 'nasdaq';
 `,
   },
+  {
+    version: "038_funnel_events",
+    name: "习惯漏斗事件表（诊断查看→记一笔→复盘查看）",
+    sql: `-- 038_funnel_events.sql
+-- 2026-10-11：投资习惯漏斗 v1。只记行为事件（看了什么、做了什么），
+-- 不记金额/价格等财务细节。抄 site_visits 的 RLS 模式：anon 可写、仅服务端可读。
+create table if not exists public.funnel_events (
+  id bigint generated always as identity primary key,
+  event text not null check (event in ('diagnosis_view', 'operation_log', 'review_view')),
+  actor_id text not null,
+  actor_type text not null default 'anon' check (actor_type in ('user', 'anon')),
+  symbol text,
+  meta jsonb not null default '{}',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists funnel_events_actor_time on public.funnel_events (actor_id, created_at);
+create index if not exists funnel_events_event_time on public.funnel_events (event, created_at);
+
+alter table public.funnel_events enable row level security;
+
+drop policy if exists "funnel_events_insert" on public.funnel_events;
+create policy "funnel_events_insert"
+  on public.funnel_events for insert
+  to anon
+  with check (true);
+`,
+  },
 ];

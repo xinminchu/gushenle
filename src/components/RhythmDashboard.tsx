@@ -23,6 +23,8 @@ import { todayStr, type OpAction, loadOperations } from '@/lib/operations';
 import { loadPositions, saveOperationAndSync } from '@/lib/positions';
 import { useColorScheme, schemeLabel, upText, downText } from '@/lib/colorScheme';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
+import { trackFunnelEvent } from '@/lib/funnel';
 import WatchlistSearch from './WatchlistSearch';
 import WatchlistModal from './modals/WatchlistModal';
 import MarketSignalBoard from './MarketSignalBoard';
@@ -170,6 +172,9 @@ export default function RhythmDashboard({
   // 涨跌配色：默认绿涨红跌（美股习惯），页面上可一键切换，全站统一
   const { scheme, toggle: toggleScheme } = useColorScheme();
   const { lang } = useLanguage();
+  const { user } = useAuth();
+  // 习惯漏斗 v1：诊断结论渲染成功即记一次 diagnosis_view（同 symbol 只记一次）
+  const funnelSeenRef = useRef<string>('');
   const en = lang === 'en';
   /** 展示名：英文模式用英文名，中文模式用自选里存的名字 */
   const displayName = (sym: string) => displayStockName(sym, lang, nameOf(sym));
@@ -373,6 +378,14 @@ export default function RhythmDashboard({
 
   const judgment = data?.judgment ?? null;
   const overHeat = !!judgment?.overheated;
+  // 习惯漏斗 v1：诊断结论出来即为一次有效"看了诊断"
+  useEffect(() => {
+    if (!judgment || !focusSymbol) return;
+    const key = focusSymbol.toUpperCase();
+    if (funnelSeenRef.current === key) return;
+    funnelSeenRef.current = key;
+    trackFunnelEvent('diagnosis_view', { symbol: key, userId: user?.id ?? null });
+  }, [judgment, focusSymbol, user?.id]);
   /** 图上"最后一根日线收盘"线的标注：盘中叫昨收，收盘后叫收盘价 */
   const prevCloseLabel = useMemo(() => {
     if (!data || data.series.length === 0) return null;

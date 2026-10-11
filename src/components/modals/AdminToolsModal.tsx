@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Radar,
   UserCheck,
+  Filter,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { REPLY_DRAFTS } from '@/lib/replyDrafts';
@@ -34,9 +35,9 @@ interface RunResult {
   error?: string;
 }
 
-type Tab = 'migrate' | 'reply' | 'scan' | 'claims';
+type Tab = 'migrate' | 'reply' | 'scan' | 'claims' | 'funnel';
 
-/** 站长专属工具箱：数据库迁移 + Mas 回复草稿轮盘 + 市场扫描 + 认领审核 */
+/** 站长专属工具箱：数据库迁移 + Mas 回复草稿轮盘 + 市场扫描 + 认领审核 + 习惯漏斗 */
 export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
   const { lang } = useLanguage();
   const [tab, setTab] = useState<Tab>('migrate');
@@ -82,6 +83,15 @@ export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
               <UserCheck className="w-4 h-4 text-violet-400" />
               {tx(lang, 'Claim review', '认领审核')}
             </button>
+            <button
+              onClick={() => setTab('funnel')}
+              className={`flex items-center gap-1.5 text-sm font-semibold px-2.5 py-1.5 rounded-lg ${
+                tab === 'funnel' ? 'text-slate-100 bg-slate-800' : 'text-slate-500'
+              }`}
+            >
+              <Filter className="w-4 h-4 text-rose-400" />
+              {tx(lang, 'Funnel', '习惯漏斗')}
+            </button>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-300 p-1">
             <X className="w-4 h-4" />
@@ -95,6 +105,8 @@ export default function AdminToolsModal({ onClose }: { onClose: () => void }) {
             <ReplyDraftsPane />
           ) : tab === 'scan' ? (
             <ScanPane />
+          ) : tab === 'funnel' ? (
+            <FunnelPane />
           ) : (
             <ClaimsPane />
           )}
@@ -600,6 +612,100 @@ function ClaimsPane() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ---------------- 习惯漏斗 ---------------- */
+
+function FunnelPane() {
+  const { lang } = useLanguage();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [days, setDays] = useState(30);
+
+  async function load(d: number) {
+    setLoading(true);
+    setError('');
+    try {
+      const { data: sess } = await supabase!.auth.getSession();
+      const tk = sess.session?.access_token ?? '';
+      const res = await fetch(`/api/admin/funnel?days=${d}`, {
+        headers: { Authorization: `Bearer ${tk}` },
+      });
+      const j = await res.json().catch(() => null);
+      if (!res.ok || !j?.ok) throw new Error((j && j.error) || `读取失败（${res.status}）`);
+      setData(j);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(days); }, []);
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-400">
+          {tx(lang, 'Behavior funnel: viewed diagnosis → logged an operation → viewed review (in order)', '行为漏斗：看了诊断 → 记了一笔 → 看了复盘（按顺序）')}
+        </div>
+        <select
+          value={days}
+          onChange={(e) => { const d = Number(e.target.value); setDays(d); load(d); }}
+          className="bg-slate-800 text-slate-200 text-xs rounded-lg px-2 py-1"
+        >
+          <option value={7}>{tx(lang, '7d', '近7天')}</option>
+          <option value={30}>{tx(lang, '30d', '近30天')}</option>
+          <option value={90}>{tx(lang, '90d', '近90天')}</option>
+        </select>
+      </div>
+      {loading && <div className="text-xs text-slate-500">{tx(lang, 'Loading…', '读取中…')}</div>}
+      {error && <div className="text-xs text-rose-400">{error}</div>}
+      {data && (
+        <>
+          <div className="text-xs text-slate-500">
+            {tx(lang, `Active actors: ${data.totalActors}`, `活跃人数：${data.totalActors}`)}
+          </div>
+          <div className="space-y-2">
+            {data.steps.map((s: any, i: number) => (
+              <div key={s.event} className="bg-slate-800/60 rounded-xl px-3 py-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold text-slate-200">
+                    <span className="text-slate-500 mr-2">{i + 1}</span>{s.label}
+                  </div>
+                  <div className="text-sm font-bold text-slate-100">{s.count}</div>
+                </div>
+                <div className="mt-1.5 h-2 bg-slate-700/60 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-rose-500/80 rounded-full"
+                    style={{ width: `${data.steps[0]?.count ? Math.round((s.count / data.steps[0].count) * 100) : 0}%` }}
+                  />
+                </div>
+                {i > 0 && (
+                  <div className="mt-1 text-xs text-slate-400">
+                    {tx(lang, `Step conversion: ${s.conv}%`, `本步转化率：${s.conv}%`)}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {data.daily?.length > 0 && (
+            <div className="text-xs text-slate-500">
+              {tx(lang, 'Daily trend (unique actors per step):', '按天趋势（每步去重人数）：')}
+              <div className="mt-1 max-h-32 overflow-y-auto space-y-0.5">
+                {data.daily.slice(-14).map((d: any) => (
+                  <div key={d.day} className="flex justify-between text-slate-400">
+                    <span>{d.day.slice(5)}</span>
+                    <span>{d.diagnosis_view} → {d.operation_log} → {d.review_view}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
