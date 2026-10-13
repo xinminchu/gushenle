@@ -23,7 +23,7 @@ interface ScannedOp {
 
 type Phase = 'idle' | 'working' | 'preview' | 'done';
 
-const CHUNK = 8;
+const CHUNK = 6;
 
 async function compressImage(file: File): Promise<{ data: string; mimeType: string }> {
   const bitmap = await createImageBitmap(file);
@@ -105,6 +105,7 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
           all.push({ ...o, checked: true, dup: false });
         }
         if (j.failed && j.failed.length > 0) failedBatches.push(i / CHUNK + 1);
+        if (j.hint) setError(j.hint);
       }
       if (all.length === 0) {
         throw new Error(

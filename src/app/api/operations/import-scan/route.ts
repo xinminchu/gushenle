@@ -5,8 +5,63 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 
-const MODEL = 'gemini-3.6-flash';
-const MAX_IMAGES = 8;
+const MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash-lite'];
+const MAX_IMAGES = 6;
+
+const RETRYABLE = /503|429|500|UNAVAILABLE|RESOURCE_EXHAUSTED|DEADLINE_EXCEEDED/i;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function scanImage(
+  ai: GoogleGenAI,
+  img: ScanImage,
+): Promise<{ ops: Array<{ date: string; symbol: string; action: string; qty: number; price: number }>; model: string }> {
+  let lastErr = '';
+  for (const model of MODELS) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { inlineData: { data: img.data, mimeType: img.mimeType || 'image/jpeg' } },
+                { text: PROMPT },
+              ],
+            },
+          ],
+          config: { responseMimeType: 'application/json' },
+        });
+        const j = JSON.parse(response.text || '{"operations":[]}');
+        const ops: Array<{ date: string; symbol: string; action: string; qty: number; price: number }> = [];
+        for (const o of Array.isArray(j.operations) ? j.operations : []) {
+          if (!o || !o.symbol || !o.date) continue;
+          const action = String(o.action || '').toLowerCase();
+          if (action !== 'buy' && action !== 'sell') continue;
+          const qty = Number(o.qty);
+          const price = Number(o.price);
+          if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(price) || price <= 0) continue;
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(String(o.date))) continue;
+          ops.push({
+            date: String(o.date),
+            symbol: String(o.symbol).toUpperCase().trim(),
+            action,
+            qty,
+            price,
+          });
+        }
+        return { ops, model };
+      } catch (e) {
+        lastErr = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 300) : String(e).slice(0, 300);
+        if (/404/.test(lastErr)) break; // 模型名不存在，换下一个
+        if (!RETRYABLE.test(lastErr)) throw new Error(lastErr);
+        await sleep(2000 * attempt);
+      }
+    }
+  }
+  throw new Error(lastErr || 'unknown');
+}
 
 const PROMPT = `You are extracting stock trade history from a brokerage app screenshot (e.g. Webull History tab).
 The screenshot shows date section headers (like "June 18, 2026") followed by transaction rows.
@@ -77,42 +132,24 @@ export async function POST(req: NextRequest) {
   for (let i = 0; i < images.length; i++) {
     const img = images[i];
     try {
-      const response = await ai.models.generateContent({
-        model: MODEL,
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              { inlineData: { data: img.data, mimeType: img.mimeType || 'image/jpeg' } },
-              { text: PROMPT },
-            ],
-          },
-        ],
-        config: { responseMimeType: 'application/json' },
-      });
-      const j = JSON.parse(response.text || '{"operations":[]}');
-      const ops = Array.isArray(j.operations) ? j.operations : [];
-      for (const o of ops) {
-        if (!o || !o.symbol || !o.date) continue;
-        const action = String(o.action || '').toLowerCase();
-        if (action !== 'buy' && action !== 'sell') continue;
-        const qty = Number(o.qty);
-        const price = Number(o.price);
-        if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(price) || price <= 0) continue;
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(o.date))) continue;
-        operations.push({
-          date: String(o.date),
-          symbol: String(o.symbol).toUpperCase().trim(),
-          action,
-          qty,
-          price,
-        });
-      }
+      const { ops } = await scanImage(ai, img);
+      operations.push(...ops);
     } catch (e) {
       failed.push(i + 1);
-      errors.push(e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 300) : String(e).slice(0, 300));
+      const msg = e instanceof Error ? e.message : String(e);
+      errors.push(msg.slice(0, 300));
     }
   }
 
-  return NextResponse.json({ ok: true, operations, failed, errors });
+  const overloaded = errors.some((m) => /503|UNAVAILABLE/i.test(m));
+  return NextResponse.json({
+    ok: true,
+    operations,
+    failed,
+    errors,
+    overloaded,
+    hint: overloaded
+      ? '模型今晚过载（503）， spikes 通常是暂时的：等几分钟再试，或分小批识别。'
+      : undefined,
+  });
 }
