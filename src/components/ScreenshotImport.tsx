@@ -23,7 +23,32 @@ interface ScannedOp {
 
 type Phase = 'idle' | 'working' | 'preview' | 'done';
 
-const CHUNK = 6;
+const CHUNK = 4;
+const REQUEST_TIMEOUT_MS = 55000;
+
+/**
+ * 永远不把原生错误英文直接甩给用户。
+ * 背景：iOS Safari 的 Response.json() 解析失败时抛的是
+ * "The string did not match the expected pattern."（Chrome 会说 Unexpected token），
+ * 根因通常是服务端超时/413 返回了 HTML 错误页。
+ */
+function friendlyError(e: unknown): string {
+  if (e instanceof DOMException && e.name === 'AbortError') {
+    return '识别超时了：试试一次少选几张图片，或等网络好一点再试。';
+  }
+  if (e instanceof Error) {
+    const m = e.message || '';
+    if (e.name === 'SyntaxError' || /did not match the expected pattern/i.test(m)) {
+      return '网络返回异常（可能是识别超时），请重试；如果反复出现，试试一次只选 1–2 张。';
+    }
+    if (/failed to fetch|load failed|networkerror/i.test(m)) {
+      return '网络连接失败，请检查网络后重试。';
+    }
+    // 服务端已做过友好化，直接透出（都是中文短句）
+    return m;
+  }
+  return '识别失败，请重试。';
+}
 
 async function compressImage(file: File): Promise<{ data: string; mimeType: string }> {
   const bitmap = await createImageBitmap(file);
@@ -60,10 +85,12 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
   const [progress, setProgress] = useState('');
   const [ops, setOps] = useState<ScannedOp[]>([]);
   const [error, setError] = useState('');
+  const [notices, setNotices] = useState<string[]>([]);
   const [result, setResult] = useState('');
 
   const startPick = () => {
     setError('');
+    setNotices([]);
     setResult('');
     fileRef.current?.click();
   };
@@ -72,6 +99,7 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
     if (!files || files.length === 0) return;
     setPhase('working');
     setError('');
+    setNotices([]);
     setOps([]);
     try {
       const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
@@ -82,8 +110,20 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
 
       const all: ScannedOp[] = [];
       const failedBatches: number[] = [];
+      const allNotices: string[] = [];
       for (let i = 0; i < compressed.length; i += CHUNK) {
         const chunk = compressed.slice(i, i + CHUNK);
+        // 单批 payload 过大（Vercel 请求体上限）时提前拦下，给明确指引而不是等 413
+        const payloadBytes = chunk.reduce((n, c) => n + c.data.length, 0);
+        if (payloadBytes > 3_000_000) {
+          throw new Error(
+            tx(
+              lang,
+              'Images too large — pick fewer at a time',
+              '图片太大：一次少选几张再试（建议一次 2 张）',
+            ),
+          );
+        }
         setProgress(
           tx(
             lang,
@@ -91,12 +131,44 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
             `识别中 ${Math.min(i + CHUNK, compressed.length)}/${compressed.length}…`,
           ),
         );
-        const res = await fetch('/api/operations/import-scan', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ images: chunk }),
-        });
-        const j = await res.json();
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+        let j: any;
+        try {
+          const res = await fetch('/api/operations/import-scan', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ images: chunk }),
+            signal: ctrl.signal,
+          });
+          if (!res.ok) {
+            // 先尝试读 JSON 错误体（no_key / too_many 这类业务错误）
+            let bj: any = null;
+            try {
+              bj = await res.json();
+            } catch {
+              /* HTML 错误页，走友好映射 */
+            }
+            if (bj && bj.ok === false) {
+              if (bj.error === 'no_key') throw new Error(bj.message);
+              throw new Error(bj.message || tx(lang, 'Recognition failed', '识别失败'));
+            }
+            throw new Error(
+              tx(lang, `Server busy (HTTP ${res.status}) — try again`, `服务器忙（${res.status}），请重试`),
+            );
+          }
+          const ct = res.headers.get('content-type') || '';
+          if (!ct.includes('application/json')) {
+            throw new Error(tx(lang, 'Bad server response — try again', '服务器返回异常，请重试'));
+          }
+          try {
+            j = await res.json();
+          } catch (e) {
+            throw e instanceof DOMException ? e : new Error('json_parse_failed');
+          }
+        } finally {
+          clearTimeout(timer);
+        }
         if (!j.ok) {
           if (j.error === 'no_key') throw new Error(j.message);
           throw new Error(j.message || tx(lang, 'Recognition failed', '识别失败'));
@@ -104,10 +176,18 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
         for (const o of j.operations || []) {
           all.push({ ...o, checked: true, dup: false });
         }
+        for (const n of j.notices || []) {
+          if (typeof n === 'string' && n && !allNotices.includes(n)) allNotices.push(n);
+        }
         if (j.failed && j.failed.length > 0) failedBatches.push(i / CHUNK + 1);
-        if (j.hint) setError(j.hint);
       }
+      setNotices(allNotices);
       if (all.length === 0) {
+        if (allNotices.length > 0) {
+          // 识别成功但无交易（截图不是 History 页）：只展示指引，不抛错
+          setPhase('idle');
+          return;
+        }
         throw new Error(
           tx(lang, 'No trades recognized — try clearer screenshots', '没识别出交易记录，换更清晰的截图试试'),
         );
@@ -147,7 +227,7 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
         );
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(friendlyError(e));
       setPhase('idle');
     }
   };
@@ -185,6 +265,7 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
     setPhase('idle');
     setOps([]);
     setError('');
+    setNotices([]);
     setResult('');
     setProgress('');
   };
@@ -305,6 +386,16 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
 
       {error && phase !== 'working' && (
         <p className="text-[11px] text-amber-300 leading-relaxed">⚠️ {error}</p>
+      )}
+
+      {notices.length > 0 && phase !== 'working' && (
+        <div className="space-y-2">
+          {notices.map((n, i) => (
+            <p key={i} className="text-[11px] text-sky-300 leading-relaxed bg-sky-950/60 border border-sky-800 rounded-lg p-2">
+              💡 {n}
+            </p>
+          ))}
+        </div>
       )}
 
       <input
