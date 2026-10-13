@@ -451,6 +451,7 @@ export function fibAdviceHint(
   comboId: FibComboId,
   price: number,
   lang: Lang = 'zh',
+  holding = true,
 ): string | null {
   const near = nearestFibLevel(fibLevels(swing, comboId, price), price);
   if (!near || near.distPct > 1.5) return null;
@@ -459,7 +460,10 @@ export function fibAdviceHint(
   const at = tx(lang, `${fibRatioLabel(level)} ${fibKindLabel(level.kind, lang)} ($${level.price})`, `${fibRatioLabel(level)}${fibKindLabel(level.kind)}（$${level.price}）`);
   switch (level.kind) {
     case 'support':
-      return tx(lang, `📐 Price near ${at} — dips tend to hold here, no need to panic-sell`, `📐 现价贴近${at}——跌到这儿容易稳住，割肉不急`);
+      // "割肉不急"是持有者话术：没持仓就不说
+      return holding
+        ? tx(lang, `📐 Price near ${at} — dips tend to hold here, no need to panic-sell`, `📐 现价贴近${at}——跌到这儿容易稳住，割肉不急`)
+        : tx(lang, `📐 Price near ${at} — dips tend to hold here`, `📐 现价贴近${at}——跌到这儿容易稳住`);
     case 'resistance':
       return tx(lang, `📐 Price near ${at} — bounces often stall here, chasing is risky`, `📐 现价贴近${at}——反弹到这儿容易遇阻，追高要慎`);
     case 'target-up':

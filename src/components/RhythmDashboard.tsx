@@ -460,9 +460,9 @@ export default function RhythmDashboard({
     myPosition && myPosition.avgCost > 0 && data
       ? ((data.price - myPosition.avgCost) / myPosition.avgCost) * 100
       : null;
-  /** 持仓感知的建议：套牢时不说"止盈"、不劝割肉（口径跟沉思乐"看持仓说话"一致） */
+  /** 持仓感知的建议：先看有没有持仓再说话——没持仓不用"拿着/止盈/割肉"话术 */
   const displayAdvice = judgment
-    ? adviceWithPosition(judgment.statusKey, judgment.advice, myPnlPct, lang)
+    ? adviceWithPosition(judgment.statusKey, judgment.advice, myPnlPct, lang, !!myPosition)
     : '';
   // 韩股（.KS）：韩元计价，大数字加千分位、无小数；美股：美元保留两位
   const fmtPrice = (p: number) => fmtMoney(symbol, p);
@@ -519,7 +519,7 @@ export default function RhythmDashboard({
     if (!fibPts.length || !data?.price) return null;
     const sw = findSwing(fibPts, RECOMMENDED_FIB_LOOKBACK);
     if (!sw) return null;
-    return fibAdviceHint(sw, RECOMMENDED_FIB_COMBO, data.price, lang);
+    return fibAdviceHint(sw, RECOMMENDED_FIB_COMBO, data.price, lang, !!myPosition);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fibPts, data?.price, lang]);
 

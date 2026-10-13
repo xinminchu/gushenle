@@ -363,12 +363,43 @@ export function judgeFromScore(
  * pnlPct: 相对成本的盈亏（%，如 -12.5）；null = 没持仓，不改。
  * 口径跟沉思乐"看持仓说话"一致：盈利照常，套牢不说"止盈"、不劝割肉。
  */
+/** 没持仓时的旁观者口径：同一状态，去掉"拿着/止盈/加仓/买入理由"等持有者预设 */
+const ADVICE_OBSERVER: Partial<Record<StatusKey, { zh: string; en: string }>> = {
+  overheated: {
+    zh: '短期涨太快了，先冷静一下？追高要慎。',
+    en: 'Up too fast lately — maybe pause? Chasing is risky.',
+  },
+  hotStrong: {
+    zh: '趋势挺健康的，追高不急。',
+    en: 'The trend looks healthy — no rush to chase.',
+  },
+  risingAccel: {
+    zh: '涨得有劲，追高要慎。',
+    en: 'Solid momentum — chasing is risky.',
+  },
+  bottomUp: {
+    zh: '跌势缓下来了，可以分批留意。',
+    en: 'The slide is slowing — worth watching in batches.',
+  },
+};
+
+/**
+ * 持仓感知的建议：先看有没有持仓再说话（"看持仓说话"）。
+ * - 没持仓：不用"拿着/止盈/加仓/割肉/买入理由"这类持有者话术，换旁观者口径；
+ *   卡片下方已有的"💡 持有这只？去持仓记一笔"负责追问。
+ * - 有持仓：走原来的盈亏口径（套牢不说"止盈"、不劝割肉）。
+ */
 export function adviceWithPosition(
   statusKey: StatusKey | undefined,
   advice: string,
   pnlPct: number | null,
   lang: Lang = 'zh',
+  hasPosition = true,
 ): string {
+  if (!hasPosition) {
+    const o = statusKey ? ADVICE_OBSERVER[statusKey] : undefined;
+    return o ? tx(lang, o.en, o.zh) : advice;
+  }
   if (pnlPct == null || statusKey == null || pnlPct >= 0) return advice;
   const pct = Math.abs(pnlPct).toFixed(1).replace(/\.0$/, '');
   const en = lang === 'en';
