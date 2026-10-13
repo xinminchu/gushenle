@@ -211,14 +211,14 @@ export default function PortfolioTab({
     );
   };
 
-  const fetchQuotes = async (list: Position[], bust = false) => {
+  const fetchQuotes = async (list: Position[], bust = false, opts?: { force?: boolean; silent?: boolean }) => {
     if (list.length === 0) return;
     if (bust) invalidateRhythm();
-    setRefreshing(true);
+    if (!opts?.silent) setRefreshing(true);
     const entries = await Promise.all(
       list.map(async (p) => {
         try {
-          return [p.symbol, await getRhythm(p.symbol, '1M')] as const;
+          return [p.symbol, await getRhythm(p.symbol, '1M', { force: opts?.force, lang })] as const;
         } catch {
           return [p.symbol, null] as const;
         }
@@ -229,13 +229,30 @@ export default function PortfolioTab({
       map[s] = q;
     });
     setQuotes(map);
-    setRefreshing(false);
+    if (!opts?.silent) setRefreshing(false);
   };
 
   useEffect(() => {
     fetchQuotes(positions);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [[...positions.map((p) => p.symbol)].sort().join(',')]); // 排序后不重拉行情
+
+  // 盘中 / 盘前 / 盘后每 60 秒静默刷新（今日页同款口径；全部收盘后自动停，不转圈打扰）
+  useEffect(() => {
+    const anyLive = Object.values(quotes).some(
+      (q) =>
+        q?.priceSession === 'live' ||
+        q?.priceSession === 'after-hours' ||
+        q?.priceSession === 'pre-market',
+    );
+    if (!anyLive) return;
+    const id = setInterval(() => {
+      if (document.hidden) return;
+      fetchQuotes(positions, false, { force: true, silent: true });
+    }, 60000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(Object.keys(quotes).sort().map((s) => `${s}:${quotes[s]?.priceSession ?? ''}`))]);
 
 
   // 汇总（只统计已拿到行情的）
@@ -803,6 +820,15 @@ export default function PortfolioTab({
                         <div className={`text-[11px] ${dayChg >= 0 ? upText(scheme) : downText(scheme)}`}>
                           {dayChg >= 0 ? '+' : ''}
                           {dayChg}% {tx(lang, 'today', '今日')}
+                          {(q?.priceSession === 'after-hours' || q?.priceSession === 'after-hours-frozen') && (
+                            <span className="text-amber-300"> · {tx(lang, 'After-hr', '盘后')}</span>
+                          )}
+                          {q?.priceSession === 'pre-market' && (
+                            <span className="text-sky-400"> · {tx(lang, 'Pre-mkt', '盘前')}</span>
+                          )}
+                          {q?.priceSession === 'live' && (
+                            <span className="text-emerald-400"> · {tx(lang, 'Live', '实时')}</span>
+                          )}
                         </div>
                       )}
                     </>
