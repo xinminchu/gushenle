@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { STOCK_LIST } from '@/lib/stockList';
+import type { ProbeData } from '@/lib/marketScan';
 
 // 名单里已移除的 symbol（如退市的 ANSS/CFLT）即使表里还有旧行也不展示
 const VALID_SYMBOLS = new Set(STOCK_LIST.map((s) => s.code.toUpperCase()));
@@ -25,6 +26,8 @@ export interface ScanItem {
   source?: string | null;
   /** 捡漏形态：rebound=昨天跌今天涨 / streak=连跌两天 */
   pattern?: 'rebound' | 'streak';
+  /** 五探针（039 未执行时为 null，只有趋势确认可用） */
+  probes?: ProbeData | null;
 }
 
 function anon() {
@@ -79,6 +82,8 @@ export async function GET(req: Request) {
     }
     // 031 没执行时（flow_20d 列不存在）降级：中间行退回"离50最近"不过滤；
     // 030 没执行时（up_streak/down_streak 不存在）降级：连涨连跌标不显示
+    const COLS_FULL_P =
+      'symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est,up_streak,down_streak,flow_20d,source,probes';
     const COLS_FULL =
       'symbol,name,score,status_key,change_pct,prev_change_pct,inflow_est,up_streak,down_streak,flow_20d,source';
     const COLS_NO_FLOW20 =
@@ -90,11 +95,21 @@ export async function GET(req: Request) {
     let rows: Record<string, unknown>[] | null = null;
     let withStreak = true;
     let withFlow20 = true;
+    let withProbes = false;
     try {
-      const r = await sb.from('market_scan').select(COLS_FULL).eq('scan_date', scanDate);
-      if (r.error) throw r.error;
-      rows = r.data;
+      // 先带 probes 拿（039 已执行）；列不存在则按 probes 缺失降级走下面的链
+      const r0 = await sb.from('market_scan').select(COLS_FULL_P).eq('scan_date', scanDate);
+      if (r0.error) throw r0.error;
+      rows = r0.data;
+      withProbes = true;
+      cols = COLS_FULL_P;
     } catch {
+      // probes 列不存在（039 未执行）或其他原因 -> 走原来的降级链（无探针）
+      try {
+        const r = await sb.from('market_scan').select(COLS_FULL).eq('scan_date', scanDate);
+        if (r.error) throw r.error;
+        rows = r.data;
+      } catch {
       try {
         withFlow20 = false;
         cols = COLS_NO_FLOW20;
@@ -118,6 +133,7 @@ export async function GET(req: Request) {
         }
       }
     }
+    }
     // 假数据兜底（source=simulated）不进任何信号行/discovery/资金异动；
     // source 为空（037 未执行的老快照）按真数据处理
     const isReal = (i: ScanItem) => i.source !== 'simulated';
@@ -136,6 +152,7 @@ export async function GET(req: Request) {
         downStreak: withStreak ? (r.down_streak as number | null) : null,
         flow20d: withFlow20 ? (r.flow_20d as number | null) : null,
         source: (r.source as string) || null,
+        probes: withProbes ? ((r.probes as ProbeData | null) ?? null) : null,
       }));
     const loadItems = async (d: string): Promise<ScanItem[]> => {
       const r = await sb.from('market_scan').select(cols).eq('scan_date', d);
@@ -250,43 +267,86 @@ export async function GET(req: Request) {
     // 大盘
     const idx = (s: string) => primary.find((i) => i.symbol === s) || null;
 
-    // ---- 潜力发现：前后两天对比找"刚转折"，不是按位置挑 ----
-    // 趋势初起：昨天 50 分下方（非热），今天转入 risingAccel/hotStrong
-    // 止跌回升：昨天是 oversoldBottom/bottomUp/weakLow，今天转入 risingAccel/hotStrong
-    // 每只带昨天分数 + 作废线（前端展示），只摆数据不做推荐
+    // ---- 发现雷达：五探针（2026-10-12 重构） ----
+    // 老规则（单日上穿 50）本地回测无超额（n=8，前向5日 +0.74% vs 基线 +0.49%），已下线。
+    // P1 趋势确认：本地回测有效（n=114，前向5日 +1.42% vs +0.49%，胜率64%）。
+    // P2 放量突破 / P3 相对强度 / P4 中线动量 / P5 波动收缩：文献参数
+    // （RVOL≥1.5；3m超额前25%；6m前20%跳过1m；ATR20/50<0.6），本地台账从上线日起积累。
+    // 只摆触发事实，不做买卖推荐。
+    const HOT = new Set(['risingAccel', 'hotStrong']);
+    type ProbeHit = ScanItem & { probeNote: string };
     let discovery: {
-      emerging: Array<ScanItem & { prevScore: number; prevStatusKey: string }>;
-      rebounding: Array<ScanItem & { prevScore: number; prevStatusKey: string }>;
+      trendConfirm: ProbeHit[];
+      breakout: ProbeHit[];
+      relStrength: ProbeHit[];
+      momentum: ProbeHit[];
+      vcp: ProbeHit[];
       prevDate: string | null;
-    } = { emerging: [], rebounding: [], prevDate: null };
+    } = { trendConfirm: [], breakout: [], relStrength: [], momentum: [], vcp: [], prevDate: null };
     try {
       const prevDate = dates.find((d) => d < scanDate) ?? null;
+      const prevMap = new Map<string, ScanItem>();
       if (prevDate) {
-        const prevItems = await loadItems(prevDate);
-        const prevMap = new Map(prevItems.map((p) => [p.symbol, p]));
-        const HOT = new Set(['risingAccel', 'hotStrong']);
-        const COLD = new Set(['oversoldBottom', 'bottomUp', 'weakLow']);
-        const emerging: Array<ScanItem & { prevScore: number; prevStatusKey: string }> = [];
-        const rebounding: Array<ScanItem & { prevScore: number; prevStatusKey: string }> = [];
-        for (const t of primary) {
-          const p = prevMap.get(t.symbol);
-          if (!p || !HOT.has(t.statusKey)) continue;
-          const item = { ...t, prevScore: p.score, prevStatusKey: p.statusKey };
-          if (COLD.has(p.statusKey)) rebounding.push(item);
-          else if (p.score < 50) emerging.push(item);
-        }
-        const byJump = (
-          a: { score: number; prevScore: number },
-          b: { score: number; prevScore: number },
-        ) => b.score - b.prevScore - (a.score - a.prevScore);
-        rebounding.sort(byJump);
-        const rbSyms = new Set(rebounding.map((r) => r.symbol));
-        discovery = {
-          emerging: emerging.filter((e) => !rbSyms.has(e.symbol)).sort(byJump).slice(0, 5),
-          rebounding: rebounding.slice(0, 5),
-          prevDate,
-        };
+        for (const p of await loadItems(prevDate)) prevMap.set(p.symbol, p);
       }
+      const real = primary.filter(isReal);
+      // P1 趋势确认：今天 HOT + 昨天 HOT + 分≥55 + 流入>0（杀单日噪音，本地验证）
+      const trendConfirm: ProbeHit[] = [];
+      for (const t of real) {
+        const p = prevMap.get(t.symbol);
+        if (!p) continue;
+        if (HOT.has(t.statusKey) && HOT.has(p.statusKey) && t.score >= 55 && (t.inflowEst ?? 0) > 0) {
+          trendConfirm.push({
+            ...t,
+            probeNote: `连2天转强 · ${p.score}→${t.score}分`,
+          });
+        }
+      }
+      trendConfirm.sort((a, b) => b.score - a.score);
+      // P2 放量突破：20日新高 + RVOL≥1.5（文献阈值）
+      const breakout: ProbeHit[] = real
+        .filter((t) => t.probes?.break20 && (t.probes.rvol ?? 0) >= 1.5)
+        .map((t) => ({
+          ...t,
+          probeNote: `RVOL ${(t.probes!.rvol ?? 0).toFixed(1)}× · 突破位 $${t.probes!.breakPrice}`,
+        }))
+        .sort((a, b) => (b.probes!.rvol ?? 0) - (a.probes!.rvol ?? 0));
+      // P3 相对强度：近3个月相对 SPY 超额前 25%
+      const withXs = real
+        .filter((t) => t.probes?.xs3m != null)
+        .sort((a, b) => (b.probes!.xs3m ?? -9) - (a.probes!.xs3m ?? -9));
+      const relStrength: ProbeHit[] = withXs
+        .slice(0, Math.max(1, Math.floor(withXs.length / 4)))
+        .map((t) => ({
+          ...t,
+          probeNote: `3个月跑赢大盘 ${((t.probes!.xs3m ?? 0) * 100).toFixed(1)}%`,
+        }));
+      // P4 中线动量：近6个月涨幅（跳过最近1个月）前 20%
+      const withMom = real
+        .filter((t) => t.probes?.ret6m != null)
+        .sort((a, b) => (b.probes!.ret6m ?? -9) - (a.probes!.ret6m ?? -9));
+      const momentum: ProbeHit[] = withMom
+        .slice(0, Math.max(1, Math.floor(withMom.length / 5)))
+        .map((t) => ({
+          ...t,
+          probeNote: `6个月 ${((t.probes!.ret6m ?? 0) * 100).toFixed(0)}%`,
+        }));
+      // P5 蓄势待发：VCP（波动收缩+站上50日线+量能萎缩），按收缩程度排序
+      const vcp: ProbeHit[] = real
+        .filter((t) => t.probes?.vcp)
+        .map((t) => ({
+          ...t,
+          probeNote: `ATR 收缩到 ${(t.probes!.atrRatio ?? 0).toFixed(2)}`,
+        }))
+        .sort((a, b) => (a.probes!.atrRatio ?? 9) - (b.probes!.atrRatio ?? 9));
+      discovery = {
+        trendConfirm: trendConfirm.slice(0, 5),
+        breakout: breakout.slice(0, 5),
+        relStrength: relStrength.slice(0, 5),
+        momentum: momentum.slice(0, 5),
+        vcp: vcp.slice(0, 5),
+        prevDate,
+      };
     } catch {
       /* 前日快照读不到就空着，不影响主流程 */
     }

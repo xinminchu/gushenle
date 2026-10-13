@@ -819,6 +819,16 @@ alter table public.market_scan
 `,
   },
   {
+    version: "039_market_scan_probes",
+    name: "market_scan 加 probes JSONB 列（发现雷达五探针）",
+    sql: `-- 039_market_scan_probes.sql
+-- 2026-10-12：潜力发现从"单日上穿50"升级为五探针雷达（趋势确认/放量突破/相对强度/中线动量/波动收缩）。
+-- 探针在扫描写端一次算好存 JSONB，读端直接排名，不新增查询。
+alter table public.market_scan
+  add column if not exists probes jsonb;
+`,
+  },
+  {
     version: "038_funnel_events",
     name: "习惯漏斗事件表（诊断查看→记一笔→复盘查看）",
     sql: `-- 038_funnel_events.sql
