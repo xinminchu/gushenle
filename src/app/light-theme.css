@@ -131,6 +131,20 @@ html.light .to-slate-900 { --tw-gradient-to: #f1f5f9; }
 /* ---------- 阴影：浅底上加深一点，卡片才有层次 ---------- */
 html.light .shadow-2xl { --tw-shadow: 0 25px 50px -12px rgb(15 23 42 / 0.18); }
 
+/* ---------- 大块彩色底：浅色下改白底 + 保留彩色边框（2026-10-13 Sam：深色大底看不清） ----------
+   PIIS 本周 / 盘前瞻 / 盘后总结 / 记忆页提示条等：原来 bg-*-950/xx 在浅底上是浑浊大色块，
+   浅色下直接白底，原有的 border-*-500/30 彩色边框自然显出来。 */
+html.light .bg-indigo-950\/30 { background-color: #ffffff; }
+html.light .bg-indigo-500\/10 { background-color: #eef2ff; }
+html.light .bg-sky-950\/40 { background-color: #ffffff; }
+html.light .bg-sky-950\/60 { background-color: #ffffff; }
+html.light .bg-emerald-950\/30 { background-color: #ffffff; }
+html.light .bg-emerald-950\/50 { background-color: #ffffff; }
+html.light .bg-amber-950\/50 { background-color: #ffffff; }
+/* indigo 浅字在白底上发虚，加深 */
+html.light .text-indigo-300 { color: #4338ca; }
+html.light .text-indigo-400\/80 { color: rgb(79 70 229 / 0.9); }
+
 /* ---------- 刻意保留深色的卡（浅色下仍深底 + 浅字，保证可读） ----------
    今日信号小格 signal-tile：用户要求单独给黑色背景 */
 html.light .signal-tile { background-color: rgb(2 6 23 / 0.72); border-color: rgb(51 65 85 / 0.5); }
