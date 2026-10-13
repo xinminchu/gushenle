@@ -24,6 +24,7 @@ import { loadWatchlist } from '@/lib/watchlist';
 import { findSimilarRecord, findDuplicateGroups, type SimilarHit } from '@/lib/memoryParse';
 import PortraitPanel from '@/components/memory/PortraitPanel';
 import SymbolReview from '@/components/memory/SymbolReview';
+import ScreenshotImport from '@/components/ScreenshotImport';
 import SpeakButton from '@/components/SpeakButton';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
@@ -852,6 +853,9 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
           </p>
         </div>
       </div>
+
+      {/* 券商截图批量导入：选 History 截图 -> 识别 -> 预览勾选 -> 记入 */}
+      <ScreenshotImport onImported={() => setOps(loadOperations())} />
 
       {/* 整理结果区：整理中 / 确认卡 / 已记入提示都在这一个位置切换，不再两次弹出 */}
       {(loading || parsedResult || justSaved) && (
