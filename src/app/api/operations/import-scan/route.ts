@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
     price: number;
   }> = [];
   const failed: number[] = [];
+  const errors: string[] = [];
 
   for (let i = 0; i < images.length; i++) {
     const img = images[i];
@@ -107,10 +108,11 @@ export async function POST(req: NextRequest) {
           price,
         });
       }
-    } catch {
+    } catch (e) {
       failed.push(i + 1);
+      errors.push(e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 300) : String(e).slice(0, 300));
     }
   }
 
-  return NextResponse.json({ ok: true, operations, failed });
+  return NextResponse.json({ ok: true, operations, failed, errors });
 }
