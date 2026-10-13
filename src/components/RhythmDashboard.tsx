@@ -592,6 +592,41 @@ export default function RhythmDashboard({
     [myPosition?.symbol, lastOp?.id],
   );
   /** 参谋价位：离现价最近的上方压力 / 下方支撑（关键价位 + 黄金分割合并） */
+  /** 盘后/盘前跟进刷新（信任红线）：诊断基于日线收盘序列，但收盘后世界可能变了。
+   * 夜盘/盘前相对收盘异动 ≥2% 时必须显式标注，不能顶着"涨势加速"装没看见。
+   * 异动与判断方向相反 → 标"转弱/转强，明日开盘后重新评估"；同向 → 只陈述事实。 */
+  const extHoursFlag = useMemo(() => {
+    if (!data?.price || !data.series.length || !judgment) return null;
+    const sess = data.priceSession;
+    if (sess !== 'after-hours' && sess !== 'after-hours-frozen' && sess !== 'pre-market')
+      return null;
+    const lastClose = data.series[data.series.length - 1].close;
+    if (!lastClose) return null;
+    const pct = ((data.price - lastClose) / lastClose) * 100;
+    if (Math.abs(pct) < 2) return null;
+    const label =
+      sess === 'pre-market' ? tx(lang, 'Pre-market', '盘前') : tx(lang, 'After-hours', '夜盘');
+    /* 方向按用户看到的字（statusKey），不按分数阈值：卡片写"涨势加速"就是偏多，哪怕 69 分没到过热线 */
+    const k = judgment.statusKey;
+    const dirUp = k === 'overheated' || k === 'hotStrong' || k === 'risingAccel';
+    const dirDown = k === 'weakLow';
+    const dirBottom = k === 'bottomUp' || k === 'oversoldBottom'; // "跌不动了/跌过头了"也被夜盘续跌证伪
+    const against = (pct < 0 && (dirUp || dirBottom)) || (pct > 0 && dirDown);
+    const pctStr = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+    const text = against
+      ? tx(
+          lang,
+          `🌙 ${label} ${pctStr} (${fmtMoney(symbol, data.price)}): "${judgment.status}" is based on the close — overnight ${pct < 0 ? 'weakness' : 'strength'}, re-evaluate after the open.`,
+          `🌙 ${label}${pctStr}（${fmtMoney(symbol, data.price)}）："${judgment.status}"基于收盘价，夜盘转${pct < 0 ? '弱' : '强'}，明日开盘后重新评估。`,
+        )
+      : tx(
+          lang,
+          `🌙 ${label} ${pctStr} (${fmtMoney(symbol, data.price)}): daytime call "${judgment.status}" is based on the close.`,
+          `🌙 ${label}${pctStr}（${fmtMoney(symbol, data.price)}）："${judgment.status}"基于收盘价。`,
+        );
+    return { text, against };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.price, data?.priceSession, data?.series, judgment, lang, symbol]);
   const counselLevels = useMemo(() => {
     if (!data?.price) return null;
     const price = data.price;
@@ -1156,6 +1191,14 @@ export default function RhythmDashboard({
               </div>
               {/* 参谋区：每句都跟你的钱/计划/可验证的价位有关，替代泛泛的多空话术 */}
               <div className="mt-3 rounded-xl bg-slate-800/40 border border-slate-700/50 p-3 space-y-2">
+                {/* 0. 盘后/盘前跟进刷新：收盘后异动 ≥2% 先说，不让日间判断装没看见 */}
+                {extHoursFlag && (
+                  <div className="text-[11px] leading-relaxed">
+                    <span className={extHoursFlag.against ? 'text-amber-300 font-medium' : 'text-slate-300'}>
+                      {extHoursFlag.text}
+                    </span>
+                  </div>
+                )}
                 {/* 1. 你的处境：持仓、成本、浮亏、回本线 */}
                 {myPosition && data && myPnlPct != null && (
                   <div className="text-[11px] leading-relaxed">
