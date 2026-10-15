@@ -5,8 +5,13 @@ import { createClient } from '@supabase/supabase-js';
 import { STOCK_LIST } from '@/lib/stockList';
 import type { ProbeData } from '@/lib/marketScan';
 
-// 名单里已移除的 symbol（如退市的 ANSS/CFLT）即使表里还有旧行也不展示
-const VALID_SYMBOLS = new Set(STOCK_LIST.map((s) => s.code.toUpperCase()));
+// 名单里已移除的 symbol（如退市的 ANSS/CFLT）即使表里还有旧行也不展示；
+// QQQ/SPY 是扫描时追加的大盘行（scanSymbols），读路径也要认，否则 qqq/spy 永远为 null
+const VALID_SYMBOLS = new Set([
+  ...STOCK_LIST.map((s) => s.code.toUpperCase()),
+  'QQQ',
+  'SPY',
+]);
 
 export interface ScanItem {
   symbol: string;
