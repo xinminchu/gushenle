@@ -19,6 +19,7 @@ interface ScanPayload {
   ok: boolean;
   empty?: boolean;
   scanDate?: string;
+  qqq?: { changePct: number | null } | null;
   discovery?: {
     trendConfirm: ProbeHit[];
     breakout: ProbeHit[];
@@ -26,6 +27,7 @@ interface ScanPayload {
     momentum: ProbeHit[];
     vcp: ProbeHit[];
     prevDate: string | null;
+    withProbes: boolean;
   };
 }
 
@@ -60,6 +62,11 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
   const disc = data?.discovery;
   if (!data || !disc) return null;
   const md = data.scanDate || '';
+  // 大盘下跌日：趋势确认上榜的多为防御型抗跌，加一句 regime 说明，免得看着像"潜力股"
+  const qqqChg = data.qqq?.changePct ?? null;
+  const riskOff = qqqChg != null && qqqChg <= -1.5;
+  // 039 未执行时 P2-P5 为空是因为没数据，不是没信号——空态文案要区分
+  const noProbeData = !disc.withProbes;
 
   function fmtScanDate(s: string): string {
     const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
@@ -179,7 +186,22 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
         </div>
       ) : (
         <div className="text-[10px] text-slate-500 py-2 text-center">
-          {tx(lang, 'none today', '今日暂无')}
+          {p.key !== 'trendConfirm' && noProbeData
+            ? tx(
+                lang,
+                'Probe data collecting — check back after the next scan.',
+                '探针数据收集中，下次扫描后可见（需站长执行 039 迁移）。',
+              )
+            : tx(lang, 'none today', '今日暂无')}
+        </div>
+      )}
+      {p.key === 'trendConfirm' && riskOff && (
+        <div className="mt-1.5 text-[10px] leading-relaxed text-amber-200/70">
+          {tx(
+            lang,
+            `Market down ${qqqChg}% today — these are defensive names holding up, i.e. relative strength, not offense.`,
+            `大盘今日跌 ${qqqChg}%，上榜多为防御型抗跌——是相对转强，不是进攻信号。`,
+          )}
         </div>
       )}
       <div className="mt-1.5 text-[10px] text-slate-500 leading-relaxed">⚠️ {p.invalid}</div>

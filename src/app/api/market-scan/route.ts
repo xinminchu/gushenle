@@ -282,7 +282,9 @@ export async function GET(req: Request) {
       momentum: ProbeHit[];
       vcp: ProbeHit[];
       prevDate: string | null;
-    } = { trendConfirm: [], breakout: [], relStrength: [], momentum: [], vcp: [], prevDate: null };
+      /** false = 039 未执行，探针列无数据（P2-P5 为空是因为没数据，不是没信号） */
+      withProbes: boolean;
+    } = { trendConfirm: [], breakout: [], relStrength: [], momentum: [], vcp: [], prevDate: null, withProbes };
     try {
       const prevDate = dates.find((d) => d < scanDate) ?? null;
       const prevMap = new Map<string, ScanItem>();
@@ -346,6 +348,7 @@ export async function GET(req: Request) {
         momentum: momentum.slice(0, 5),
         vcp: vcp.slice(0, 5),
         prevDate,
+        withProbes,
       };
     } catch {
       /* 前日快照读不到就空着，不影响主流程 */
