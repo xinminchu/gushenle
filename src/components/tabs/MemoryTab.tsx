@@ -28,6 +28,7 @@ import ScreenshotImport from '@/components/ScreenshotImport';
 import SpeakButton from '@/components/SpeakButton';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
+import { useSellCooldown } from '@/hooks/useSellCooldown';
 import { useNickname } from '@/hooks/useNickname';
 import { tx } from '@/lib/hant';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -126,6 +127,8 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
   // 语音免确认自动记入：刚记入的一笔（8 秒内可撤销），持仓快照一起带
   const [justSaved, setJustSaved] = useState<SaveAndSyncResult | null>(null);
   const justSavedTimerRef = useRef<number | null>(null);
+  // 卖出冷静：浮亏深 + 跌不动了/跌过头了 → 记卖出前先看三眼（不阻塞）
+  const { guardSell, sellCooldownModal } = useSellCooldown();
   useEffect(() => () => {
     if (justSavedTimerRef.current) window.clearTimeout(justSavedTimerRef.current);
   }, []);
@@ -289,25 +292,30 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
         // 不再弹确认卡；8 秒内可撤销（记录删除 + 持仓按快照精确恢复），听错了也不怕
         const cleanVoice = fromVoice && symbol && symbol !== 'UNKNOWN' && price != null && price > 0 && !similar && parsedAction != null;
         if (cleanVoice) {
-          const res = saveOperationAndSync({
-            symbol,
-            action,
-            price,
-            qty: typeof d.qty === 'number' && d.qty > 0 ? d.qty : undefined,
-            date: /^\d{4}-\d{2}-\d{2}$/.test(opDate) ? opDate : todayStr(),
-            source: 'voice',
-            thesis: d.thesis || undefined,
-            emotion: d.emotion || undefined,
-          });
-          // 习惯漏斗 v1：记一笔完成
-          trackFunnelEvent('operation_log', { symbol, userId: user?.id ?? null, meta: { action } });
-          setOps(loadOperations());
-          setInputText('');
-          setJustSaved(res);
-          // 记入后播报一遍，耳朵做最后的核对
-          speakTrade(action, symbol, res.rec.qty != null ? String(res.rec.qty) : '', String(price), opDate, true);
-          if (justSavedTimerRef.current) window.clearTimeout(justSavedTimerRef.current);
-          justSavedTimerRef.current = window.setTimeout(() => setJustSaved(null), 8000);
+          const doSaveVoice = () => {
+            const res = saveOperationAndSync({
+              symbol,
+              action,
+              price,
+              qty: typeof d.qty === 'number' && d.qty > 0 ? d.qty : undefined,
+              date: /^\d{4}-\d{2}-\d{2}$/.test(opDate) ? opDate : todayStr(),
+              source: 'voice',
+              thesis: d.thesis || undefined,
+              emotion: d.emotion || undefined,
+            });
+            // 习惯漏斗 v1：记一笔完成
+            trackFunnelEvent('operation_log', { symbol, userId: user?.id ?? null, meta: { action } });
+            setOps(loadOperations());
+            setInputText('');
+            setJustSaved(res);
+            // 记入后播报一遍，耳朵做最后的核对
+            speakTrade(action, symbol, res.rec.qty != null ? String(res.rec.qty) : '', String(price), opDate, true);
+            if (justSavedTimerRef.current) window.clearTimeout(justSavedTimerRef.current);
+            justSavedTimerRef.current = window.setTimeout(() => setJustSaved(null), 8000);
+          };
+          // 卖出冷静：浮亏深 + 跌不动了/跌过头了 → 先看三眼再决定（仍可卖出）
+          if (action === 'sell') guardSell(symbol, price, doSaveVoice);
+          else doSaveVoice();
         } else {
           setParsedResult(d);
           setPriceEdit(price != null ? String(price) : '');
@@ -521,39 +529,44 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
     }
     const qty = qtyEdit ? parseInt(qtyEdit, 10) : undefined;
     // 存记录 + 自动同步到持仓（有股数才同步；没填股数/同步失败时手动按钮仍可补救）
-    const { rec, syncMsg, syncOk } = saveOperationAndSync({
-      symbol,
-      action: actionEdit,
-      price,
-      qty: qty && qty > 0 ? qty : undefined,
-      date: /^\d{4}-\d{2}-\d{2}$/.test(dateEdit) ? dateEdit : todayStr(),
-      source: 'voice',
-      thesis: parsedResult.thesis || undefined,
-      emotion: parsedResult.emotion || undefined,
-    });
-    // 习惯漏斗 v1：记一笔完成
-    trackFunnelEvent('operation_log', { symbol, userId: user?.id ?? null, meta: { action: actionEdit } });
-    setOps(loadOperations());
-    setParsedResult(null);
-    setInputText('');
-    if (syncMsg) {
-      setNotice({
-        type: syncOk ? 'info' : 'error',
-        text: syncOk
-          ? tx(lang, `Logged and auto-synced to holdings: ${syncMsg}`, `已记入，持仓已自动同步：${syncMsg}`)
-          : syncMsg,
+    const doSaveForm = () => {
+      const { rec, syncMsg, syncOk } = saveOperationAndSync({
+        symbol,
+        action: actionEdit,
+        price,
+        qty: qty && qty > 0 ? qty : undefined,
+        date: /^\d{4}-\d{2}-\d{2}$/.test(dateEdit) ? dateEdit : todayStr(),
+        source: 'voice',
+        thesis: parsedResult.thesis || undefined,
+        emotion: parsedResult.emotion || undefined,
       });
-    } else {
-      setNotice({
-        type: 'info',
-        text: tx(lang, 'Logged (no share count — tap "Sync to holdings" on the entry to update positions)', '已记入记忆（没填股数）；如需更新持仓，点这条记录下的「同步到持仓」'),
-      });
-    }
-    // 新记录立刻拉复盘
-    fetch(`/api/forward-return?symbol=${encodeURIComponent(rec.symbol)}&date=${rec.date}`)
-      .then((r) => r.json())
-      .then((j) => setReviews((prev) => ({ ...prev, [rec.id]: { r5: j.r5 ?? null, r20: j.r20 ?? null } })))
-      .catch(() => {});
+      // 习惯漏斗 v1：记一笔完成
+      trackFunnelEvent('operation_log', { symbol, userId: user?.id ?? null, meta: { action: actionEdit } });
+      setOps(loadOperations());
+      setParsedResult(null);
+      setInputText('');
+      if (syncMsg) {
+        setNotice({
+          type: syncOk ? 'info' : 'error',
+          text: syncOk
+            ? tx(lang, `Logged and auto-synced to holdings: ${syncMsg}`, `已记入，持仓已自动同步：${syncMsg}`)
+            : syncMsg,
+        });
+      } else {
+        setNotice({
+          type: 'info',
+          text: tx(lang, 'Logged (no share count — tap "Sync to holdings" on the entry to update positions)', '已记入记忆（没填股数）；如需更新持仓，点这条记录下的「同步到持仓」'),
+        });
+      }
+      // 新记录立刻拉复盘
+      fetch(`/api/forward-return?symbol=${encodeURIComponent(rec.symbol)}&date=${rec.date}`)
+        .then((r) => r.json())
+        .then((j) => setReviews((prev) => ({ ...prev, [rec.id]: { r5: j.r5 ?? null, r20: j.r20 ?? null } })))
+        .catch(() => {});
+    };
+    // 卖出冷静：浮亏深 + 跌不动了/跌过头了 → 先看三眼再决定（仍可卖出）
+    if (actionEdit === 'sell') guardSell(symbol, price, doSaveForm);
+    else doSaveForm();
   };
 
   const handleCancel = () => {
@@ -1391,6 +1404,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
           );
         })}
       </div>
+      {sellCooldownModal}
     </div>
   );
 }

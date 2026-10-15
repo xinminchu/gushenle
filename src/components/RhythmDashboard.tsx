@@ -13,6 +13,8 @@ import { RANGE_DEFS, RANGE_MAP, ANCHOR_RANGE_ID, scoreGradient, rangeLabel } fro
 import { adviceWithPosition, convictionOf, type Conviction } from '@/lib/rhythm';
 import { getRhythm, invalidateRhythm } from '@/lib/market';
 import DrawdownCheckup from './DrawdownCheckup';
+import DrawdownHistoryLine from './DrawdownHistoryLine';
+import { useSellCooldown } from '@/hooks/useSellCooldown';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 import { useWatchlist } from './WatchlistContext';
 import CompanyIntro from './CompanyIntro';
@@ -242,6 +244,8 @@ export default function RhythmDashboard({
   // 「记一笔」操作记录弹窗
   const [showOpModal, setShowOpModal] = useState(false);
   const [opAction, setOpAction] = useState<OpAction>('sell');
+  // 卖出冷静：浮亏深 + 跌不动了/跌过头了 → 记卖出前先看三眼（不阻塞）
+  const { guardSell, sellCooldownModal } = useSellCooldown();
   const [opPrice, setOpPrice] = useState('');
   const [opQty, setOpQty] = useState('');
   const [opSaved, setOpSaved] = useState(false);
@@ -1109,6 +1113,8 @@ export default function RhythmDashboard({
                   {judgment.statusDetail}
                 </div>
               )}
+              {/* 📉 历史分位一句话：今日大跌时给一行历史对照（base rate，非预测） */}
+              <DrawdownHistoryLine symbol={symbol} dayPct={data.dayChangePct} />
 
               <div className="mt-3 flex items-center gap-2">
                 <span className="text-sm font-semibold text-slate-200 shrink-0">
@@ -1634,26 +1640,31 @@ export default function RhythmDashboard({
                         return;
                       }
                       const qty = opQty ? parseInt(opQty, 10) : undefined;
-                      const { syncMsg, syncOk } = saveOperationAndSync({
-                        symbol,
-                        name: nameOf(symbol) || undefined,
-                        action: opAction,
-                        price,
-                        qty: qty && qty > 0 ? qty : undefined,
-                        date: todayStr(),
-                        source: 'one-tap',
-                        adviceSnapshot: `${judgment.status}：${displayAdvice}`,
-                        adviceScore: judgment.score,
-                      });
-                      setOpSyncMsg(
-                        syncMsg
-                          ? syncOk
-                            ? tx(lang, `Auto-synced to holdings: ${syncMsg}`, `持仓已自动同步：${syncMsg}`)
-                            : syncMsg
-                          : tx(lang, 'Logged (no share count — sync it from Memory later)', '已记入（没填股数，可稍后去记忆页同步到持仓）'),
-                      );
-                      setOpSaved(true);
-                      setTimeout(() => setShowOpModal(false), 2200);
+                      const doSaveOneTap = () => {
+                        const { syncMsg, syncOk } = saveOperationAndSync({
+                          symbol,
+                          name: nameOf(symbol) || undefined,
+                          action: opAction,
+                          price,
+                          qty: qty && qty > 0 ? qty : undefined,
+                          date: todayStr(),
+                          source: 'one-tap',
+                          adviceSnapshot: `${judgment.status}：${displayAdvice}`,
+                          adviceScore: judgment.score,
+                        });
+                        setOpSyncMsg(
+                          syncMsg
+                            ? syncOk
+                              ? tx(lang, `Auto-synced to holdings: ${syncMsg}`, `持仓已自动同步：${syncMsg}`)
+                              : syncMsg
+                            : tx(lang, 'Logged (no share count — sync it from Memory later)', '已记入（没填股数，可稍后去记忆页同步到持仓）'),
+                        );
+                        setOpSaved(true);
+                        setTimeout(() => setShowOpModal(false), 2200);
+                      };
+                      // 卖出冷静：浮亏深 + 跌不动了/跌过头了 → 先看三眼再决定（仍可卖出）
+                      if (opAction === 'sell') guardSell(symbol, price, doSaveOneTap);
+                      else doSaveOneTap();
                     }}
                     className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-medium"
                   >
@@ -1689,6 +1700,8 @@ export default function RhythmDashboard({
           lang={lang}
         />
       )}
+      {/* ⏸️ 卖出冷静三眼：浮亏深 + 跌不动了/跌过头了时才出现 */}
+      {sellCooldownModal}
     </div>
   );
 }
