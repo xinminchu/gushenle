@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { displayStockName } from '@/lib/stockList';
+import { getRhythm, dayChangePct } from '@/lib/market';
 import { tx } from '@/lib/hant';
 
 interface ProbeHit {
@@ -59,11 +60,30 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
     };
   }, []);
 
+  const [qqqChg, setQqqChg] = useState<number | null>(null);
+  const apiQqqChg = data?.qqq?.changePct ?? null;
+  useEffect(() => {
+    // 大盘涨跌：优先用扫描的 qqq 行；扫描没写大盘行时客户端直取兜底
+    if (apiQqqChg != null) {
+      setQqqChg(apiQqqChg);
+      return;
+    }
+    if (!data) return;
+    let alive = true;
+    getRhythm('QQQ', '1m', { lang: 'zh' })
+      .then((r) => {
+        if (alive) setQqqChg(dayChangePct(r));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [apiQqqChg, !!data]);
+
   const disc = data?.discovery;
   if (!data || !disc) return null;
   const md = data.scanDate || '';
   // 大盘下跌日：趋势确认上榜的多为防御型抗跌，加一句 regime 说明，免得看着像"潜力股"
-  const qqqChg = data.qqq?.changePct ?? null;
   const riskOff = qqqChg != null && qqqChg <= -1.5;
   // 039 未执行时 P2-P5 为空是因为没数据，不是没信号——空态文案要区分
   const noProbeData = !disc.withProbes;
