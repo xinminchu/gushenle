@@ -12,6 +12,7 @@ import type { RhythmResponse } from '@/lib/rhythm';
 import { RANGE_DEFS, RANGE_MAP, ANCHOR_RANGE_ID, scoreGradient, rangeLabel } from '@/lib/rhythm';
 import { adviceWithPosition, convictionOf, type Conviction } from '@/lib/rhythm';
 import { getRhythm, invalidateRhythm } from '@/lib/market';
+import DrawdownCheckup from './DrawdownCheckup';
 import { useMarketAutoRefresh } from '@/hooks/useMarketAutoRefresh';
 import { useWatchlist } from './WatchlistContext';
 import CompanyIntro from './CompanyIntro';
@@ -656,6 +657,8 @@ export default function RhythmDashboard({
 
   return (
     <div className="w-full space-y-4">
+      {/* 大跌体检卡：QQQ 大跌日才出现，无持仓/没大跌自动隐藏 */}
+      <DrawdownCheckup />
       {/* 标题 + 自选管理 + 标的选择 */}
       <div className="space-y-3">
         {/* 顶部搜索条：输代码/名称/拼音，匹配上自动切下面走势，右边 ＋ 加入自选 */}

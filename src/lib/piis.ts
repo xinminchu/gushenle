@@ -74,3 +74,32 @@ export const PIIS_WEEKS: PiisWeek[] = [
 ];
 
 export const latestPiisWeek = (): PiisWeek => PIIS_WEEKS[0];
+
+/* ---------------- 事件归因（大跌/大涨日一句话） ----------------
+   Sam 手写：当市场出现值得解释的事件（大跌/大涨/异动）时，在这里填一条，
+   资讯页会自动置顶显示；无事件时把 active 设为 false，组件自动隐藏。
+   写法要求：只讲 driver（为什么发生），不预测、不给操作建议。 */
+
+export interface MarketEventNote {
+  id: string; // 2026-10-15
+  dateZh: string; // 10/15
+  dateEn: string; // Oct 15
+  titleZh: string;
+  titleEn: string;
+  bodyZh: string;
+  bodyEn: string;
+  active: boolean;
+}
+
+export const MARKET_EVENT: MarketEventNote = {
+  id: '2026-10-15',
+  dateZh: '10/15',
+  dateEn: 'Oct 15',
+  active: true,
+  titleZh: '今日市场：为什么跌',
+  titleEn: 'Today: why the market fell',
+  bodyZh:
+    '9 月 CPI、PPI 双双超预期，10 月加息押注升温，资金杀高估值：纳指 -1.9%、费半 -4.3%、标普 -1.1%（7 月底以来最大单日跌幅），道指基本持平。这是系统性杀估值，不是你选错了股。',
+  bodyEn:
+    'September CPI and PPI both ran hot, October hike bets jumped, and money sold expensive valuations: Nasdaq -1.9%, SOX -4.3%, S&P 500 -1.1% (biggest one-day drop since July), Dow flat. This is systematic de-rating — not your stock-picking.',
+};

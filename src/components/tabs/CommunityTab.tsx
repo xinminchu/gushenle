@@ -16,6 +16,7 @@ import DenominatorStrip from '../DenominatorStrip';
 import MarketSentimentStrip from '../MarketSentimentStrip';
 import InsiderStrip from '../InsiderStrip';
 import PiisWeekly from '../PiisWeekly';
+import MarketEventNote from '../MarketEventNote';
 import {
   fetchPosts,
   createPost,
@@ -389,6 +390,9 @@ export default function CommunityTab({ calendarFocus }: { calendarFocus?: string
 
       {/* 探市全家桶：聪明钱动向（SEC Form 4，无数据自动隐藏） */}
       <InsiderStrip />
+
+      {/* 事件归因一句话：大跌/大涨日先给 driver，再看 PIIS 本周（无事件自动隐藏） */}
+      <MarketEventNote />
 
       {/* PIIS 本周解读：先给视角，再看下面的新闻 */}
       <PiisWeekly />
