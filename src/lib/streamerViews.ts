@@ -35,9 +35,6 @@ export interface SymbolViewGroup {
   views: StreamerView[];
 }
 
-export const STREAMER_VIEWS_UPDATED = '2026-10-16';
-export const STREAMER_VIEWS_BLOGGER_COUNT = 8;
-
 export const STANCE_ZH: Record<ViewStance, string> = {
   bullish: '看好',
   bearish: '偏空',
@@ -50,7 +47,7 @@ export const HORIZON_ZH: Record<ViewHorizon, string> = {
   long: '长期',
 };
 
-export const STREAMER_VIEWS: SymbolViewGroup[] = [
+const BATCH_2026_10_16: SymbolViewGroup[] = [
   {
     symbol: 'CRWV',
     label: '新云算力',
@@ -380,3 +377,21 @@ export const STREAMER_VIEWS: SymbolViewGroup[] = [
     ],
   },
 ];
+
+export interface DailyBatch {
+  date: string; // 2026-10-17
+  groups: SymbolViewGroup[];
+}
+
+/* ---------------- 每日更新：观点留痕 ----------------
+   STREAMER_VIEW_HISTORY 按日期倒序，最新在前。
+   每日 cron 的唯一写操作：在数组最前面插入一个新 DailyBatch。
+   只增不改：历史 batch 一旦发布不再修改（留痕回看靠它）。
+   新 batch 的 groups 复用上面的 SymbolViewGroup 结构；
+   倾向四档词表 + 强制期限标签 + 判断/持仓分开 + 注明来源，
+   与首期 batch 同一套纪律。 */
+export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-10-16', groups: BATCH_2026_10_16 },
+];
+
+export const latestViewBatch = (): DailyBatch => STREAMER_VIEW_HISTORY[0];
