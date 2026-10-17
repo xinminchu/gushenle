@@ -16,6 +16,7 @@ import DenominatorStrip from '../DenominatorStrip';
 import MarketSentimentStrip from '../MarketSentimentStrip';
 import InsiderStrip from '../InsiderStrip';
 import PiisWeekly from '../PiisWeekly';
+import StreamerViews from '../StreamerViews';
 import MarketEventNote from '../MarketEventNote';
 import {
   fetchPosts,
@@ -396,6 +397,9 @@ export default function CommunityTab({ calendarFocus }: { calendarFocus?: string
 
       {/* PIIS 本周解读：先给视角，再看下面的新闻 */}
       <PiisWeekly />
+
+      {/* 主播观点：Mas 分析整理后的结构化展示（博主·标的·倾向·期限·理由·保留/证伪·来源） */}
+      <StreamerViews />
 
       {/* 今日大事 + 财经日历：免登录可看 */}
       <FamilyNews focusDate={calendarFocus} />
