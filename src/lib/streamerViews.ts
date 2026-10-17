@@ -390,7 +390,64 @@ export interface DailyBatch {
    新 batch 的 groups 复用上面的 SymbolViewGroup 结构；
    倾向四档词表 + 强制期限标签 + 判断/持仓分开 + 注明来源，
    与首期 batch 同一套纪律。 */
+const BATCH_2026_10_17: SymbolViewGroup[] = [
+  {
+    symbol: 'SOX',
+    label: '费城半导体',
+    views: [
+      {
+        id: 'sox-kova-2',
+        blogger: 'Kova动量交易',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '半导体 selloff 已启动，暂不抄底',
+        reason:
+          '他把 10 月 16 日 QQQ、SOXL 的大跌解读为震荡期结束后的向下突破与抛售启动，而非正常回调。',
+        caveat:
+          '他给出转手条件：成交量极致放大并看到买方力量进场之前不动手；他本人持有做空仓位，观点与仓位同向。',
+        source: 'Kova动量交易 Substack《Trading Report, Oct 16th - 和我一起做空吧》',
+        published: '10/16',
+        note: '文章链接：https://kovainvest.substack.com/p/trading-report-oct-16th',
+      },
+      {
+        id: 'sox-kova-2-pos',
+        blogger: 'Kova动量交易',
+        stance: 'neutral',
+        horizon: 'short',
+        kind: 'position',
+        headline: '已披露：10/13 开 3 倍做空半导体，浮盈约 30%',
+        reason: '',
+        caveat: '仓位赚钱不等于底部已确认，他的离场看成交量与买盘信号。',
+        source: 'Kova动量交易 Substack《Trading Report, Oct 16th》',
+        published: '10/16',
+      },
+    ],
+  },
+  {
+    symbol: 'QQQ',
+    label: '纳指',
+    views: [
+      {
+        id: 'qqq-shiye-2',
+        blogger: '视野环球财经',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: 'AI 高增长交易逻辑动摇',
+        reason:
+          '10 月 16 日纳指重挫后，他把 Anthropic 增长不及预期、IPO 估值下调摆在一起，认为高增长 AI 交易的根基松了。',
+        caveat:
+          '仅凭标题提炼的盘后复盘信号，具体点位和反转条件要看正片；标题里还提到 TSM 持仓计划更新，但未给出方向，不记入。',
+        source: '视野环球财经',
+        published: '10/16（盘后复盘）',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-10-17', groups: BATCH_2026_10_17 },
   { date: '2026-10-16', groups: BATCH_2026_10_16 },
 ];
 
