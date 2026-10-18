@@ -446,7 +446,99 @@ const BATCH_2026_10_17: SymbolViewGroup[] = [
   },
 ];
 
+const BATCH_2026_10_18: SymbolViewGroup[] = [
+  {
+    symbol: 'AMD',
+    label: '超威半导体',
+    views: [
+      {
+        id: 'amd-selina-1',
+        blogger: 'Selina聊美股',
+        stance: 'bullish',
+        horizon: 'long',
+        kind: 'view',
+        headline: '财报季回调视为买入机会',
+        reason:
+          '她把 AMD 列为财报季四只核心跟踪标的之一，围绕 AI GPU 与 CPU 业务的增长潜力、营收弹性与市场预期差做基本面功课，认为回调是分批关注的窗口。',
+        caveat:
+          '她也提醒：财报超预期不等于股价必涨，关键看实际业绩与预期的差距、管理层指引；主张不追高、不重仓、不杠杆赌财报。',
+        source: 'Selina聊美股',
+        published: '10/17',
+        clip: '03:50—06:50（AMD 章节）',
+        note: '原片：https://www.youtube.com/watch?v=D8R6mu58TpE',
+      },
+    ],
+  },
+  {
+    symbol: 'META',
+    label: 'Meta',
+    views: [
+      {
+        id: 'meta-selina-1',
+        blogger: 'Selina聊美股',
+        stance: 'bullish',
+        horizon: 'long',
+        kind: 'view',
+        headline: '财报季回调视为买入机会',
+        reason:
+          '她把 Meta 列为财报季四只核心跟踪标的之一，重点看 AI 产品商业化能否打开新的增长空间，以及 AI 与广告业务的协同，认为回调是分批关注的窗口。',
+        caveat:
+          '她也提醒：财报超预期不等于股价必涨，关键看实际业绩与预期的差距、管理层指引；主张不追高、不重仓、不杠杆赌财报。',
+        source: 'Selina聊美股',
+        published: '10/17',
+        clip: '06:50—09:20（Meta 章节）',
+        note: '原片：https://www.youtube.com/watch?v=D8R6mu58TpE',
+      },
+    ],
+  },
+  {
+    symbol: 'SOFI',
+    label: 'SoFi',
+    views: [
+      {
+        id: 'sofi-selina-1',
+        blogger: 'Selina聊美股',
+        stance: 'bullish',
+        horizon: 'long',
+        kind: 'view',
+        headline: '财报季回调视为买入机会',
+        reason:
+          '她把 SoFi 列为财报季四只核心跟踪标的之一，看重数字银行的用户增长、交叉销售与长期成长逻辑，认为回调是分批关注的窗口。',
+        caveat:
+          '她也点出短期利率压力与信贷风险是主要不确定项；且财报超预期不等于股价必涨，主张不追高、不重仓、不杠杆赌财报。',
+        source: 'Selina聊美股',
+        published: '10/17',
+        clip: '09:20—11:15（SoFi 章节）',
+        note: '原片：https://www.youtube.com/watch?v=D8R6mu58TpE',
+      },
+    ],
+  },
+  {
+    symbol: 'AMZN',
+    label: '亚马逊',
+    views: [
+      {
+        id: 'amzn-selina-1',
+        blogger: 'Selina聊美股',
+        stance: 'bullish',
+        horizon: 'long',
+        kind: 'view',
+        headline: '财报季回调视为买入机会',
+        reason:
+          '她把亚马逊列为财报季四只核心跟踪标的之一，认为 AWS 云业务增速与 AI 基建投入是影响估值的关键变量，回调是分批关注的窗口。',
+        caveat:
+          '她也提醒：财报超预期不等于股价必涨，关键看实际业绩与预期的差距、管理层指引；主张不追高、不重仓、不杠杆赌财报。',
+        source: 'Selina聊美股',
+        published: '10/17',
+        clip: '11:15—13:02（亚马逊章节）',
+        note: '原片：https://www.youtube.com/watch?v=D8R6mu58TpE',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-10-18', groups: BATCH_2026_10_18 },
   { date: '2026-10-17', groups: BATCH_2026_10_17 },
   { date: '2026-10-16', groups: BATCH_2026_10_16 },
 ];
