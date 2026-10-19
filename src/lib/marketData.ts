@@ -543,6 +543,51 @@ export function pickDisplayPrice(
  * 日线接口在盘中拿不到今天的 bar（永远显示昨收），所以开盘期间用这个补实时价。
  * 失败返回 null，调用方静默降级为日线收盘价，不抛错。
  */
+/**
+ * Yahoo 真盘后/盘前价（v8 chart, includePrePost）。
+ * Nasdaq 的 /info 接口不提供真盘后价（isRealTime=False），盘后时段用 Yahoo 补。
+ * 只在 Nasdaq 报 After-Hours/Pre-Market 时调用；失败返回 null（调用方用 Nasdaq 价兜底）。
+ */
+async function getYahooExtendedPrice(
+  symbol: string,
+): Promise<{ price: number; time: string } | null> {
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+      symbol.toUpperCase(),
+    )}?includePrePost=true&interval=1m&range=1d`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': UA, Accept: 'application/json' },
+      next: { revalidate: 30 },
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const result = json?.chart?.result?.[0];
+    if (!result) return null;
+    const timestamps: number[] = result.timestamp ?? [];
+    const closes: (number | null)[] = result.indicators?.quote?.[0]?.close ?? [];
+    for (let i = closes.length - 1; i >= 0; i--) {
+      const c = closes[i];
+      if (c != null && Number.isFinite(c) && c > 0 && timestamps[i]) {
+        const dt = new Date(timestamps[i] * 1000);
+        // 美东时间串，供 quoteDateISO 解析（格式 "Oct 19, 2026 4:34 AM ET"）
+        const et = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        }).format(dt);
+        return { price: Number(c.toFixed(2)), time: `${et} ET` };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getLiveQuote(symbol: string): Promise<LiveQuote | null> {
   const key = symbol.toUpperCase();
   // 韩股走 Naver 分钟线
@@ -570,13 +615,23 @@ export async function getLiveQuote(symbol: string): Promise<LiveQuote | null> {
     const price = num(p?.lastSalePrice);
     if (!Number.isFinite(price) || price <= 0) return null;
     const dayChangePct = Number(String(p?.percentageChange || '').replace('%', ''));
-    return {
+    const marketStatus = String(data?.marketStatus || '');
+    const quote: LiveQuote = {
       price: Number(price.toFixed(2)),
       dayChangePct: Number.isFinite(dayChangePct) ? Number(dayChangePct.toFixed(2)) : 0,
       time: String(p?.lastTradeTimestamp || ''),
-      marketOpen: data?.marketStatus === 'Open',
-      marketStatus: String(data?.marketStatus || ''),
+      marketOpen: marketStatus === 'Open',
+      marketStatus,
     };
+    // 盘后/盘前：Nasdaq 不给真价，用 Yahoo 补（2026-10-19 起）
+    if (!quote.marketOpen && (marketStatus === 'After-Hours' || marketStatus === 'Pre-Market')) {
+      const yahoo = await getYahooExtendedPrice(symbol);
+      if (yahoo && yahoo.price > 0) {
+        quote.price = yahoo.price;
+        quote.time = yahoo.time;
+      }
+    }
+    return quote;
   } catch {
     return null;
   }

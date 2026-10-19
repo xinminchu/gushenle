@@ -3,6 +3,7 @@
 // 这里只做客户端去重 + 短期缓存 + 手动失效。
 
 import type { RhythmResponse } from './rhythm';
+import { getAHPrint, saveAHPrint } from './ahCache';
 import type { Lang } from '@/lib/i18n';
 
 const cache = new Map<string, { data: RhythmResponse; fetchedAt: number }>();
@@ -91,14 +92,40 @@ export function dayChangePct(data: RhythmResponse): number | null {
 }
 
 /**
- * 夜盘冻结价顶替：已停用（2026-10-18）。
- * 停用原因：Nasdaq 的 /info 报价接口不提供真正的盘后价（isRealTime=False，
- * 无盘后字段，lastSalePrice 在盘后时段不更新）。此前在 marketStatus='After-Hours'
- * 时把常规收盘价误存为"盘后价"，导致周末显示的"盘后"价与券商真盘后价差 2-4%。
- * 收盘后一律显示日线收盘价（session='close'），不再伪装成盘后价。
- * 若未来接入真盘后数据源（如 Yahoo postMarket），可在此恢复。
+ * 夜盘冻结价顶替（2026-10-19 恢复，v2）。
+ * 2026-10-18 曾停用：当时 Nasdaq 的 /info 接口不提供真盘后价，误把常规收盘价
+ * 存成"盘后价"。现 getLiveQuote 在盘后/盘前时段用 Yahoo v8 真盘后价，
+ * 存下来的才是真夜盘价，恢复冻结显示（跟券商 App 一样：冻结价 + 时间戳）。
+ * 生效条件：缓存的交易日 == 日线最后一根的日期（第二天开盘/有新 bar 后自动失效）。
+ * 返回的 session 为 'after-hours-frozen'：前端显示琥珀色"盘后"但不轮询（价格不会再变）。
  */
 function applyFrozenAH(symbol: string, json: RhythmResponse): RhythmResponse {
-  void symbol;
-  return json;
+  if (json.priceSession === 'after-hours') {
+    if (json.priceTime) saveAHPrint(symbol, json.price, json.dayChangePct, json.priceTime);
+    return json;
+  }
+  if (json.priceSession !== 'close') return json;
+  const entry = getAHPrint(symbol);
+  const s = json.series;
+  const dailyLastDate = s.length > 0 ? s[s.length - 1].date : '';
+  if (!entry || !dailyLastDate || entry.etDate !== dailyLastDate) return json;
+  const first = s.length > 0 ? s[0].close : 0;
+  const changePct =
+    first > 0 ? +(((entry.price - first) / first) * 100).toFixed(2) : json.changePct;
+  const slicePos =
+    json.high > json.low
+      ? Math.round(
+          Math.min(100, Math.max(0, ((entry.price - json.low) / (json.high - json.low)) * 100)),
+        )
+      : json.slicePos;
+  return {
+    ...json,
+    price: entry.price,
+    priceSession: 'after-hours-frozen',
+    priceLive: true,
+    priceTime: entry.time,
+    dayChangePct: entry.pct,
+    changePct,
+    slicePos,
+  };
 }

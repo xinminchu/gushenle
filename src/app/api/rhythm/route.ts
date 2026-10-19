@@ -75,12 +75,17 @@ function buildResponse(
     priceSession,
     priceTime: priceSession !== 'close' ? live!.time || null : null,
     // 盘中/盘前/收盘后报价：报价接口自带的当日涨跌（相对昨收）；
-    // 盘后：相对上一根日线收盘（即今日至今的涨跌，日线尚未发布今日 bar 时它是上周五收盘）。
-    // 报价没用上时为 null，前端只显示"收盘价"。
+    // 盘后：相对昨日收盘（即"今日至今"的真涨跌，含盘后波动；日线最后一根是今日收盘，
+    // 用倒数第二根做基准）。报价没用上时为 null，前端只显示"收盘价"。
     dayChangePct: priceSession === 'close'
       ? null
-      : priceSession === 'after-hours'
-        ? Number((((live!.price - lastClose) / lastClose) * 100).toFixed(2))
+      : priceSession === 'after-hours' && closes.length >= 2
+        ? Number(
+            (
+              ((live!.price - closes[closes.length - 2]) / closes[closes.length - 2]) *
+              100
+            ).toFixed(2),
+          )
         : live!.dayChangePct,
     prevClose: Number(lastClose.toFixed(2)),
     changePct: Number((((displayPrice - first) / first) * 100).toFixed(2)),
