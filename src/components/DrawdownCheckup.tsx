@@ -5,6 +5,7 @@ import { loadPositions } from '@/lib/positions';
 import { getRhythm, dayChangePct } from '@/lib/market';
 import { tx } from '@/lib/hant';
 import { useLanguage } from '@/context/LanguageContext';
+import DrawdownHistory from './DrawdownHistory';
 
 /**
  * 大跌体检卡：只在 QQQ 单日跌超阈值时出现。
@@ -144,6 +145,8 @@ export default function DrawdownCheckup() {
           {verdict}
         </p>
       )}
+
+      <DrawdownHistory dropPct={state.qqq} />
 
       <ul className="mt-2.5 space-y-1.5">
         {state.rows.map((r) => (
