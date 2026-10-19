@@ -85,10 +85,39 @@ const SECTOR_MAP: Record<string, string> = {
 };
 
 export function sectorOf(symbol: string): string {
-  // 优先用 STOCK_LIST（236 只精选池的板块），再用手写小表，最后未分类
+  // 优先用 STOCK_LIST（236 只精选池的板块），再用手写小表，
+  // 再用全市场库（7123 只，Nasdaq 英文板块→中文），最后未分类
   const hit = findStock(symbol);
   if (hit?.sector) return hit.sector;
-  return SECTOR_MAP[symbol.toUpperCase()] ?? '未分类';
+  const manual = SECTOR_MAP[symbol.toUpperCase()];
+  if (manual) return manual;
+  const en = universeSectorCache?.get(symbol.toUpperCase());
+  if (en && EN2ZH_SECTOR[en]) return EN2ZH_SECTOR[en];
+  return '未分类';
+}
+
+/* ---------------- 全市场库板块回退（异步懒加载） ---------------- */
+
+/** Nasdaq 英文板块 → 中文（与 STOCK_LIST 的中文板块体系对齐） */
+const EN2ZH_SECTOR: Record<string, string> = {
+  Technology: '科技',
+  'Consumer Discretionary': '消费',
+  'Consumer Staples': '消费',
+  'Health Care': '医疗',
+  Finance: '金融',
+  Industrials: '工业',
+  Energy: '能源',
+  Telecommunications: '通信',
+  'Basic Materials': '原材料',
+  'Real Estate': '房地产',
+  Utilities: '公用事业',
+};
+
+let universeSectorCache: Map<string, string> | null = null;
+
+/** 由持仓页 useEffect 调用：全市场库加载完成后登记 code→英文板块，供 sectorOf 回退 */
+export function setUniverseSectors(m: Map<string, string>): void {
+  universeSectorCache = m;
 }
 
 /* ---------------- 同步去重：同一条操作记录短时间内重复"同步到持仓"要拦一下 ---------------- */

@@ -54,6 +54,33 @@ for (const ex of ['nasdaq', 'nyse', 'amex']) {
 }
 out.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
 
+/* ---------- 板块回填：Nasdaq 有 ~10% 的条目 sector 为空（优先股/权证/单位/部分 SPAC） ---------- */
+function parentCode(sym) {
+  if (sym.includes('^')) return sym.split('^')[0];
+  if (/[WUR]$/.test(sym)) return sym.slice(0, -1);
+  return null;
+}
+let overrides = {};
+try {
+  overrides = JSON.parse(readFileSync(join(ROOT, 'scripts', 'universe-sector-overrides.json'), 'utf8'));
+} catch { /* 无覆盖文件则跳过 */ }
+const bySym = new Map(out.map((r) => [r[0], r]));
+let filled = 0;
+// 先用父公司继承：优先股/权证/单位/配股继承同一公司普通股的板块
+for (const r of out) {
+  if (r[2]) continue;
+  const p = parentCode(r[0]);
+  const pr = p && bySym.get(p);
+  if (pr && pr[2]) { r[2] = pr[2]; filled++; }
+}
+// 再用手写覆盖表；最后把名字里带 Acquisition/SPAC 的空壳归为 Finance
+for (const r of out) {
+  if (r[2]) continue;
+  if (overrides[r[0]]) { r[2] = overrides[r[0]]; filled++; }
+  else if (/acquisition|spac/i.test(r[1])) { r[2] = 'Finance'; filled++; }
+}
+console.log(`sector backfill: ${filled} symbols`);
+
 const payload = {
   v: 1,
   asOf: new Date().toISOString().slice(0, 10),

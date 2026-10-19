@@ -6,7 +6,8 @@ import { useWatchlist } from '@/components/WatchlistContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { tx } from '@/lib/hant';
 import type { Lang } from '@/lib/i18n';
-import { loadPositions, savePositions, holdingDays, sectorOf, type Position } from '@/lib/positions';
+import { loadPositions, savePositions, holdingDays, sectorOf, setUniverseSectors, type Position } from '@/lib/positions';
+import { loadUniverse } from '@/lib/universe';
 import { loadAccount, saveAccount, todayStr, type AccountInfo } from '@/lib/account';
 import { SYNC_EVENT } from '@/lib/userSync';
 import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
@@ -88,6 +89,23 @@ export default function PortfolioTab({
     const bump = () => setHistTick((t) => t + 1);
     window.addEventListener('gushenle:focus-changed', bump);
     return () => window.removeEventListener('gushenle:focus-changed', bump);
+  }, []);
+  // 全市场库板块回退：解决精选池/SECTOR_MAP 之外的持仓（如 NBIS）显示"未分类"
+  const [, setUniverseTick] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    loadUniverse()
+      .then((all) => {
+        if (!alive) return;
+        const m = new Map<string, string>();
+        for (const e of all) if (e.sector) m.set(e.code.toUpperCase(), e.sector);
+        setUniverseSectors(m);
+        setUniverseTick((t) => t + 1);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   }, []);
   // 持仓故事展开：一次只展开一只
   const [storySymbol, setStorySymbol] = useState<string | null>(null);
