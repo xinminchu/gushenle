@@ -7,6 +7,7 @@ import { loadStats, recordPlay, recordSession, GAME_ICONS, type GameId, type Gam
 import { useLanguage } from '@/context/LanguageContext';
 import { tx, zh2hant } from '@/lib/hant';
 import WishPool from '../games/WishPool';
+import SupportCard from '../SupportCard';
 import Leaderboard from '../games/Leaderboard';
 import LoginNudge from '../games/LoginNudge';
 
@@ -304,6 +305,9 @@ export default function FunTab() {
       <div ref={wishPoolRef} className="scroll-mt-4">
         <WishPool />
       </div>
+
+      {/* 打赏（自愿支持）：链接未配置时自动不渲染 */}
+      <SupportCard />
 
       {/* 游戏全屏/Modal 弹窗容器 */}
       {activeGame && (

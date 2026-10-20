@@ -537,7 +537,33 @@ const BATCH_2026_10_18: SymbolViewGroup[] = [
   },
 ];
 
+const BATCH_2026_10_20: SymbolViewGroup[] = [
+  {
+    symbol: 'LITE',
+    label: '光通信',
+    views: [
+      {
+        id: 'lite-selina-2',
+        blogger: 'Selina聊美股',
+        stance: 'cautious',
+        horizon: 'long',
+        kind: 'view',
+        headline: '回调≠见顶，分化才是主线',
+        reason:
+          '她把光通信板块约 30% 的回调与行业需求拐点分开判断，从产品升级、光连接应用扩张、云厂商资本开支三条线拆解 AI 光通信的需求逻辑；以 LITE、COHR、AAOI、AVGO 为例分析产业链里谁能把收入增长变成利润，点出两类值得盯的方向：新产品放量走在前面的企业，以及手握稀缺光源与核心芯片的供应商。',
+        caveat:
+          '她提醒价格还受融资压力、远期供给和估值预期的影响，不只由需求决定；成熟模块厂商面临上游成本与下游降价压力，销量涨了利润能不能跟上是关键问题；财报验证看两点：1.6T 收入占比与增速，以及同口径下的毛利率变化。',
+        source: 'Selina聊美股',
+        published: '10/20（盘前发布）',
+        clip: '01:20 暴跌真相拆解；07:05 关键两大方向；15:40 财报季盯紧两个数据',
+        note: '原片：https://www.youtube.com/watch?v=7fP-50N4MbA',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-10-20', groups: BATCH_2026_10_20 },
   { date: '2026-10-18', groups: BATCH_2026_10_18 },
   { date: '2026-10-17', groups: BATCH_2026_10_17 },
   { date: '2026-10-16', groups: BATCH_2026_10_16 },
