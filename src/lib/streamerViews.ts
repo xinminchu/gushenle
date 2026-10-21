@@ -562,7 +562,124 @@ const BATCH_2026_10_20: SymbolViewGroup[] = [
   },
 ];
 
+const BATCH_2026_10_21: SymbolViewGroup[] = [
+  {
+    symbol: 'SPCX',
+    label: '半导体前瞻',
+    views: [
+      {
+        id: 'spcx-shiye-3',
+        blogger: '视野环球财经',
+        stance: 'bullish',
+        horizon: 'short',
+        kind: 'view',
+        headline: 'SPCX 前瞻大幅提振半导体',
+        reason:
+          '他在 10 月 20 日盘后复盘里把半导体板块的走强归因于 SPCX 的前瞻事件，认为这是当前板块情绪的主导催化。',
+        caveat:
+          '仅凭标题提炼，具体催化细节与反转条件要看正片；"提振"是他对事件的解读，不等于个股推荐。',
+        source: '视野环球财经',
+        published: '10/20（盘后复盘）',
+        note: '原片：https://www.youtube.com/watch?v=g7V8AbUkjcs',
+      },
+      {
+        id: 'isrg-shiye-pos',
+        blogger: '视野环球财经',
+        stance: 'neutral',
+        horizon: 'short',
+        kind: 'position',
+        headline: '已披露：ISRG 加仓计划更新',
+        reason: '',
+        caveat:
+          '标题只说计划"更新"，没披露具体数量、价位与执行时间，是计划更新不是已成交。',
+        source: '视野环球财经',
+        published: '10/20（盘后复盘）',
+        note: '原片：https://www.youtube.com/watch?v=g7V8AbUkjcs',
+      },
+      {
+        id: 'nflx-shiye-3',
+        blogger: '视野环球财经',
+        stance: 'neutral',
+        horizon: 'short',
+        kind: 'view',
+        headline: '财报波动季 NFLX 蛰伏等待',
+        reason:
+          '在 10 月 20 日盘后复盘里，他对 NFLX 的姿态是蛰伏等待、不提前押注。',
+        caveat:
+          '标题只给出"蛰伏等待"四字，没给方向和触发条件，不构成交易判断。',
+        source: '视野环球财经',
+        published: '10/20（盘后复盘）',
+        note: '原片：https://www.youtube.com/watch?v=g7V8AbUkjcs',
+      },
+    ],
+  },
+  {
+    symbol: 'NVDA',
+    label: '英伟达',
+    views: [
+      {
+        id: 'nvda-talkjun-1',
+        blogger: '投资TALK君',
+        stance: 'bullish',
+        horizon: 'long',
+        kind: 'view',
+        headline: '最强指引，ALL-IN 算力',
+        reason:
+          '他在第 1510 期里把本轮营收指引定调为"最强指引"，以 1 万亿营收前景为依据，主张全力押注算力链。',
+        caveat:
+          '"ALL-IN"是节目风格化的情绪表达，不是仓位建议；指引兑现取决于 AI 资本开支能否持续。',
+        source: '投资TALK君（第 1510 期）',
+        published: '10/20',
+        note: '原片：https://www.youtube.com/watch?v=8uh5V2AamAg',
+      },
+    ],
+  },
+  {
+    symbol: 'QQQ',
+    label: '纳指',
+    views: [
+      {
+        id: 'qqq-talkjun-1',
+        blogger: '投资TALK君',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '纳指非常悲观（AI 除外）',
+        reason:
+          '他在第 1509 期里认为除 AI 之外纳指成分股估值偏贵，对纳指短期展望非常悲观。',
+        caveat:
+          '标题本身把 AI 排除在悲观结论之外；"本周财报焦点"说明这是短期判断，财报落地即重新评估。',
+        source: '投资TALK君（第 1509 期）',
+        published: '10/18',
+        note: '原片：https://www.youtube.com/watch?v=gUkTI-dBJP0',
+      },
+    ],
+  },
+  {
+    symbol: 'AMZN',
+    label: '亚马逊',
+    views: [
+      {
+        id: 'amzn-shiye-4',
+        blogger: '视野环球财经',
+        stance: 'bullish',
+        horizon: 'short',
+        kind: 'view',
+        headline: 'AMZN 撑起半边天',
+        reason:
+          '他在 10 月 19 日盘后复盘里认为 AMZN 在盘面走弱时依然强势，是撑住指数的关键力量。',
+        caveat:
+          '仅凭标题提炼；"撑起半边天"是对当时盘面的描述，未给出持有或买卖的方向建议。',
+        source: '视野环球财经',
+        published: '10/19（盘后复盘）',
+        note: '原片：https://www.youtube.com/watch?v=XMs6mASFtbE',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-10-21', groups: BATCH_2026_10_21 },
   { date: '2026-10-20', groups: BATCH_2026_10_20 },
   { date: '2026-10-18', groups: BATCH_2026_10_18 },
   { date: '2026-10-17', groups: BATCH_2026_10_17 },
