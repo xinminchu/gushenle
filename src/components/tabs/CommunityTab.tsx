@@ -16,6 +16,7 @@ import DenominatorStrip from '../DenominatorStrip';
 import MarketSentimentStrip from '../MarketSentimentStrip';
 import InsiderStrip from '../InsiderStrip';
 import PiisWeekly from '../PiisWeekly';
+import MorningBriefing from '../MorningBriefing';
 import StreamerViews from '../StreamerViews';
 import MarketEventNote from '../MarketEventNote';
 import {
@@ -397,6 +398,9 @@ export default function CommunityTab({ calendarFocus }: { calendarFocus?: string
 
       {/* PIIS 本周解读：先给视角，再看下面的新闻 */}
       <PiisWeekly />
+
+      {/* 盘前早报：固定四栏目（隔夜要闻/盘前异动/今日日历/情绪市况），人工审核门 */}
+      <MorningBriefing />
 
       {/* 主播观点：Mas 分析整理后的结构化展示（博主·标的·倾向·期限·理由·保留/证伪·来源） */}
       <StreamerViews />

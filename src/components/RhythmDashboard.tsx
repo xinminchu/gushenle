@@ -36,6 +36,7 @@ import { useFocusList } from '@/hooks/useFocusList';
 import { FOCUS_MAX } from '@/lib/focus';
 import BuyCheckup from './BuyCheckup';
 import { useWatchlistData } from '@/hooks/useWatchlistData';
+import StreakLine from './StreakLine';
 import { getStaticEvents, calEventTitle } from '@/lib/financeCalendar';
 import type { SymbolReactions } from '@/app/api/earnings/route';
 import { computeKeyLevels, actualHighLow } from '@/lib/brief';
@@ -718,6 +719,9 @@ export default function RhythmDashboard({
             </button>
           ))}
         </div>
+
+        {/* streak 小统计：事实型一行，无 streak（N<2）自动隐藏 */}
+        {!loading && data && <StreakLine symbol={symbol} data={data} wlData={wlData} />}
       </div>
 
       {/* 价格走势区（loading 骨架与图表共用锚点，保证点选股票时总能滚到） */}

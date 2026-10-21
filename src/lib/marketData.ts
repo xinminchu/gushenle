@@ -90,12 +90,15 @@ function num(s: string | undefined): number {
   return Number((s || '').replace(/[$,]/g, ''));
 }
 
+/** Nasdaq 报 "Symbol not exists."（如 ETF 用错 assetclass）时抛此错，调用方可换口径重试 */
+class NasdaqNotFoundError extends Error {}
+
 /** Nasdaq 官方历史日线（无需 key），作为首选源；带 open/high/low 供 K线用 */
-async function fetchNasdaqFull(symbol: string): Promise<RhythmPoint[]> {
+async function fetchNasdaqHistorical(symbol: string, assetclass: 'stocks' | 'etf'): Promise<RhythmPoint[]> {
   const from = isoDate(new Date(Date.now() - 1100 * 86400000)); // 约 3 年
   const url = `https://api.nasdaq.com/api/quote/${encodeURIComponent(
     symbol,
-  )}/historical?assetclass=stocks&fromdate=${from}&limit=9999`;
+  )}/historical?assetclass=${assetclass}&fromdate=${from}&limit=9999`;
   const res = await fetch(url, {
     headers: {
       'User-Agent': UA,
@@ -105,9 +108,15 @@ async function fetchNasdaqFull(symbol: string): Promise<RhythmPoint[]> {
     next: { revalidate: 300 },
   });
   if (!res.ok) throw new Error(`Nasdaq status ${res.status}`);
-  const json = (await res.json()) as NasdaqResponse;
+  const json = (await res.json()) as NasdaqResponse & {
+    status?: { bCodeMessage?: { errorMessage?: string }[] };
+  };
   const rows = json.data?.tradesTable?.rows;
-  if (!rows || rows.length < 2) throw new Error('bad Nasdaq payload');
+  if (!rows || rows.length < 2) {
+    const msg = json.status?.bCodeMessage?.[0]?.errorMessage ?? 'bad Nasdaq payload';
+    if (msg === 'Symbol not exists.') throw new NasdaqNotFoundError(msg);
+    throw new Error(msg);
+  }
   const series: RhythmPoint[] = [];
   // rows 是倒序（最新在前），翻转成正序
   for (let i = rows.length - 1; i >= 0; i--) {
@@ -133,6 +142,16 @@ async function fetchNasdaqFull(symbol: string): Promise<RhythmPoint[]> {
   }
   if (series.length < 2) throw new Error('Nasdaq returned too few points');
   return series;
+}
+
+/** ETF（如 QQQ/SPY）在 stocks 口径下报 Symbol not exists，自动改走 etf 口径 */
+async function fetchNasdaqFull(symbol: string): Promise<RhythmPoint[]> {
+  try {
+    return await fetchNasdaqHistorical(symbol, 'stocks');
+  } catch (e) {
+    if (e instanceof NasdaqNotFoundError) return fetchNasdaqHistorical(symbol, 'etf');
+    throw e;
+  }
 }
 
 interface YahooChartResult {
@@ -597,19 +616,29 @@ export async function getLiveQuote(symbol: string): Promise<LiveQuote | null> {
     return null;
   }
   try {
-    const url = `https://api.nasdaq.com/api/quote/${encodeURIComponent(
-      symbol.toUpperCase(),
-    )}/info?assetclass=stocks`;
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': UA,
-        Accept: 'application/json',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-      next: { revalidate: 30 },
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
+    const fetchInfo = async (assetclass: 'stocks' | 'etf') => {
+      const url = `https://api.nasdaq.com/api/quote/${encodeURIComponent(
+        symbol.toUpperCase(),
+      )}/info?assetclass=${assetclass}`;
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': UA,
+          Accept: 'application/json',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+        next: { revalidate: 30 },
+      });
+      if (!res.ok) return null;
+      return (await res.json()) as {
+        data?: { primaryData?: Record<string, string>; marketStatus?: string } | null;
+        status?: { bCodeMessage?: { errorMessage?: string }[] };
+      };
+    };
+    let json = await fetchInfo('stocks');
+    // ETF（如 QQQ/SPY）在 stocks 口径下报 Symbol not exists，改走 etf 口径
+    if (!json?.data && json?.status?.bCodeMessage?.[0]?.errorMessage === 'Symbol not exists.') {
+      json = await fetchInfo('etf');
+    }
     const data = json?.data;
     const p = data?.primaryData;
     const price = num(p?.lastSalePrice);
