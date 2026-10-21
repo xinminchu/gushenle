@@ -8,8 +8,10 @@ export interface TipPreset {
 }
 
 export const TIP_PRESETS: TipPreset[] = [
+  { usd: 2, url: '' },
   { usd: 3, url: '' },
   { usd: 5, url: '' },
+  { usd: 8, url: '' },
   { usd: 10, url: '' },
 ];
 
