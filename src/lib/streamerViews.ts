@@ -562,6 +562,30 @@ const BATCH_2026_10_20: SymbolViewGroup[] = [
   },
 ];
 
+const BATCH_2026_10_22: SymbolViewGroup[] = [
+  {
+    symbol: 'TSLA',
+    label: '特斯拉',
+    views: [
+      {
+        id: 'tsla-talkjun-1',
+        blogger: '投资TALK君',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '特斯拉财报定调拉胯',
+        reason:
+          '他在第 1511 期里把特斯拉最新财报的表现称为"拉跨"，并用夜盘走势作为佐证。',
+        caveat:
+          '仅凭标题提炼：标题是带问号的节目钩子，他本人在节目里的倾向强度与证伪条件未知；这是财报事件驱动的短期判断。',
+        source: '投资TALK君（第 1511 期）',
+        published: '10/22（美东 10/21 晚节目）',
+        note: '原片：https://www.youtube.com/watch?v=Ia7zvaU0MoA',
+      },
+    ],
+  },
+];
+
 const BATCH_2026_10_21: SymbolViewGroup[] = [
   {
     symbol: 'SPCX',
@@ -679,6 +703,7 @@ const BATCH_2026_10_21: SymbolViewGroup[] = [
 ];
 
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-10-22', groups: BATCH_2026_10_22 },
   { date: '2026-10-21', groups: BATCH_2026_10_21 },
   { date: '2026-10-20', groups: BATCH_2026_10_20 },
   { date: '2026-10-18', groups: BATCH_2026_10_18 },
