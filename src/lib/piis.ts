@@ -95,7 +95,7 @@ export const MARKET_EVENT: MarketEventNote = {
   id: '2026-10-15',
   dateZh: '10/15',
   dateEn: 'Oct 15',
-  active: true,
+  active: false, // 2026-10-23 已过期关停：挂了 8 天仍自称「今日」；且组件已加 2 天自动过期，active 忘关也不会再陈列
   titleZh: '今日市场：为什么跌',
   titleEn: 'Today: why the market fell',
   bodyZh:

@@ -11,6 +11,9 @@ import { useLanguage } from '@/context/LanguageContext';
 export default function MarketEventNote() {
   const { lang } = useLanguage();
   if (!MARKET_EVENT.active) return null;
+  // 自动过期：注脚只解释事件日当天的市场，标题自称「今日」——超过 2 天自动隐藏，
+  // 防止 active 忘关时旧注脚长期冒充今日（2026-10-15 那条曾挂 8 天，2026-10-23 Sam 指出）。
+  if ((Date.now() - Date.parse(MARKET_EVENT.id)) / 864e5 > 2) return null;
   return (
     <section className="rounded-2xl border border-teal-500/30 bg-teal-950/20 p-4">
       <div className="flex items-baseline justify-between">
