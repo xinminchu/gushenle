@@ -1,6 +1,7 @@
 // PIIS 每周解读 · single source of truth.
-// 每周 Sam 把 PIIS 周报浓缩成 5–8 条"一句话"，贴在这里即可上线，无需改代码。
-// Weekly: distill the PIIS weekly into 5–8 one-liners and paste here.
+// 2026-10-23 起改自动（Sam 拍板）：每周一 Mas 按早报流水线生成——先核实每个数字的来源，
+// 再浓缩成 5–8 条"一句话"写入本文件最前面（PIIS_WEEKS[0] 即线上显示），旧期保留在数组里。
+// Auto since 2026-10-23: Mas drafts each Monday, verifies every figure, prepends the new week.
 
 export interface PiisPoint {
   /** 小标签，如 宏观 / 利率 / 资金流 */
@@ -20,6 +21,57 @@ export interface PiisWeek {
 }
 
 export const PIIS_WEEKS: PiisWeek[] = [
+  {
+    id: '2026-10-19',
+    rangeZh: '10/12–10/19',
+    rangeEn: '10/12–10/19',
+    formulaZh: 'AI 需求仍在加速 ＞ 被通胀与油价顶住的资本成本 + 融资疑虑 + 估值要求',
+    formulaEn: 'AI demand still accelerating > cost of capital (held up by inflation and oil) + financing doubts + valuation demands',
+    points: [
+      {
+        tag: '宏观',
+        tagEn: 'Macro',
+        zh: '9 月 CPI 同比 +3.7%、核心环比 +0.3%，PPI 同比 +6.3%（10/14 公布）：这一轮通胀再加速主要是能源——汽油单月 +9.1%，不是需求过热，但足够把联储钉住。',
+        en: 'September CPI rose 3.7% YoY with core +0.3% MoM, and PPI hit +6.3% YoY (released Oct 14): this inflation re-acceleration is mostly energy — gasoline +9.1% in a month — not demand overheating, but enough to pin the Fed.',
+      },
+      {
+        tag: '利率',
+        tagEn: 'Rates',
+        zh: '10 年期美债收益率在 CPI 后一度冲到 5.33%，随后股市大跌、避险买盘进场，周五收在约 5.10%（一周前 5.24%）。主席 Warsh 不肯给方向，10 月加息押注从 28% 回落到 17%，但 12 月加息仍被市场计入约九成。',
+        en: 'The 10Y yield spiked to 5.33% after CPI, then safe-haven buying during the equity selloff pulled it back to ~5.10% by Friday (5.24% a week earlier). Chair Warsh stayed noncommittal: October hike odds fell from 28% to 17%, while a December hike is still priced at roughly 90%.',
+      },
+      {
+        tag: '大盘',
+        tagEn: 'Market',
+        zh: '全周记分牌：纳指 -4.5%（6 月以来最差一周、四周连涨终结），标普 -1.9%，费半 -11.4%，罗素 2000 -3.0%；道指却 +0.7%。杀的是最贵的名字，不是全面出逃。',
+        en: 'The weekly scoreboard: Nasdaq -4.5% (worst week since June, four-week win streak snapped), S&P 500 -1.9%, SOX -11.4%, Russell 2000 -3.0% — while the Dow gained +0.7%. The most expensive names got de-rated; this was not a broad liquidation.',
+      },
+      {
+        tag: '轮动',
+        tagEn: 'Rotation',
+        zh: '钱从高估值科技撤向防御与价值：必需消费、医疗、公用、能源全周跑赢大盘，VIX 周五升到 20.16。上一期是 selective risk-on，这一期是它的镜像。',
+        en: 'Money rotated out of expensive tech into defensives and value: staples, healthcare, utilities and energy all beat the market, and the VIX closed at 20.16 on Friday. Last issue was selective risk-on; this one is its mirror image.',
+      },
+      {
+        tag: 'AI 硬件',
+        tagEn: 'AI HW',
+        zh: '台积电三季报（10/15）：营收 $467 亿、同比 +41%，四季度指引同比约 +58%，2026 资本开支维持 $600–640 亿，CEO 说需求"还没被完全满足"。需求被证伪不了——但费半同一周跌了 11.4%：市场现在计价的约束是钱，不是需求。',
+        en: 'TSMC Q3 (Oct 15): revenue $46.7B, +41% YoY; Q4 guidance ~+58% YoY; 2026 capex reaffirmed at $60–64B, with the CEO saying demand is still not fully met. Demand cannot be falsified — yet the SOX fell 11.4% the same week: the constraint being priced now is money, not demand.',
+      },
+      {
+        tag: 'AI 金融',
+        tagEn: 'AI Fin',
+        zh: '博通 CEO 陈福阳周五警告：资本短缺可能成为 AI 投入的上限，博通与 AMD 当天各跌约 4–5%。接上一期的 vendor financing——"谁出钱"已经从注脚变成市场的主要问题。',
+        en: 'Broadcom CEO Hock Tan warned on Friday that a shortage of capital could become a limit on AI spending; Broadcom and AMD each fell ~4–5% that day. Following last issue’s vendor-financing note: "who pays" has moved from footnote to the market’s main question.',
+      },
+      {
+        tag: '能源',
+        tagEn: 'Energy',
+        zh: 'WTI 全周 +7.7% 收在约 $99，布伦特一度触及 $110：中东与霍尔木兹风险溢价直接写进了 CPI 的汽油项。能源→通胀→收益率→估值，这条链本周完整跑了一遍。',
+        en: 'WTI rose 7.7% on the week to ~$99, with Brent briefly touching $110: the Middle East / Hormuz risk premium fed straight into CPI via gasoline. Energy → inflation → yields → valuations — the full chain ran this week.',
+      },
+    ],
+  },
   {
     id: '2026-10-05',
     rangeZh: '9/28–10/5',
