@@ -192,3 +192,9 @@ html.light .bg-slate-700\/40 { background-color: rgb(241 245 249 / 0.4); }
 html.light .bg-slate-950\/60 { background-color: rgb(255 255 255 / 0.6); }
 html.light .disabled\:bg-slate-700:disabled { background-color: #cbd5e1; }
 html.light .divide-slate-800\/70 > :not([hidden]) ~ :not([hidden]) { border-color: rgb(226 232 240 / 0.7); }
+
+/* ---------- signal-tile 黑底优先（2026-10-23 修正） ----------
+   上面补漏的 .bg-slate-950\/60 通用映射与本节同为 (0,2,1) 特异性、位置更靠后，
+   把 signal-tile 的刻意黑底冲成了白底，而格内文字仍是为黑底准备的浅色 → 白底白字。
+   在文件末尾重申黑底，让它压过通用映射；格内浅字规则（特异性更高）不受影响。 */
+html.light .signal-tile { background-color: rgb(2 6 23 / 0.72); border-color: rgb(51 65 85 / 0.5); }
