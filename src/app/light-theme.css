@@ -158,3 +158,37 @@ html.light .signal-tile .text-sky-300 { color: #7dd3fc; }
 /* K 线图例 chart-legend：浅色下用浅透底 + 深字，不压住图表 */
 html.light .chart-legend { background-color: rgb(255 255 255 / 0.72); }
 html.light .chart-legend .text-slate-500 { color: #475569; }
+
+/* ---------- 补漏（2026-10-22 Sam：文字看不清、背景色干扰，全站扫查后补齐） ----------
+   以下类此前不在映射表里，浅色下保持深色主题原值：
+   浅黄/浅青文字落在白卡上几乎不可见（主播观点「保留/证伪」行、每日更新徽章），
+   深色半透明底（amber-950/20 等）罩在浅底上成浑浊色块（早报卡米色底）。
+   一律按本表既有惯例加深/改浅，保证浅底可读。 */
+html.light .text-teal-300 { color: #0f766e; }
+html.light .text-teal-200\/90 { color: rgb(15 118 110 / 0.9); }
+html.light .text-orange-300 { color: #ea580c; }
+html.light .text-orange-400 { color: #ea580c; }
+html.light .text-amber-200\/70 { color: rgb(180 83 9 / 0.75); }
+html.light .text-amber-200\/80 { color: rgb(180 83 9 / 0.85); }
+html.light .text-emerald-300\/90 { color: rgb(5 150 105 / 0.9); }
+html.light .text-emerald-400\/70 { color: rgb(5 150 105 / 0.75); }
+html.light .text-rose-300\/90 { color: rgb(225 29 72 / 0.9); }
+html.light .text-violet-300\/90 { color: rgb(124 58 237 / 0.9); }
+html.light .text-violet-400\/80 { color: rgb(109 40 217 / 0.85); }
+html.light .text-violet-400\/90 { color: rgb(109 40 217 / 0.9); }
+html.light .hover\:text-amber-400:hover { color: #b45309; }
+html.light .hover\:text-sky-400:hover { color: #0284c7; }
+html.light .hover\:text-violet-300:hover { color: #7c3aed; }
+html.light .hover\:text-slate-400:hover { color: #475569; }
+html.light .group-hover\:text-amber-300 { color: #d97706; }
+html.light .active\:text-slate-200:active { color: #1e293b; }
+html.light .disabled\:text-slate-500:disabled { color: #64748b; }
+html.light .placeholder-slate-500::placeholder { color: #94a3b8; }
+/* 深色半透明底 → 浅色淡染，不再罩出浑浊色块 */
+html.light .bg-amber-950 { background-color: #fffbeb; }
+html.light .bg-amber-950\/20 { background-color: rgb(254 243 199 / 0.4); }
+html.light .bg-teal-950\/20 { background-color: rgb(204 251 241 / 0.4); }
+html.light .bg-slate-700\/40 { background-color: rgb(241 245 249 / 0.4); }
+html.light .bg-slate-950\/60 { background-color: rgb(255 255 255 / 0.6); }
+html.light .disabled\:bg-slate-700:disabled { background-color: #cbd5e1; }
+html.light .divide-slate-800\/70 > :not([hidden]) ~ :not([hidden]) { border-color: rgb(226 232 240 / 0.7); }
