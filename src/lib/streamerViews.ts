@@ -383,6 +383,164 @@ export interface DailyBatch {
   groups: SymbolViewGroup[];
 }
 
+/* ---------------- 10/23 批：半导体杀跌日，油价逻辑 + 台股估值 ----------------
+   水位线 2026-10-22；今日 5 个新条目（Kova Substack 全文 + 3 个 YT 新视频），
+   7 个观点入库（1 个持仓），2 条丢弃：Kova YT 直播（Kova Lab 平台介绍，
+   无具体标的倾向）、Money or Life（"终于看到 CyberCab"为体验内容，
+   无法确定倾向/期限）。 */
+const BATCH_2026_10_23: SymbolViewGroup[] = [
+  {
+    symbol: 'SOX',
+    label: '费城半导体',
+    views: [
+      {
+        id: 'sox-kova-3',
+        blogger: 'Kova动量交易',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '半导体不是回调而是下跌阶段，继续做空、不抄底',
+        reason:
+          '他把本周半导体的跳空大跌解读为下跌阶段的确立，而非正常回调；并强调不知道底部在哪里，没有做空能力的读者不要买跌抄底。',
+        caveat:
+          '三倍杠杆做空有衰减与逼空风险；他给出的转手条件仍是成交量极致放大并出现买方力量之前不动手。',
+        source: 'Kova动量交易 Substack《Trading Report 10月23日，现在美股/中国股市中的强势股》',
+        published: '10/23（美东 10/22 晚文章）',
+        note: '文章链接：https://kovainvest.substack.com/p/trading-report-1023',
+      },
+      {
+        id: 'sox-kova-3-pos',
+        blogger: 'Kova动量交易',
+        stance: 'neutral',
+        horizon: 'short',
+        kind: 'position',
+        headline: '已披露：上周起持有 3x 做空半导体',
+        reason: '',
+        caveat: '杠杆方向产品本身的衰减与反向挤压风险由产品承担，不是"稳赚"承诺。',
+        source: 'Kova动量交易 Substack《Trading Report 10月23日》',
+        published: '10/23',
+      },
+      {
+        id: 'soxx-shiye-5',
+        blogger: '视野环球财经',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: 'SOXX 成分股全阵亡，后市讲注意事项',
+        reason: '他在 10 月 22 日盘后视频中用"全阵亡"形容 SOXX 成分股的普跌，并给出"后面怎么玩"的注意事项。',
+        caveat:
+          '仅凭标题提炼：具体后市操作思路与反转条件看正片；"全阵亡"是对普跌的描述，不等于个股推荐。',
+        source: '视野环球财经',
+        published: '10/22（美东盘后视频）',
+        note: '原片：https://www.youtube.com/watch?v=4_uytm7I_XQ',
+      },
+    ],
+  },
+  {
+    symbol: 'SSL',
+    label: 'Sasol',
+    views: [
+      {
+        id: 'ssl-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'bullish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '油价飙升下的能源高弹性强势股',
+        reason:
+          '布伦特油破 110 美元放大了他的煤制油成本优势：FY2026 EBITDA 同比增约 17%、Secunda 工厂产量创新高、债务下降，股价一年涨超 200%，市场把它当作油价高弹性标的在交易。',
+        caveat:
+          '逻辑几乎完全绑定油价：地缘缓和、油价回落时弹性同样会反向；长期有环保碳排压力与南非本地政策运营风险。',
+        source: 'Kova动量交易 Substack《Trading Report 10月23日，现在美股/中国股市中的强势股》',
+        published: '10/23',
+        note: '文章链接：https://kovainvest.substack.com/p/trading-report-1023',
+      },
+    ],
+  },
+  {
+    symbol: 'MRNA',
+    label: 'Moderna',
+    views: [
+      {
+        id: 'mrna-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'cautious',
+        horizon: 'short',
+        kind: 'view',
+        headline: '数据积极但盘中大跌：可能是洗盘，纪律是 10EMA 止损',
+        reason:
+          'INTerpath-001 三期数据本身积极（复发/死亡风险降约 42%），但被肿瘤网站提前泄密导致盘中剧烈波动；他把这轮走势与 8 月 19 日阳性结果后先砸约 23.5% 再收回走高的剧本对比，认为是同一次洗盘的进阶版。',
+        caveat:
+          '他强调止损纪律：止损放在 10EMA，被打掉就拿走利润走人；本周末 ESMO 正式演讲有无更多负面细节未知。',
+        source: 'Kova动量交易 Substack《Trading Report 10月23日，现在美股/中国股市中的强势股》',
+        published: '10/23',
+        note: '文章链接：https://kovainvest.substack.com/p/trading-report-1023',
+      },
+    ],
+  },
+  {
+    symbol: '002242.SZ',
+    label: '九阳股份',
+    views: [
+      {
+        id: 'jiuyang-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '概念妖股警告：股价与基本面背离',
+        reason:
+          '近 20 个交易日涨超 100%、多次涨停，但三季报单季净利仅约 21.6 万元、同比大降 75%；公司已多次澄清与华为无战略合作、无资产注入，涨幅几乎完全由"AI/机器人/华为"题材资金接力驱动。',
+        caveat:
+          '他提醒这是一轮典型题材驱动行情，情绪退潮后调整往往很快；短线交易者盯资金情绪节奏，不看基本面。',
+        source: 'Kova动量交易 Substack《Trading Report 10月23日，现在美股/中国股市中的强势股》',
+        published: '10/23',
+        note: '文章链接：https://kovainvest.substack.com/p/trading-report-1023',
+      },
+    ],
+  },
+  {
+    symbol: 'AI',
+    label: 'AI科技股',
+    views: [
+      {
+        id: 'ai-talkjun-2',
+        blogger: '投资TALK君',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '半导体科技股血流成河，AI 泡沫质疑再起',
+        reason: '他用"血流成河"形容半导体科技股的杀跌，并把"AI结束了？"抛为节目议题。',
+        caveat:
+          '仅凭标题提炼："AI结束了"是节目钩子，实际倾向强度与证伪条件看正片；这是杀跌事件驱动的短期判断。',
+        source: '投资TALK君',
+        published: '10/23（美东 10/22 晚节目）',
+        note: '原片：https://www.youtube.com/watch?v=Cr7N8t0x03E',
+      },
+    ],
+  },
+  {
+    symbol: 'TWSE',
+    label: '台北股市',
+    views: [
+      {
+        id: 'twse-laowang-1',
+        blogger: '老王不只三分钟',
+        stance: 'cautious',
+        horizon: 'long',
+        kind: 'view',
+        headline: '空头修正中，从基本面找估值',
+        reason: '他在最新一期【王老先聲】里讨论空头修正阶段如何用估值和基本面选股，节目话题锚定台北股市。',
+        caveat:
+          '仅凭标题提炼：这是空头修正中的估值方法论讨论，不是方向喊单；具体选股框架看正片。',
+        source: '老王不只三分鐘（王老先聲）',
+        published: '10/23',
+        note: '原片：https://www.youtube.com/watch?v=lEGXaEbUksU',
+      },
+    ],
+  },
+];
+
 /* ---------------- 每日更新：观点留痕 ----------------
    STREAMER_VIEW_HISTORY 按日期倒序，最新在前。
    每日 cron 的唯一写操作：在数组最前面插入一个新 DailyBatch。
@@ -703,6 +861,7 @@ const BATCH_2026_10_21: SymbolViewGroup[] = [
 ];
 
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-10-23', groups: BATCH_2026_10_23 },
   { date: '2026-10-22', groups: BATCH_2026_10_22 },
   { date: '2026-10-21', groups: BATCH_2026_10_21 },
   { date: '2026-10-20', groups: BATCH_2026_10_20 },
