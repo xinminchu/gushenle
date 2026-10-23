@@ -205,8 +205,73 @@ const BATCH_2026_10_22: MorningBriefing = {
   ],
 };
 
+const BATCH_2026_10_23: MorningBriefing = {
+  date: '2026-10-23',
+  overnight: [
+    {
+      text: '特斯拉 Q3 财报：营收 280.5 亿美元（超预期的 279 亿）、调整后 EPS 0.48 美元（预期 0.43 美元），但将 2026 年资本支出指引从 250 亿美元以上下调至约 200 亿美元；股价收盘 374.58 美元（-3.08%）。',
+      source: 'Reuters / TipRanks / Motley Fool',
+      url: 'https://www.reuters.com/business/nasdaq-futures-drop-over-1-ai-worries-resurface-oil-climbs-2026-10-22/',
+    },
+    {
+      text: 'Meta Q3 财报：营收 646 亿美元（超预期的 633.7 亿）、GAAP EPS 3.83 美元（预期 6.54 美元，未达预期主因约 99 亿美元青少年心理健康诉讼和解；调整后 7.40 美元）；同时宣布 2 拆 1 并发行无投票权 C 类股以资助 AI 投入；盘后跌约 1.9%。',
+      source: 'TipRanks / Reuters / SummaMoney',
+      url: 'https://www.tipranks.com/news/why-is-the-stock-market-down-today-10-22-26',
+    },
+    {
+      text: '原油走高：Brent 涨约 3% 至约 112 美元（近五个月高点），胡塞武装袭击沙特油田；特朗普称中期选举（11/3）前暂不对伊朗动武。',
+      source: 'Reuters / TipRanks',
+      url: 'https://www.reuters.com/business/nasdaq-futures-drop-over-1-ai-worries-resurface-oil-climbs-2026-10-22/',
+    },
+    {
+      text: '美国上周初请失业金降至 19.4 万（预期 20 万），处于历史低位，就业市场未现警讯。',
+      source: 'CoinDesk 市场直播 10-22',
+      url: 'https://www.coindesk.com/business/2026/10/22/live-updates-bitcoin-s-round-trip-to-usd85-000-burns-traders-on-both-sides?post-id=9074d3220a68',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货盘前（8:28 ET，延迟 10 分钟）：ES -0.34%（约 7,678 点）、NQ -0.18%（约 29,090 点）、YM -0.75%（约 52,669 点）。',
+      source: 'regardsofwallstreet',
+      url: 'https://www.regardsofwallstreet.com/premarket',
+    },
+    {
+      text: 'QQQ 盘前约 703.6 美元（-0.12%）；自选与持仓盘前均窄幅波动（-0.5% 至 +0.5%），无突出异动。',
+      source: '站内 /api/rhythm（Nasdaq 管线，8:23–8:28 ET）',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日（美东）：8:30 初请失业金（上周 19.4 万，预期 20 万）；今日无其他重要宏观数据安排。',
+      source: 'CoinDesk 市场直播 / RapidTradeView 日历',
+    },
+    {
+      text: '今日财报（盘前）：美国运通 AXP、SLB；NBIS（持仓）仍出现在第三方日历的"日期未确认"名单，发布时间点待公司 IR 确认。',
+      source: 'RapidTradeView 10-19–23 财报日历',
+      url: 'https://www.rapidtradeview.trade/earnings/this-week',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 10-22 收盘约 19.03；今晨盘前指示约 19.83（+4.2%，10 分钟延迟）。',
+      source: 'regardsofwallstreet',
+      url: 'https://www.regardsofwallstreet.com/premarket',
+    },
+    {
+      text: 'QQQ 10-22 收 704.47 美元（-2.86%），站内日线 50 日均线 726.37 美元：收盘价低于 50 日线约 3.0%，已连续 5 个交易日收在 50 日线之下（上次收在之上是 10-15）。',
+      source: '站内 /api/rhythm',
+    },
+    {
+      text: '10 年期美债收益率约 4.95%（盘前指示，10 分钟延迟）。',
+      source: 'regardsofwallstreet',
+      url: 'https://www.regardsofwallstreet.com/premarket',
+    },
+  ],
+};
+
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_10_23,
   BATCH_2026_10_22,
   BATCH_2026_10_21,
 ];
