@@ -860,7 +860,39 @@ const BATCH_2026_10_21: SymbolViewGroup[] = [
   },
 ];
 
+/* ---------------- 10/24 批：水位线 2026-10-23；今日 7 个新条目，1 个观点入库 ----------------
+   6 条丢弃：Kova Substack 新文为付费墙（仅见一句话预告，正文不可见）；
+   阳光财经（标题"下周更劲爆"含糊、无标的/方向，简介仅会员推广）；
+   NaNa（"不想再被毒打"为情绪口号，无标的/方向/期限）；
+   Selina（Meta 财报标题以问号收尾，阵痛还是泡沫未定，倾向/期限皆无）；
+   Money or Life（猎鹰九号拼车发射成本话题，无上市公司标的与倾向）；
+   老王（聯一光"跌什麼"提问式短视频，未给方向与期限）。 */
+const BATCH_2026_10_24: SymbolViewGroup[] = [
+  {
+    symbol: 'QQQ',
+    label: '纳指',
+    views: [
+      {
+        id: 'qqq-shiye-1',
+        blogger: '视野环球财经',
+        stance: 'cautious',
+        horizon: 'short',
+        kind: 'view',
+        headline: '对冲基金连减，下周盯紧 QQQ',
+        reason:
+          '他在 10 月 23 日盘后视频里指出对冲基金 8 天里 7 天减仓、整体偏紧，并把下周的观察点放在 QQQ 上；同期还提到 OpenAI 估值下调与 AMZN 停建一座数据中心的消息。',
+        caveat:
+          '仅凭标题提炼："注意"未明示方向与触发条件，实际倾向强度与操作思路看正片；这是下周视角的短期提醒。',
+        source: '视野环球财经',
+        published: '10/23（美东盘后视频）',
+        note: '原片：https://www.youtube.com/watch?v=b_ZVO8_QfJ0',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-10-24', groups: BATCH_2026_10_24 },
   { date: '2026-10-23', groups: BATCH_2026_10_23 },
   { date: '2026-10-22', groups: BATCH_2026_10_22 },
   { date: '2026-10-21', groups: BATCH_2026_10_21 },
