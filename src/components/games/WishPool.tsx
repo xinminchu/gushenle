@@ -66,6 +66,8 @@ export default function WishPool() {
   const [replyText, setReplyText] = useState('');
   const [replyBusy, setReplyBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  /** 刚提交成功：常驻确认卡 + 高亮列表里自己那条（2026-10-26：成功提示不再 3 秒消失） */
+  const [justPosted, setJustPosted] = useState<{ nickname: string; content: string } | null>(null);
   const [endorsements, setEndorsements] = useState<Record<string, EndorseInfo>>({});
   const [endorseReady, setEndorseReady] = useState(false); // 023 没跑时隐藏认同区
   const [endorseBusy, setEndorseBusy] = useState<string | null>(null);
@@ -288,7 +290,7 @@ export default function WishPool() {
       });
       if (error) throw error;
       setContent('');
-      setMsg(tx(lang, user ? 'Got it! +10 contribution pts 🎉' : 'Got it! Sign in to earn contribution pts', user ? '已收到！贡献值 +10 🎉' : '已收到！登录后留言可获得贡献值'));
+      setJustPosted({ nickname: name, content: text });
       await load();
     } catch {
       setMsg(tx(lang, 'Send failed, check your connection and retry', '发送失败，检查网络后重试'));
@@ -365,6 +367,11 @@ export default function WishPool() {
     }
   };
 
+  /** 刚提交的那条在列表里的 id（昵称 + 内容匹配，列表按时间倒序，新est在前） */
+  const freshId = justPosted
+    ? wishes.find((w) => w.nickname === justPosted.nickname && w.content === justPosted.content)?.id ?? null
+    : null;
+
   return (
     <section className="mt-6">
       <div className="flex items-center justify-between mb-1">
@@ -427,6 +434,23 @@ export default function WishPool() {
         {msg && <p className="text-[11px] text-emerald-300">{msg}</p>}
       </div>
 
+      {/* 提交成功确认：常驻显示，直到用户手动关闭（不再 3 秒消失） */}
+      {justPosted && (
+        <div className="mt-3 bg-emerald-500/10 border border-emerald-500/40 rounded-xl px-3.5 py-3">
+          <div className="flex items-start gap-2">
+            <p className="text-xs text-emerald-200 font-semibold flex-1">
+              ✓ {tx(lang, user ? 'Got it! +10 contribution pts 🎉' : 'Got it! Sign in to earn contribution pts', user ? '已收到！贡献值 +10 🎉' : '已收到！登录后留言可获得贡献值')}
+              {' — '}
+              {tx(lang, 'shown at the top of the list below', '已显示在下方列表顶部')}
+            </p>
+            <button onClick={() => setJustPosted(null)} className="text-slate-500 text-xs px-1" aria-label={tx(lang, 'Dismiss', '关闭')}>✕</button>
+          </div>
+          <p className="text-xs text-emerald-100/80 leading-relaxed mt-1 whitespace-pre-line">
+            “{justPosted.content.length > 160 ? justPosted.content.slice(0, 160) + '…' : justPosted.content}”
+          </p>
+        </div>
+      )}
+
       {/* 留言列表 */}
       <div className="mt-3 space-y-2.5">
         {wishes.length === 0 && (
@@ -437,11 +461,16 @@ export default function WishPool() {
         {wishes.map((w) => {
           const st = endorsements[w.id];
           return (
-          <div key={w.id} className="bg-slate-800/40 border border-slate-700/60 rounded-xl px-3.5 py-3">
+          <div key={w.id} className={`bg-slate-800/40 border border-slate-700/60 rounded-xl px-3.5 py-3 ${w.id === freshId ? 'ring-1 ring-emerald-500/70' : ''}`}>
             <div className="flex items-center gap-1.5 mb-1">
               <span className={`text-[10px] ${KIND_META[w.kind].text}`}>
                 {tx(lang, KIND_META[w.kind].en, KIND_META[w.kind].zh)}
               </span>
+              {w.id === freshId && (
+                <span className="text-[10px] text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                  ✓ {tx(lang, 'Just posted', '刚提交')}
+                </span>
+              )}
               <span className="text-[11px] text-slate-300 font-medium">{w.nickname}</span>
               {w.adopted && (
                 <span className="text-[10px] text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded">
