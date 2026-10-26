@@ -22,6 +22,63 @@ export interface PiisWeek {
 
 export const PIIS_WEEKS: PiisWeek[] = [
   {
+    id: '2026-10-26',
+    rangeZh: '10/19–10/26',
+    rangeEn: '10/19–10/26',
+    formulaZh: 'AI 需求仍在加速 ＞ 被油价与通胀顶住的资本成本 + 融资风险 + 估值要求',
+    formulaEn: 'AI demand still accelerating > cost of capital (held up by oil and inflation) + financing risk + valuation demands',
+    points: [
+      {
+        tag: '宏观',
+        tagEn: 'Macro',
+        zh: '住房全线熄火：建商信心指数 29（2012 年 6 月以来最低）、新屋开工 122.1 万（环比 −5.2%）、成屋签约销售环比 −7.3%（有记录以来最低），30 年期按揭 7.40%；但增长数据火热——S&P flash PMI 综合 57.6（服务业 57.9、制造业 56.0），密歇根 1 年通胀预期升至 4.7%。',
+        en: 'Housing went cold across the board: builder confidence 29 (lowest since June 2012), housing starts 1.221M (−5.2% MoM), pending home sales −7.3% MoM (lowest on record), 30-year mortgage 7.40%; yet growth data ran hot — S&P flash PMI composite 57.6 (services 57.9, manufacturing 56.0), and Michigan 1-year inflation expectations rose to 4.7%.',
+      },
+      {
+        tag: '利率',
+        tagEn: 'Rates',
+        zh: '10 年期美债收益率周一冲至 5.14%（法国 OAT 抛售传导，OAT-Bund 利差走阔至约 140–146bp），周四 Meta 财报引发避险买盘、单日跌 16.6bp 至 4.95%，周五收约 4.99%（一周前 5.10%）；三周累计下行 0.289 个百分点。',
+        en: 'The 10Y yield spiked to 5.14% on Monday (France OAT selloff spilling over, OAT-Bund spread widening to ~140–146bp), then safe-haven buying after Meta’s results cut it 16.6bp in a day to 4.95% on Thursday; it closed Friday at ~4.99% (5.10% a week earlier), down 0.289 points over three weeks.',
+      },
+      {
+        tag: '大盘',
+        tagEn: 'Market',
+        zh: '全周记分牌：标普 −0.47%、纳指 −0.71%、道指 +0.41%、罗素 2000 +2.00%、费半 −3.21%；等权重标普 +1.13%，跑赢大盘 1.60 个百分点；周四标普单日 −1.21%，为 7 月以来最差单日。',
+        en: 'The weekly scoreboard: S&P 500 −0.47%, Nasdaq −0.71%, Dow +0.41%, Russell 2000 +2.00%, SOX −3.21%; the equal-weight S&P 500 gained +1.13%, beating the index by 1.60 points; Thursday’s −1.21% was the S&P’s worst day since July.',
+      },
+      {
+        tag: '轮动',
+        tagEn: 'Rotation',
+        zh: '钱没出股市，从大票科技流向小票与价值：罗素 +2.00%、等权重 +1.13%；BofA/EPFR 数据显示当周股票基金净流入 $55.6B，其中科技基金 +$18.8B（7 月以来最大单周流入）——下跌时投资者逢低买入科技；VIX 周五收 19.45。',
+        en: 'Money did not leave stocks; it left big tech for small caps and value: Russell +2.00%, equal-weight +1.13%. BofA/EPFR data show $55.6B flowed into equity funds that week, including $18.8B into tech funds (largest weekly tech inflow since July) — investors bought the dip; the VIX closed Friday at 19.45.',
+      },
+      {
+        tag: 'AI 硬件',
+        tagEn: 'AI HW',
+        zh: '费半全周 −3.21%，周四单日 −6.7%：Lam Research 发布指引警告后领跌，英伟达周四 −4.40%；但 SpaceX 报出上市后首次盈利、SMCI 上调指引后 +9.55%——硬件需求未被证伪，被计价的是钱。',
+        en: 'The SOX fell −3.21% on the week and −6.7% on Thursday alone: Lam Research led the drop after a guidance warning and Nvidia fell 4.40% that day; yet SpaceX reported its first profit since listing and SMCI rose 9.55% after raising guidance — hardware demand was not falsified; what got repriced is the money.',
+      },
+      {
+        tag: 'AI 金融',
+        tagEn: 'AI Fin',
+        zh: 'Meta 三季报：营收 $64.6B（+26%）、单季资本开支 $34.91B、全年指引上调至 $135–145B，自由现金流 −$2.12B（IPO 以来首次为负），并新设 C 类股融资；Oracle 5 年期 CDS 从 9 月底的 237bp 升至 314bp——“谁出钱”已从注脚变成主要问题。',
+        en: 'Meta Q3: revenue $64.6B (+26%), quarterly capex $34.91B, full-year guidance raised to $135–145B, free cash flow −$2.12B (first negative quarter since its IPO), plus a new Class C share issue to fund the buildout; Oracle’s 5-year CDS widened from 237bp at end-September to 314bp — “who pays” has moved from footnote to the main question.',
+      },
+      {
+        tag: '消费',
+        tagEn: 'Consumer',
+        zh: '消费靠就业撑着、靠房子拖着：首次申领失业金 19.4 万（三个月最低，low-hire / low-fire 未变），续领 172.8 万走高；但住房负担能力危机加深——签约销售创纪录低、43% 建商降价（2020 年以来最高）。',
+        en: 'Consumption is held up by jobs and dragged by housing: initial jobless claims 194K (a three-month low; low-hire / low-fire unchanged) while continuing claims rose to 1.728M; but the housing affordability crisis deepened — pending sales at a record low and 43% of builders cutting prices (highest since 2020).',
+      },
+      {
+        tag: '能源',
+        tagEn: 'Energy',
+        zh: '布伦特全周 +6.24% 收 $116.72（4 月以来最高收盘）、WTI +4.29% 收 $103.27：胡塞武装袭击沙特阿美设施与中东局势升级；能源→通胀预期（密歇根 4.7%）→收益率→估值，这条链本周又跑了一遍。',
+        en: 'Brent rose 6.24% on the week to $116.72 (highest close since April) and WTI +4.29% to $103.27: Houthi strikes on Aramco facilities and escalating Middle East tensions; energy → inflation expectations (Michigan 4.7%) → yields → valuations — the chain ran again this week.',
+      },
+    ],
+  },
+  {
     id: '2026-10-19',
     rangeZh: '10/12–10/19',
     rangeEn: '10/12–10/19',

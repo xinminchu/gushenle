@@ -5,3 +5,6 @@ node_modules
 
 # 盘前早报每日草稿（本地人工审核用，不发布）
 scripts/morning-briefing-drafts/
+
+# PIIS 每周草稿（本地人工审核用，不发布）
+scripts/piis-drafts/
