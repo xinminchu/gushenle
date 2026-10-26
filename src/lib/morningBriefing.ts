@@ -269,9 +269,68 @@ const BATCH_2026_10_23: MorningBriefing = {
   ],
 };
 
+const BATCH_2026_10_26: MorningBriefing = {
+  date: '2026-10-26',
+  overnight: [
+    {
+      text: '原油回落：WTI 跌约 2% 至约 101 美元/桶，上周五因中东局势大涨后回吐；胡塞武装周末继续袭击沙特利雅得机场与石油设施。',
+      source: 'Reuters / TipRanks / Investopedia',
+      url: 'https://wncy.com/2026/10/26/us-stock-futures-edge-up-as-oil-falls-heading-into-earnings-barrage/',
+    },
+    {
+      text: '马斯克周日发文称，缺乏 AI 数据中心以外可观收入的公司已基本借不到钱，并预言算力租赁行业将整合；CoreWeave 与 Nebius 盘前跌约 3%，持仓 IREN 跌 2.6%。',
+      source: 'Reuters',
+      url: 'https://wncy.com/2026/10/26/us-stock-futures-edge-up-as-oil-falls-heading-into-earnings-barrage/',
+    },
+    {
+      text: '上周五三大指数收跌（标普 -0.52%、纳指 -0.21%、道指 -1.24%）；全周标普跌 0.47%、纳指跌 0.71%、道指涨 0.41%。',
+      source: 'eOption / TipRanks',
+      url: 'https://www.eoption.com/morning-preview-october-26-2026/',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货盘前（约 05:19 ET）：道指期货 +0.49%（+257 点）、标普 +0.30%（+23.25 点）、纳指 +0.25%（+73 点）。',
+      source: 'Reuters',
+      url: 'https://wncy.com/2026/10/26/us-stock-futures-edge-up-as-oil-falls-heading-into-earnings-barrage/',
+    },
+    {
+      text: 'QQQ 盘前约 710 美元（+0.8%）；特斯拉盘前 381.26 美元（+2.43%）、英伟达 213.65 美元（+1.22%），持仓 IREN 盘前 24.45 美元（-1.83%）。',
+      source: '站内 /api/rhythm（Nasdaq 管线，8:26–8:28 ET）',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日（美东）：8:30 芝加哥联储全国活动指数（9 月）、10:30 达拉斯联储制造业调查（10 月）、13:00 财政部拍卖 690 亿美元 2 年期国债；今日无重磅宏观数据。',
+      source: 'WSJ / eOption',
+      url: 'https://www.eoption.com/morning-preview-october-26-2026/',
+    },
+    {
+      text: '今日财报：盘前 Verizon（已上调全年业绩指引）；盘后 Cadence Design Systems、Nucor、Whirlpool、Welltower；自选股微软的财报在周三盘后。',
+      source: 'WSJ / Investopedia',
+      url: 'https://www.investopedia.com/5-things-to-know-before-the-stock-market-opens-on-monday-october-25-2026-12193684',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日收盘 19（口径：FRED VIXCLS，数据日期 2026-10-22）。',
+      source: '站内 /api/macro',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-10-23）收 704.4 美元（-0.01%）；收盘价低于 50 日线（725.81 美元）约 3.0%，已连续 6 个交易日收在 50 日线之下（上次收在之上是 10-15）；仍站上 200 日线（677.3 美元）。',
+      source: '站内 /api/rhythm',
+    },
+    {
+      text: '10 年期美债收益率约 5.01%（盘前基本持平）。',
+      source: 'Investopedia',
+      url: 'https://www.investopedia.com/5-things-to-know-before-the-stock-market-opens-on-monday-october-25-2026-12193684',
+    },
+  ],
+};
+
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
-  BATCH_2026_10_23,
+  BATCH_2026_10_26,
   BATCH_2026_10_22,
   BATCH_2026_10_21,
 ];
