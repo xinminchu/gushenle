@@ -891,7 +891,55 @@ const BATCH_2026_10_24: SymbolViewGroup[] = [
   },
 ];
 
+/* ---------------- 10/27 批：水位线 2026-10-24；今日 12 个新条目 + 1 条 10/24 午后漏网（Money or Life 特斯拉+SpaceX 合并推演，10/24 07:17 CDT 当期 cron 运行后才发布），2 个观点入库 ----------------
+   11 条丢弃：阳光财经（"马斯克警告"无标的/方向/期限）；NaNa（"俩兄弟"所指不明，无标的）；Selina（MU"黄金坑还是十年大顶"问句，未定方向）；Money or Life（"拥抱AI视频"含糊、"算力变现哪家强"提问无倾向、10/24 午后合并推演只做价格推演未给倾向）；老王 5 条（力積電/友達/富喬、季線保衛戰、矽光子買賣、技術分析能否预测、大跌后买什么——全是提问句或方法论，未给方向与期限）。 */
+const BATCH_2026_10_27: SymbolViewGroup[] = [
+  {
+    symbol: 'SOX',
+    label: '费城半导体',
+    views: [
+      {
+        id: 'soxx-shiye-6',
+        blogger: '视野环球财经',
+        stance: 'bullish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '三个需求利好推动 SOXX 反弹',
+        reason:
+          '他在 10 月 26 日盘后视频里把 SOXX 的反弹归因于三个需求面的利好，同期还讨论大科技资本支出的四选一与 Anthropic 更新 S-1 文件。',
+        caveat:
+          '仅凭标题提炼：三条利好的具体内容与反转条件看正片；反弹不等于趋势转多。',
+        source: '视野环球财经',
+        published: '10/26（美东盘后视频）',
+        note: '原片：https://www.youtube.com/watch?v=QHrNWTgD7DA',
+      },
+    ],
+  },
+  {
+    symbol: 'SPX',
+    label: '大盘',
+    views: [
+      {
+        id: 'spx-talkjun-1',
+        blogger: '投资TALK君',
+        stance: 'cautious',
+        horizon: 'short',
+        kind: 'view',
+        headline: '信用风险高企，本周看财报与联储会议',
+        reason:
+          '他在第 1512 期里把信用风险的水平比作接近战争时期，并把本周的观察点放在财报、联储会议与 CPI 等重磅数据上。',
+        caveat:
+          '仅凭标题提炼：信用风险是节目议题，实际倾向强度与触发条件看正片；数据落地即重新评估。',
+        source: '投资TALK君（第 1512 期）',
+        published: '10/25',
+        note: '原片：https://www.youtube.com/watch?v=dLmxpu6knQw',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-10-27', groups: BATCH_2026_10_27 },
   { date: '2026-10-24', groups: BATCH_2026_10_24 },
   { date: '2026-10-23', groups: BATCH_2026_10_23 },
   { date: '2026-10-22', groups: BATCH_2026_10_22 },
