@@ -2,14 +2,15 @@
 
 /**
  * 券商截图批量导入：在记忆页选多张交易历史截图 -> Gemini vision 识别
- * -> 预览勾选 -> 批量记入操作记录。
- * 只写操作记录（source='import'），不动当前持仓；自动去重。
+ * -> 预览勾选 -> 批量记入操作记录，并按日期从旧到新同步到持仓（买入加权成本，卖出扣减股数）。
+ * 已存在于操作记录的交易自动去重（不重复记，也不重复同步）。
  */
 import { useRef, useState } from 'react';
 import { Camera, CheckCircle2, Loader2, XCircle, Upload } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { tx } from '@/lib/hant';
-import { loadOperations, saveOperation } from '@/lib/operations';
+import { loadOperations } from '@/lib/operations';
+import { saveOperationAndSync } from '@/lib/positions';
 
 interface ScannedOp {
   date: string;
@@ -237,9 +238,14 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
   };
 
   const confirmImport = () => {
-    const picked = ops.filter((o) => o.checked && !o.dup);
+    // 按日期从旧到新同步：同一只股票先买后卖，卖出才不会因持仓不足失败
+    const picked = ops
+      .filter((o) => o.checked && !o.dup)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const synced: string[] = [];
+    const failed: string[] = [];
     for (const o of picked) {
-      saveOperation({
+      const { syncMsg, syncOk } = saveOperationAndSync({
         symbol: o.symbol,
         action: o.action,
         price: o.price,
@@ -248,13 +254,26 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
         source: 'import',
         thesis: tx(lang, 'Imported from brokerage screenshot', '券商截图导入'),
       });
+      if (syncMsg) (syncOk ? synced : failed).push(syncMsg);
     }
     onImported();
+    const syncLine =
+      synced.length > 0
+        ? tx(lang, `Holdings synced: ${synced.join('；')}`, `持仓已同步：${synced.join('；')}`)
+        : '';
+    const failLine =
+      failed.length > 0
+        ? tx(
+            lang,
+            `${failed.length} could not sync to holdings: ${failed.join('；')} — tap "Sync to holdings" on the entry in Memory to retry.`,
+            `${failed.length} 笔没能同步到持仓：${failed.join('；')}——可去记忆页点这条记录下的「同步到持仓」再试。`,
+          )
+        : '';
     setResult(
       tx(
         lang,
-        `Imported ${picked.length} trades ✓ (holdings untouched — positions stay as you entered them)`,
-        `已导入 ${picked.length} 笔 ✓（只记操作，不动你现在的持仓）`,
+        `Imported ${picked.length} trades ✓${syncLine ? ` (${syncLine})` : ''}${failLine ? ` ${failLine}` : ''}`,
+        `已导入 ${picked.length} 笔 ✓${syncLine ? `（${syncLine}）` : ''}${failLine ? ` ${failLine}` : ''}`,
       ),
     );
     setPhase('done');
