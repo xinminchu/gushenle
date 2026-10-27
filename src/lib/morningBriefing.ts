@@ -328,8 +328,69 @@ const BATCH_2026_10_26: MorningBriefing = {
   ],
 };
 
+const BATCH_2026_10_27: MorningBriefing = {
+  date: '2026-10-27',
+  overnight: [
+    {
+      text: 'Anthropic 公开递交 IPO 申请（S-1），披露上半年收入 162.9 亿美元；受此带动，周一标普涨 0.7% 至 7676.77 点、纳指涨 0.8% 至 26169.38 点、道指涨 0.3% 至 52361.58 点。',
+      source: 'Zacks / FinancialAdvsr',
+      url: 'https://www.zacks.com/stock/news/3015467/stock-market-news-for-oct-27-2026',
+    },
+    {
+      text: '英伟达拟向 Meta 增资 30 亿美元；Meta 将史上最大规模股权融资增至 975 亿美元，用于 AI 扩张。',
+      source: 'Investopedia / Reuters',
+      url: 'https://www.investopedia.com/5-things-to-know-before-the-stock-market-opens-on-tuesday-october-27-2026-12195919',
+    },
+    {
+      text: '比特币跌破 8 万美元，现约 79500 美元。',
+      source: 'TradingKey / Stockopedia',
+      url: 'https://www.stockopedia.com/content/daily-stock-market-report-tue-27th-oct-2026-agenda-1059687/',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货盘前（约 08:00 ET）：道指期货 +0.2%、标普 +0.2%、纳指 +0.4%。',
+      source: 'Investopedia / TradingKey',
+      url: 'https://www.investopedia.com/5-things-to-know-before-the-stock-market-opens-on-tuesday-october-27-2026-12195919',
+    },
+    {
+      text: 'QQQ 盘前 716.19 美元（+0.56%）；持仓股 NBIS 盘前 159.40 美元（+4.00%）、IREN 25.98 美元（+2.17%），特斯拉 395.85 美元（+1.08%）、英伟达 217.86 美元（+0.83%）；微软 529.51 美元（-0.58%）、苹果 342.74 美元（-0.34%）。',
+      source: '站内 /api/rhythm（Nasdaq 管线，8:21–8:28 ET）',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日（美东）：8:30 9 月耐用品订单、10:00 10 月消费者信心指数与 9 月新屋销售；美联储为期两天议息会议今日开始，利率决定明日周三 14:00 ET 公布，普遍预期维持 3.75%–4.00% 不变。',
+      source: 'TradingKey / FinancialAdvsr',
+      url: 'https://www.tradingkey.com/analysis/stocks/us-stocks/262242150-us-ko-meta-spacex-nvda-intc-tradingkey',
+    },
+    {
+      text: '今日财报：盘前可口可乐、波音、PayPal、UPS；盘后 Visa、Robinhood、Seagate、NXP；自选股微软与 Alphabet 的财报在周三盘后，亚马逊在周四。',
+      source: 'TradingKey / Investopedia',
+      url: 'https://www.tradingkey.com/analysis/stocks/us-stocks/262242150-us-ko-meta-spacex-nvda-intc-tradingkey',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 周一收盘 18.39，下跌 5.5%。',
+      source: 'Zacks',
+      url: 'https://www.zacks.com/stock/news/3015467/stock-market-news-for-oct-27-2026',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-10-26）收 712.2 美元（+1.11%）；收盘价低于 50 日线（725.43 美元）约 1.8%，已连续 7 个交易日收在 50 日线之下（上次收在之上是 10-15）；仍站上 200 日线（677.75 美元）。',
+      source: '站内 /api/rhythm',
+    },
+    {
+      text: '10 年期美债收益率周一收 5.00%，持平。',
+      source: 'FinancialAdvsr（美国财政部数据）',
+      url: 'https://www.financialadvsr.com/markets/2026-10-27',
+    },
+  ],
+};
+
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_10_27,
   BATCH_2026_10_26,
   BATCH_2026_10_22,
   BATCH_2026_10_21,
