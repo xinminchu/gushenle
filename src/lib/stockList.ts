@@ -95,6 +95,7 @@ export const STOCK_LIST: StockInfo[] = [
   { code: 'RIOT', en: 'Riot Platforms', zh: 'Riot', sector: '科技', themes: ['加密'], blurb: '比特币矿企，德州大矿场' },
   { code: 'CLSK', en: 'CleanSpark', zh: 'CleanSpark', sector: '科技', themes: ['加密'], blurb: '比特币矿企，主打清洁能源' },
   { code: 'IREN', en: 'Iris Energy', zh: 'IREN', sector: '科技', themes: ['加密', 'AI'], blurb: '比特币挖矿加AI数据中心两条腿' },
+  { code: 'NBIS', en: 'Nebius Group', zh: 'Nebius', sector: '科技', themes: ['AI', '云计算'], blurb: '出租GPU算力的AI云厂商（前身Yandex海外资产），波动极大' },
   { code: 'HUT', en: 'Hut 8', zh: 'Hut8', sector: '科技', themes: ['加密'], blurb: '比特币矿企，加拿大起家' },
   { code: 'BZ', en: 'BOSS Zhipin', zh: 'BOSS直聘', sector: '科技', themes: [], blurb: 'BOSS直聘，线上招聘平台' },
   // ---- 半导体 ----

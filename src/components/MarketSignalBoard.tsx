@@ -27,19 +27,22 @@ interface ScanPayload {
     relStrength: ProbeHit[];
     momentum: ProbeHit[];
     vcp: ProbeHit[];
+    oversold: ProbeHit[];
     prevDate: string | null;
     withProbes: boolean;
   };
 }
 
 /**
- * 首页「潜力发现」：发现雷达五探针（2026-10-12 重构）。
+ * 首页「潜力发现」：发现雷达六探针（2026-10-12 重构，2026-10-28 加 P6 超卖）。
  * 老规则（单日上穿50）本地回测无超额已下线。新规则：
  * 🚀 趋势确认：连2天HOT + 分≥55 + 流入>0 —— 本地回测前向5日 +1.42% vs 基线 +0.49%（n=114）
  * 💥 放量突破：20日新高 + RVOL≥1.5 —— 文献阈值（Minervini）
  * 🏆 相对强度：近3个月相对SPY超额前25% —— 动量文献
  * 🌊 中线动量：近6个月涨幅前20%（跳过最近1个月）—— Jegadeesh-Titman(1993)
  * 🐆 蓄势待发：VCP 波动收缩 —— 文献参数，台账收集中
+ * 🥶 超卖：模型认的跌过头了（oversoldBottom）—— 分数≤超卖线且趋势已缓；还在跌的
+ *    weakLow 不进；高波股超卖信号本地命中率约五成，只摆数据
  * 每只带触发事实 + 作废线；只摆数据、不做买入推荐。点一只跳到它的价格走势。
  */
 export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string) => void }) {
@@ -164,6 +167,19 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
       ),
       border: 'border-purple-500/70',
     },
+    {
+      key: 'oversold',
+      items: disc.oversold,
+      icon: '🥶',
+      label: tx(lang, 'Oversold', '超卖'),
+      sub: tx(lang, 'score ≤ cold line · downtrend easing', '跌过头了 · 分数≤超卖线 · 趋势已缓'),
+      invalid: tx(
+        lang,
+        'Invalid if the trend turns down again or it makes a new low — high-vol oversold calls hit ~50% locally; data only, not a buy call.',
+        '趋势重新转弱或破新低作废——高波股超卖信号本地命中率约五成，只摆数据，不是买入推荐。',
+      ),
+      border: 'border-teal-500/70',
+    },
   ];
 
   const allEmpty = probes.every((p) => p.items.length === 0);
@@ -206,7 +222,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
         </div>
       ) : (
         <div className="text-[10px] text-slate-500 py-2 text-center">
-          {p.key !== 'trendConfirm' && noProbeData
+          {p.key !== 'trendConfirm' && p.key !== 'oversold' && noProbeData
             ? tx(
                 lang,
                 'Probe data collecting — check back after the next scan.',
@@ -250,8 +266,8 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
       <div className="mt-2 text-[10px] leading-relaxed text-slate-500">
         {tx(
           lang,
-          '📌 Five probes, five lists — no combined score. Trend-confirm is locally backtested; the rest use literature parameters with a local ledger accumulating.',
-          '📌 五探针各看各的事实，不合成总分。趋势确认本地回测过，其余按文献参数，本地台账收集中。',
+          '📌 Six probes, six lists — no combined score. Trend-confirm is locally backtested; the rest use literature parameters with a local ledger accumulating.',
+          '📌 六探针各看各的事实，不合成总分。趋势确认本地回测过，其余按文献参数，本地台账收集中。',
         )}
       </div>
       <div className="mt-1 text-[10px] leading-relaxed text-slate-600">

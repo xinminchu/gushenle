@@ -272,7 +272,7 @@ export async function GET(req: Request) {
     // 大盘
     const idx = (s: string) => primary.find((i) => i.symbol === s) || null;
 
-    // ---- 发现雷达：五探针（2026-10-12 重构） ----
+    // ---- 发现雷达：六探针（2026-10-12 重构，2026-10-28 加 P6 超卖） ----
     // 老规则（单日上穿 50）本地回测无超额（n=8，前向5日 +0.74% vs 基线 +0.49%），已下线。
     // P1 趋势确认：本地回测有效（n=114，前向5日 +1.42% vs +0.49%，胜率64%）。
     // P2 放量突破 / P3 相对强度 / P4 中线动量 / P5 波动收缩：文献参数
@@ -286,10 +286,11 @@ export async function GET(req: Request) {
       relStrength: ProbeHit[];
       momentum: ProbeHit[];
       vcp: ProbeHit[];
+      oversold: ProbeHit[];
       prevDate: string | null;
       /** false = 039 未执行，探针列无数据（P2-P5 为空是因为没数据，不是没信号） */
       withProbes: boolean;
-    } = { trendConfirm: [], breakout: [], relStrength: [], momentum: [], vcp: [], prevDate: null, withProbes };
+    } = { trendConfirm: [], breakout: [], relStrength: [], momentum: [], vcp: [], oversold: [], prevDate: null, withProbes };
     try {
       const prevDate = dates.find((d) => d < scanDate) ?? null;
       const prevMap = new Map<string, ScanItem>();
@@ -346,12 +347,28 @@ export async function GET(req: Request) {
           probeNote: `ATR 收缩到 ${(t.probes!.atrRatio ?? 0).toFixed(2)}`,
         }))
         .sort((a, b) => (a.probes!.atrRatio ?? 9) - (b.probes!.atrRatio ?? 9));
+      // P6 超卖（2026-10-28）：模型认的跌过头了（oversoldBottom = 分数 ≤ 超卖线 且
+      // 趋势已缓）。注意 weakLow（还在跌）不进——还在跌的票全列进来就是信号泛滥；
+      // 也不用 RSI<30——高波股一年能响一百多次，命中率约五成（rhythm.ts 注释），
+      // 模型口径自带趋势确认，更干净。P6 不用 probes 列，039 未执行也能出。
+      // 按分数从低到高（越冷越前）。
+      const oversold: ProbeHit[] = real
+        .filter((t) => t.statusKey === 'oversoldBottom')
+        .map((t) => {
+          const chg =
+            t.changePct == null
+              ? '—'
+              : `${t.changePct > 0 ? '+' : ''}${t.changePct}%`;
+          return { ...t, probeNote: `${t.score}分 · 昨日 ${chg}` };
+        })
+        .sort((a, b) => a.score - b.score);
       discovery = {
         trendConfirm: trendConfirm.slice(0, 5),
         breakout: breakout.slice(0, 5),
         relStrength: relStrength.slice(0, 5),
         momentum: momentum.slice(0, 5),
         vcp: vcp.slice(0, 5),
+        oversold: oversold.slice(0, 5),
         prevDate,
         withProbes,
       };
