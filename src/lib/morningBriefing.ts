@@ -388,8 +388,63 @@ const BATCH_2026_10_27: MorningBriefing = {
   ],
 };
 
+const BATCH_2026_10_28: MorningBriefing = {
+  date: '2026-10-28',
+  overnight: [
+    {
+      text: 'SK 海力士三季报超预期：营业利润增 632%、收入增 328%，美光盘前 +4%、SK 海力士美股盘前 +7.8%。',
+      source: 'Reuters',
+      url: 'https://hot96.com/2026/10/28/nasdaq-futures-rise-as-sk-hynix-boosts-chips-before-fed-decision-earnings/',
+    },
+    {
+      text: '沙特一家炼油厂遇袭后油价走高：布伦特 +1.5% 至 115.57 美元、WTI +1.5% 至 101.37 美元。',
+      source: 'TipRanks',
+      url: 'https://www.tipranks.com/news/futures-trade-mixed-ahead-of-big-tech-earnings-and-the-feds-rate-decision',
+    },
+    {
+      text: '周二标普 +0.6%、纳指 +1.2%、道指 +0.03%；芯片股连涨三天，Broadcom 宣布银行团提供 630 亿美元融资购芯片租给 Anthropic。',
+      source: 'TipRanks',
+      url: 'https://www.tipranks.com/news/futures-trade-mixed-ahead-of-big-tech-earnings-and-the-feds-rate-decision',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货盘前（约 05:00 ET）：道指 -0.2%、标普 +0.1%、纳指 +0.4%。',
+      source: 'Reuters',
+      url: 'https://hot96.com/2026/10/28/nasdaq-futures-rise-as-sk-hynix-boosts-chips-before-fed-decision-earnings/',
+    },
+    {
+      text: 'QQQ 盘前 724 美元（+0.38%）；持仓股 IREN 28.30 美元（+3.13%）、NBIS 175.25 美元（+2.80%），英伟达 219.82 美元（+0.82%）、特斯拉 410.30 美元（+0.70%）；Coinbase 157.93 美元（-2.01%）、微软 530.38 美元（-0.12%）、苹果 346.11 美元（-0.29%）。',
+      source: '站内 /api/rhythm（Nasdaq 管线，8:26–8:30 ET）',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日（美东）：美联储为期两天议息会议今日结束，利率决定 14:00 ET 公布，普遍预期维持 3.75%–4.00% 不变。',
+      source: 'TipRanks',
+      url: 'https://www.tipranks.com/news/futures-trade-mixed-ahead-of-big-tech-earnings-and-the-feds-rate-decision',
+    },
+    {
+      text: '今日财报：盘后微软与 Alphabet，焦点是云增长与资本开支回报；亚马逊在周四。',
+      source: 'Reuters',
+      url: 'https://hot96.com/2026/10/28/nasdaq-futures-rise-as-sk-hynix-boosts-chips-before-fed-decision-earnings/',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日（10-26）收盘 18.39。',
+      source: '站内 /api/macro（FRED VIXCLS，数据日期 2026-10-26）',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-10-27）收 721.25 美元（+1.27%）；收盘价低于 50 日线（725.26 美元）约 0.6%，已连续 8 个交易日收在 50 日线之下；仍站上 200 日线（678.23 美元）。',
+      source: '站内 /api/rhythm',
+    },
+  ],
+};
+
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_10_28,
   BATCH_2026_10_27,
   BATCH_2026_10_26,
   BATCH_2026_10_22,
