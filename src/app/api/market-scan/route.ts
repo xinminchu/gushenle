@@ -356,13 +356,8 @@ export async function GET(req: Request) {
       // 高波股超卖信号本地命中率约五成（rhythm.ts 注释），只摆数据。
       const oversold: ProbeHit[] = real
         .filter((t) => t.statusKey === 'weakLow' || t.statusKey === 'oversoldBottom')
-        .map((t) => {
-          const chg =
-            t.changePct == null
-              ? '—'
-              : `${t.changePct > 0 ? '+' : ''}${t.changePct}%`;
-          return { ...t, probeNote: `${t.score}分 · 昨日 ${chg}` };
-        })
+        // probeNote 只写分数：卡片模板本来就在下面单独渲染昨日涨跌幅，写进去会重复
+        .map((t) => ({ ...t, probeNote: `${t.score}分` }))
         .sort((a, b) => a.score - b.score || (a.changePct ?? 0) - (b.changePct ?? 0));
       discovery = {
         trendConfirm: trendConfirm.slice(0, 5),
