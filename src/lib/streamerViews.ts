@@ -938,8 +938,55 @@ const BATCH_2026_10_27: SymbolViewGroup[] = [
   },
 ];
 
+/* ---------------- 10/28 批：水位线 2026-10-27；今日 12 个新条目，2 个观点入库 ----------------
+   10 条丢弃：阳光财经（"这只股跌得差不多了"未点名标的）；视野环球财经（GOOG/MSFT/AMZN"多空决战分胜负"未定方向，SOXX"大波动"无方向）；NaNa（"韩力士救我"所指不明）；投资TALK君 1513 期（MSFT 财报重心无方向、HOOD"是不是凉了"为问句）；Money or Life（AI 卧推短视频，无标的）；老王 4 条（"該買了嘛？"、旺宏 300 元、力積電/友達/富喬、季線保衛戰——全是提问句，未给方向与期限）。Kova Substack 无新文（最新仍为 10/23 付费墙预告）。 */
+const BATCH_2026_10_28: SymbolViewGroup[] = [
+  {
+    symbol: 'BE',
+    label: '燃料电池',
+    views: [
+      {
+        id: 'be-selina-1',
+        blogger: 'Selina聊美股',
+        stance: 'cautious',
+        horizon: 'long',
+        kind: 'view',
+        headline: 'AI 缺电风口的历史级业绩，但现金流与客户集中是暗雷',
+        reason:
+          '她拆解 Bloom Energy 三季报：单季收入 12.4 亿美元、同比增 138%，经营利润超过去年全年，定金翻 8 倍、毛利率逆势提升；公司签下 58 亿美元长期采购合同（含 take-or-pay 条款）并大幅预付供应商锁产能，逻辑是 AI 缺电让燃料电池从"小众清洁能源玩具"变成"能救命的现货"，客户买的是时间。',
+        caveat:
+          '账面利润亮眼但经营现金流为负、合同资产暴增；69% 收入依赖两家大客户，大客户还通过认股权证分走成长红利；窗口期只有 2–3 年，长期要看燃料电池能否成为分布式能源主流方案。',
+        source: 'Selina聊美股',
+        published: '10/27',
+        clip: '03:20—12:45 AI 缺电逻辑；12:45—22:10 58 亿锁产能；22:10—31:30 两大暗雷；31:30— 投资策略',
+        note: '原片：https://www.youtube.com/watch?v=jwQqsQfJeGs',
+      },
+    ],
+  },
+  {
+    symbol: 'SSE',
+    label: 'A股',
+    views: [
+      {
+        id: 'sse-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: 'A股还有的跌',
+        reason: '他在 10 月 27 日香港直播的标题里直言 A 股还有的跌。',
+        caveat:
+          '仅凭标题提炼：具体点位与反转条件看正片；这是直播标题给出的短期判断。',
+        source: 'Kova动量交易',
+        published: '10/27（香港直播）',
+        note: '原片：https://www.youtube.com/watch?v=c05BoxZRe6Y',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
-  { date: '2026-10-27', groups: BATCH_2026_10_27 },
+  { date: '2026-10-28', groups: BATCH_2026_10_28 },
   { date: '2026-10-24', groups: BATCH_2026_10_24 },
   { date: '2026-10-23', groups: BATCH_2026_10_23 },
   { date: '2026-10-22', groups: BATCH_2026_10_22 },
