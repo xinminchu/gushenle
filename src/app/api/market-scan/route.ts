@@ -347,13 +347,15 @@ export async function GET(req: Request) {
           probeNote: `ATR 收缩到 ${(t.probes!.atrRatio ?? 0).toFixed(2)}`,
         }))
         .sort((a, b) => (a.probes!.atrRatio ?? 9) - (b.probes!.atrRatio ?? 9));
-      // P6 超卖（2026-10-28）：模型认的跌过头了（oversoldBottom = 分数 ≤ 超卖线 且
-      // 趋势已缓）。注意 weakLow（还在跌）不进——还在跌的票全列进来就是信号泛滥；
-      // 也不用 RSI<30——高波股一年能响一百多次，命中率约五成（rhythm.ts 注释），
-      // 模型口径自带趋势确认，更干净。P6 不用 probes 列，039 未执行也能出。
-      // 按分数从低到高（越冷越前）。
+      // P6 超卖（2026-10-28）：分数跌破超卖线（statusKey 为 weakLow 或 oversoldBottom
+      // 即 score < cold；oversoldBottom 另要求趋势已缓）。实测注意：模型里的
+      // oversoldBottom 几乎不触发——10-26 全池 235 只里 0 只，NBIS 滚动 192 天 0 次
+      // （分数到地板时趋势分也到地板，trend>45 的组合很难成立）。只用它名单永远是
+      // 空的，所以 P6 改用分数口径：取全池最冷的 5 只，分数从低到高（同分按昨日
+      // 跌幅从大到小）。NBIS 10-26 分数 0 分，按这个口径会排在榜首。
+      // 高波股超卖信号本地命中率约五成（rhythm.ts 注释），只摆数据。
       const oversold: ProbeHit[] = real
-        .filter((t) => t.statusKey === 'oversoldBottom')
+        .filter((t) => t.statusKey === 'weakLow' || t.statusKey === 'oversoldBottom')
         .map((t) => {
           const chg =
             t.changePct == null
@@ -361,7 +363,7 @@ export async function GET(req: Request) {
               : `${t.changePct > 0 ? '+' : ''}${t.changePct}%`;
           return { ...t, probeNote: `${t.score}分 · 昨日 ${chg}` };
         })
-        .sort((a, b) => a.score - b.score);
+        .sort((a, b) => a.score - b.score || (a.changePct ?? 0) - (b.changePct ?? 0));
       discovery = {
         trendConfirm: trendConfirm.slice(0, 5),
         breakout: breakout.slice(0, 5),

@@ -41,8 +41,9 @@ interface ScanPayload {
  * 🏆 相对强度：近3个月相对SPY超额前25% —— 动量文献
  * 🌊 中线动量：近6个月涨幅前20%（跳过最近1个月）—— Jegadeesh-Titman(1993)
  * 🐆 蓄势待发：VCP 波动收缩 —— 文献参数，台账收集中
- * 🥶 超卖：模型认的跌过头了（oversoldBottom）—— 分数≤超卖线且趋势已缓；还在跌的
- *    weakLow 不进；高波股超卖信号本地命中率约五成，只摆数据
+ * 🥶 超卖：分数跌破超卖线（weakLow/oversoldBottom）—— 全池最冷的 5 只，越冷越前；
+ *    模型里的 oversoldBottom（趋势已缓）实测几乎不触发，只用它名单永远是空的，
+ *    所以用分数口径；高波股超卖信号本地命中率约五成，只摆数据
  * 每只带触发事实 + 作废线；只摆数据、不做买入推荐。点一只跳到它的价格走势。
  */
 export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string) => void }) {
@@ -172,11 +173,11 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
       items: disc.oversold,
       icon: '🥶',
       label: tx(lang, 'Oversold', '超卖'),
-      sub: tx(lang, 'score ≤ cold line · downtrend easing', '跌过头了 · 分数≤超卖线 · 趋势已缓'),
+      sub: tx(lang, 'score below the cold line · coldest first', '分数跌破超卖线 · 越冷越前'),
       invalid: tx(
         lang,
-        'Invalid if the trend turns down again or it makes a new low — high-vol oversold calls hit ~50% locally; data only, not a buy call.',
-        '趋势重新转弱或破新低作废——高波股超卖信号本地命中率约五成，只摆数据，不是买入推荐。',
+        'Invalid on a new low or further weakness — high-vol oversold calls hit ~50% locally; data only, not a buy call.',
+        '破新低或继续走弱作废——高波股超卖信号本地命中率约五成，只摆数据，不是买入推荐。',
       ),
       border: 'border-teal-500/70',
     },
