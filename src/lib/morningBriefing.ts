@@ -442,8 +442,82 @@ const BATCH_2026_10_28: MorningBriefing = {
   ],
 };
 
+const BATCH_2026_10_29: MorningBriefing = {
+  date: '2026-10-29',
+  overnight: [
+    {
+      text: '微软 FY27 Q1 营收 923 亿美元（+19%，超预期的 907 亿）、调整后 EPS 4.89 美元（超预期的 4.73 美元），Azure +48% 至 332 亿美元、资本开支 394 亿美元低于预期，盘后涨约 4%（常规收 531.01 美元 → 盘后约 551 美元）。',
+      source: 'Seoul Economic Daily（路透-韩联社）',
+      url: 'https://en.sedaily.com/international/2026/10/29/microsoft-beats-estimates-with-923-billion-revenue-as-azure',
+    },
+    {
+      text: 'Alphabet 三季报营收 1276 亿美元（+25%，略低于预期的 1282 亿）、EPS 2.12 美元（低于预期的 3.02 美元，含 87 亿美元股权证券投资损失），Google Cloud +103% 至 307 亿美元（超预期）、自由现金流 -90.7 亿美元，Class A 盘后跌约 9.4% 至 294.49 美元（常规收 324.89 美元）。',
+      source: 'SourceFirstNews',
+      url: 'https://sourcefirstnews.com/alphabet-q3-2026-earnings-free-cash-flow-google-cloud',
+    },
+    {
+      text: '美联储以 10:2 维持利率 3.75%–4.00% 不变（9 月刚加息 25bp）；Cook 理事与 Hammack 主席主张立即再加息 25bp，市场对 12 月加息的预期升至约 83%。',
+      source: 'Zacks',
+      url: 'https://www.zacks.com/stock/news/3017791/notes-on-fomc-decision-and-earnings-after-the-close',
+    },
+    {
+      text: '周三标普涨 0.28% 至 7,743.98、纳指涨 0.27% 至 26,549.85、道指涨 0.19% 至 52,475.10，三大指数连续第三个交易日收涨；VIX 收 16.91。',
+      source: 'TipRanks',
+      url: 'https://www.tipranks.com/news/stock-market-today-oct-29-nasdaq-futures-fall-as-alphabet-earnings-spook-investors',
+    },
+    {
+      text: '布伦特约 114.1–114.5 美元、WTI 约 101.4–101.7 美元早盘回落：媒体称美国副总统万斯致信伊朗方面试图重启和谈，胡塞武装仍在袭击沙特设施。',
+      source: 'TipRanks（援引 WSJ）',
+      url: 'https://www.tipranks.com/news/stock-market-today-oct-29-nasdaq-futures-fall-as-alphabet-earnings-spook-investors',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货盘前（约 05:34 ET）：纳指 100 期货跌约 1.0%、标普 500 期货跌约 0.24%、道指期货涨约 0.58%。',
+      source: 'TipRanks',
+      url: 'https://www.tipranks.com/news/stock-market-today-oct-29-nasdaq-futures-fall-as-alphabet-earnings-spook-investors',
+    },
+    {
+      text: '谷歌盘前 285.69 美元（-11.25%），延续盘后跌势；微软盘前 535.45 美元（+0.84%）。',
+      source: '站内 /api/rhythm（Nasdaq 管线，8:27–8:29 ET）',
+    },
+    {
+      text: 'QQQ 盘前 717.07 美元（-1.18%）；持仓股 NBIS 170.34 美元（-6.58%）、IREN 27.39 美元（-5.03%），英伟达 214.50 美元（-0.41%）、苹果 348.29 美元（+1.30%）、Coinbase 157.95 美元（-2.69%）、MSTR 141.08 美元（-2.81%）、特斯拉 403.53 美元（-0.15%）。',
+      source: '站内 /api/rhythm（Nasdaq 管线，8:27–8:29 ET）',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日美东 8:30（美中 7:30）公布美国三季度 GDP 初值（预期年化约 +3.1%，前值 +2.2%）、9 月 PCE（预期环比 +0.5%、同比 +3.7%）与核心 PCE、9 月个人收入/消费支出，以及上周初请失业金人数（预期约 19.8–20 万）。',
+      source: 'my-passive-income.eu',
+      url: 'https://my-passive-income.eu/markets-before-the-open-october-29-2026/',
+    },
+    {
+      text: '今日美东 9:15（美中 8:15）欧洲央行议息决议，预期维持 2.50% 不变。',
+      source: 'my-passive-income.eu',
+      url: 'https://my-passive-income.eu/markets-before-the-open-october-29-2026/',
+    },
+    {
+      text: '今日盘前财报：默克、万事达、卡特彼勒；盘后财报：亚马逊（EPS 预期约 1.96–2.00 美元、营收约 2020–2060 亿美元）、Coinbase、Strategy、英特尔（调整后 EPS 预期约 0.40 美元）、SanDisk；苹果不在今天（11 月 2 日）。',
+      source: 'WEEX TradFi Daily',
+      url: 'https://www.weex.com/news/detail/federal-reserve-holds-rates-amzn-mstr-intc-and-sndk-earnings-in-focus-weex-tradfi-daily-october-29-2026-v9x9w4v99zzh5m4ghyiqo220',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日收盘 17.5。',
+      source: '站内 /api/macro（FRED VIXCLS，数据日期 2026-10-27）',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-10-28）收 725.61 美元（+0.60%）；10-28 收盘重返 50 日线（725.42 美元）之上，结束此前连续 8 个交易日收于 50 日线之下的局面；仍站上 200 日线（678.72 美元）。',
+      source: '站内 /api/rhythm',
+    },
+  ],
+};
+
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_10_29,
   BATCH_2026_10_28,
   BATCH_2026_10_27,
   BATCH_2026_10_26,
