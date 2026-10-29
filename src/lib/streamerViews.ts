@@ -985,7 +985,85 @@ const BATCH_2026_10_28: SymbolViewGroup[] = [
   },
 ];
 
+/* ---------------- 10/29 批：水位线 2026-10-28；今日 7 个新条目，4 个观点入库 ----------------
+   5 条丢弃：阳光财经 10/28 盘后（"沃什：少开点会吧"无标的、无期限）；NaNa 10/28（"糟老头子坏的很"无标的）；Money or Life 10/28 晨（Rocket Lab"投资者必看"只做科普未给倾向；是 10/28 07:17 当期 cron 运行后 7 分钟发布的漏网，今次补核后仍丢弃）；老王 2 条（"法說前能買嗎？"、"台光電還能買？"均为提问句，未给方向与期限）。Kova Substack、Selina、Kova YouTube 均无新文。 */
+const BATCH_2026_10_29: SymbolViewGroup[] = [
+  {
+    symbol: 'MSFT',
+    label: '微软',
+    views: [
+      {
+        id: 'msft-shiye-1',
+        blogger: '视野环球财经',
+        stance: 'bullish',
+        horizon: 'short',
+        kind: 'view',
+        headline: 'AI 货币化成功上岸',
+        reason:
+          '他在 10 月 28 日盘后视频的标题里说微软 AI 货币化已经成功上岸，与谷歌的狼狈形成对比，短期看强。',
+        caveat:
+          '仅凭标题提炼："上岸"的实质细节与走弱条件看正片；这是财报事件驱动的短期判断。',
+        source: '视野环球财经',
+        published: '10/28（美东盘后视频）',
+        note: '原片：https://www.youtube.com/watch?v=g3qLtJPUAxU',
+      },
+      {
+        id: 'msft-talkjun-1',
+        blogger: '投资TALK君',
+        stance: 'bullish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '微软爆发，冰火两重天的强端',
+        reason:
+          '他在 10 月 29 日节目标题里把微软形容为"爆发"的一端，与谷歌的大跌形成冰火对照。',
+        caveat:
+          '仅凭标题提炼："爆发"的后续空间与反转条件看正片；同期还提到美联储大变动，宏观变量另看。',
+        source: '投资TALK君',
+        published: '10/29',
+        note: '原片：https://www.youtube.com/watch?v=8-nquviNQ2E',
+      },
+    ],
+  },
+  {
+    symbol: 'GOOG',
+    label: '谷歌',
+    views: [
+      {
+        id: 'goog-shiye-1',
+        blogger: '视野环球财经',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '财报后鼻青脸肿，至少等一个季度',
+        reason:
+          '他在 10 月 28 日盘后视频的标题里说谷歌财报后"鼻青脸肿"，要"等一个季度"，判断短期翻身难。',
+        caveat:
+          '仅凭标题提炼：受挫的实质细节与翻盘条件看正片；这是财报事件驱动的短期偏空。',
+        source: '视野环球财经',
+        published: '10/28（美东盘后视频）',
+        note: '原片：https://www.youtube.com/watch?v=g3qLtJPUAxU',
+      },
+      {
+        id: 'goog-talkjun-1',
+        blogger: '投资TALK君',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '谷歌大跌，冰火两重天的弱端',
+        reason:
+          '他在 10 月 29 日节目标题里把谷歌形容为"大跌"的一端，与微软的爆发形成冰火对照。',
+        caveat:
+          '仅凭标题提炼：跌势的持续条件与企稳信号看正片；同期还提到美联储大变动，宏观变量另看。',
+        source: '投资TALK君',
+        published: '10/29',
+        note: '原片：https://www.youtube.com/watch?v=8-nquviNQ2E',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-10-29', groups: BATCH_2026_10_29 },
   { date: '2026-10-28', groups: BATCH_2026_10_28 },
   { date: '2026-10-24', groups: BATCH_2026_10_24 },
   { date: '2026-10-23', groups: BATCH_2026_10_23 },
