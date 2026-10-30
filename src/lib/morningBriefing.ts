@@ -515,8 +515,77 @@ const BATCH_2026_10_29: MorningBriefing = {
   ],
 };
 
+const BATCH_2026_10_30: MorningBriefing = {
+  date: '2026-10-30',
+  overnight: [
+    {
+      text: '亚马逊 Q3 营收 2019 亿美元（+12%，略低于预期的 2021 亿）、EPS 1.89 美元（低于预期的 2.01 美元），AWS +39.3% 至 460 亿美元（超预期、近五年最快）、经营利润率 13.9% 创历史最高，但单季资本开支 773 亿美元、过去十二个月自由现金流为 -424 亿美元，盘后跌约 7.3%。',
+      source: 'Amazon 官方财报 / Zacks',
+      url: 'https://www.aboutamazon.com/news/company-news/amazon-earnings-q3-2026-report?trk=organization_guest_main-feed-card-text',
+    },
+    {
+      text: '英特尔 Q3 营收 165 亿美元（+21%，超预期）、调整后 EPS 0.52 美元（超预期的 0.40 美元），数据中心与 AI +78% 至 73 亿美元，但 Q4 指引营收 150–160 亿美元（低于预期的约 171 亿）、调整后 EPS 0.25 美元（低于预期的 0.43 美元），PC 需求疲软至少延续到 2027 年上半年，盘后跌约 23%。',
+      source: 'ad-hoc-news.de（转述 Intel 财报）/ quantli.com',
+      url: 'https://www.ad-hoc-news.de/boerse/news/corporate-news/intel-stock-faces-weak-q4-outlook-after-strong-third-quarter/70434056',
+    },
+    {
+      text: 'Coinbase Q3 营收 12.2 亿美元符合预期、调整后 EBITDA 3.33 亿美元（超预期的 2.83 亿），交易量市占率同比翻倍；Strategy Q3 净利 195.3 亿美元（上年同期 27.9 亿，几乎全来自 209.1 亿美元比特币重估收益），软件营收 1.25 亿美元（低于预期的 1.28 亿）；SanDisk 上季营收 110.3 亿美元（超预期的 106.4 亿）、毛利率 85.1%，并宣布 11 月 19 日 1 拆 8。',
+      source: 'CVJ.AI（综合财报）',
+      url: 'https://cvj.ai/briefing/finance-news/intel-plunges-21-on-weak-q4-outlook-amazon-coinbase-starbucks-sandisk-report/',
+    },
+    {
+      text: '周四美股连续第二个交易日收跌：纳指跌 1.38%、标普跌 0.30%、道指跌 0.25%；谷歌创 20 多年来最大单日跌幅，亚马逊与 Alphabet 的 AI 资本开支引发市场担忧。',
+      source: 'FXStreet / Summa Money',
+      url: 'https://www.fxstreet.com/news/dow-jones-futures-fall-as-tech-earnings-disappoint-fed-hike-bets-202610300807',
+    },
+    {
+      text: '美国三季度 GDP 初值年化 +3.4%（预期约 +3.1%、前值 +2.2%），10 月 29 日公布。',
+      source: 'EL7.AI（转述 BEA）',
+      url: 'https://el7.ai/en/news/2026-10-30-us-futures-mixed-as-tech-giants-amazon-and-intel-slide-pre-market',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货盘前（约 08:07 ET）：纳指 100 期货跌约 2.0–2.3%、标普 500 期货跌约 0.9–1.1%、道指期货基本持平（-0.1% 至 +0.04%）。',
+      source: 'FXStreet / Invezz / CAMS',
+      url: 'https://www.fxstreet.com/news/dow-jones-futures-fall-as-tech-earnings-disappoint-fed-hike-bets-202610300807',
+    },
+    {
+      text: '亚马逊盘前 226.09 美元（-7.26%）、英特尔 69.30 美元（-24.73%）、谷歌 279.00 美元（-1.18%，延续昨日跌势）。',
+      source: '站内 /api/rhythm（Nasdaq 管线，8:32 ET）',
+    },
+    {
+      text: 'QQQ 盘前 697.14 美元（-2.54%）；持仓股 NBIS 157.88 美元（-8.20%）、IREN 24.38 美元（-7.12%），英伟达 207.40 美元（-2.95%）、Coinbase 150.50 美元（-6.11%）、MSTR 131.86 美元（-6.87%）。',
+      source: '站内 /api/rhythm（Nasdaq 管线，8:26–8:32 ET）',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日美东 8:30（美中 7:30）公布三季度雇佣成本指数（预期环比 +0.8%）。',
+      source: 'Invezz',
+      url: 'https://invezz.com/news/2026/10/30/5-things-to-know-before-wall-street-opens-on-october-30/',
+    },
+    {
+      text: '今日盘前财报：埃克森美孚、雪佛龙、艾伯维、阿斯利康。',
+      source: 'CAMS Morning Market Brief',
+      url: 'https://www.curveaheadmarketstrategies.com/cams-morning-market-brief-october-30-2026/',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日收盘 16.9（口径：FRED VIXCLS，数据日期 2026-10-28）；盘前约 18.5。',
+      source: '站内 /api/macro（FRED VIXCLS）/ CAMS',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-10-29）收 715.34 美元（-1.42%）；重回 50 日线（725.41 美元）之下（10-28 刚收回其上），仍站上 200 日线（679.16 美元）。',
+      source: '站内 /api/rhythm',
+    },
+  ],
+};
+
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_10_30,
   BATCH_2026_10_29,
   BATCH_2026_10_28,
   BATCH_2026_10_27,
