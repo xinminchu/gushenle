@@ -985,6 +985,136 @@ const BATCH_2026_10_28: SymbolViewGroup[] = [
   },
 ];
 
+/* ---------------- 10/30 批：水位线 2026-10-29；今日 9 个新条目，6 个观点入库 ----------------
+   3 条丢弃：NaNa 10/29（"全军覆没了"为情绪化标题，无标的/倾向/期限）；老王 3 条（10/30 早盘：台積電/友達/聯電"要賣嗎/怎麼辦"、台光電"怎麼了"、聯電跌停"還有救"——全是提问句，未给方向与期限）。Kova Substack、Money or Life 均无新文（最新仍为 9/30 与 10/28）。 */
+const BATCH_2026_10_30: SymbolViewGroup[] = [
+  {
+    symbol: 'GOOG',
+    label: '谷歌',
+    views: [
+      {
+        id: 'goog-sunny-1',
+        blogger: '阳光财经',
+        stance: 'cautious',
+        horizon: 'short',
+        kind: 'view',
+        headline: '盘后仍在爆雷，抄底谷歌还太早',
+        reason:
+          '他在 10 月 29 日盘后视频的标题里问"谷歌什么时候能抄底"，同时说盘后又有两家公司财报爆雷，意思是跌势还没走完，现在动手抄底还太早。',
+        caveat:
+          '仅凭标题推断：触发抄底的具体条件与企稳信号看正片；这是盘后事件驱动的短期谨慎。',
+        source: '阳光财经',
+        published: '10/29（美东盘后视频）',
+        note: '原片：https://www.youtube.com/watch?v=wCUn2t-uSNc',
+      },
+    ],
+  },
+  {
+    symbol: 'SOX',
+    label: '费城半导体',
+    views: [
+      {
+        id: 'soxx-shiye-7',
+        blogger: '视野环球财经',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '科技股上演跳水锦标赛，半导体多空激战',
+        reason:
+          '他在 10 月 29 日晚间视频的标题里形容科技股上演"跳水锦标赛"，AMZN、INTC 跟随下跌，QQQ 与 SOXX 的多空博弈正酣，并质疑 MSFT 发债回吐之后是否还行得通。',
+        caveat:
+          '仅凭标题提炼："跳水锦标赛"为情绪化措辞，多空博弈的结论与反转条件看正片；这是盘后事件驱动的短期偏空。',
+        source: '视野环球财经',
+        published: '10/29（美东盘后视频）',
+        note: '原片：https://www.youtube.com/watch?v=53SJvdzJneM',
+      },
+    ],
+  },
+  {
+    symbol: '000660.KS',
+    label: 'SK海力士',
+    views: [
+      {
+        id: 'skhynix-selina-1',
+        blogger: 'Selina聊美股',
+        stance: 'bullish',
+        horizon: 'long',
+        kind: 'view',
+        headline: '三季报炸裂：HBM 卖方市场，五年长约锁定产能',
+        reason:
+          '她拆解 SK 海力士三季报：单季营收 104.6 万亿韩元、同比增 328%，营业利润率近 80%；HBM4 本季批量出货且盈利超预期，客户总需求是实际供应量的两倍多；已签五年长约锁定 2027—2028 年一半以上 HBM 产能——结论是 AI 彻底改变了存储的需求结构与定价曲线，不是普通周期顶。',
+        caveat:
+          '仅凭简介提炼：股价已先涨一段、"见顶了吗"的反方讨论与估值风险看正片；这是基本面驱动的结构性长期看多。',
+        source: 'Selina聊美股',
+        published: '10/29',
+        note: '原片：https://www.youtube.com/watch?v=R2iZcXJmksU',
+      },
+    ],
+  },
+  {
+    symbol: 'INTC',
+    label: '英特尔',
+    views: [
+      {
+        id: 'intc-talkjun-1',
+        blogger: '投资TALK君',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '财报暴雷',
+        reason: '他在第 1514 期节目标题里用"崩了"形容英特尔财报暴雷。',
+        caveat:
+          '仅凭标题提炼：暴雷的实质内容与企稳条件看正片；这是财报事件驱动的短期偏空。',
+        source: '投资TALK君（第 1514 期）',
+        published: '10/30',
+        note: '原片：https://www.youtube.com/watch?v=lLNUraSFK90',
+      },
+    ],
+  },
+  {
+    symbol: 'AMZN',
+    label: '亚马逊',
+    views: [
+      {
+        id: 'amzn-talkjun-1',
+        blogger: '投资TALK君',
+        stance: 'bullish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '给出超强指引',
+        reason:
+          '他在第 1514 期节目标题里说亚马逊给出超强指引，与英特尔的财报暴雷形成对照。',
+        caveat:
+          '仅凭标题提炼：指引的具体内容与走弱条件看正片；这是财报事件驱动的短期看好。',
+        source: '投资TALK君（第 1514 期）',
+        published: '10/30',
+        note: '原片：https://www.youtube.com/watch?v=lLNUraSFK90',
+      },
+    ],
+  },
+  {
+    symbol: 'SPX',
+    label: '大盘',
+    views: [
+      {
+        id: 'spx-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '三倍做空大盘姿态不变',
+        reason:
+          '他在 10 月 29 日中国直播的标题里继续摆出三倍做空大盘的姿态，同场还提到 IOVA 单日跌 30%。',
+        caveat:
+          '仅凭标题提炼：杠杆做空的期限与反转条件看正片；这是直播标题给出的短期判断。',
+        source: 'Kova动量交易',
+        published: '10/29（中国直播）',
+        note: '原片：https://www.youtube.com/watch?v=pt7uZ_FmeTw',
+      },
+    ],
+  },
+];
+
 /* ---------------- 10/29 批：水位线 2026-10-28；今日 7 个新条目，4 个观点入库 ----------------
    5 条丢弃：阳光财经 10/28 盘后（"沃什：少开点会吧"无标的、无期限）；NaNa 10/28（"糟老头子坏的很"无标的）；Money or Life 10/28 晨（Rocket Lab"投资者必看"只做科普未给倾向；是 10/28 07:17 当期 cron 运行后 7 分钟发布的漏网，今次补核后仍丢弃）；老王 2 条（"法說前能買嗎？"、"台光電還能買？"均为提问句，未给方向与期限）。Kova Substack、Selina、Kova YouTube 均无新文。 */
 const BATCH_2026_10_29: SymbolViewGroup[] = [
@@ -1063,6 +1193,7 @@ const BATCH_2026_10_29: SymbolViewGroup[] = [
 ];
 
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-10-30', groups: BATCH_2026_10_30 },
   { date: '2026-10-29', groups: BATCH_2026_10_29 },
   { date: '2026-10-28', groups: BATCH_2026_10_28 },
   { date: '2026-10-24', groups: BATCH_2026_10_24 },
