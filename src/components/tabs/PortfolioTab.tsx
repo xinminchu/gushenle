@@ -12,6 +12,7 @@ import { loadAccount, saveAccount, todayStr, type AccountInfo } from '@/lib/acco
 import { SYNC_EVENT } from '@/lib/userSync';
 import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
 import { statusLabel, type RhythmResponse } from '@/lib/rhythm';
+import { latestSwing } from '@/lib/swings';
 import { groupFocusHistory, weekLabel, clearFocusHistory } from '@/lib/focusHistory';
 import { sectorLabel } from '@/lib/stockList';
 import { useColorScheme, upText, downText } from '@/lib/colorScheme';
@@ -902,6 +903,23 @@ export default function PortfolioTab({
                       : tx(lang, 'Not enough data', '数据不足')}{' '}
                     → {tx(lang, 'tap to see the diagnosis in the Today tab', '点击去今日看诊断')}
                   </div>
+                  {(() => {
+                    const sw = latestSwing(q.series);
+                    if (!sw.kind || !sw.date) return null;
+                    const d = sw.date.slice(5);
+                    return (
+                      <div className="text-[10px] text-slate-500">
+                        {tx(lang, 'Turning point', '转折')}{' '}
+                        <span className="text-slate-300">
+                          {sw.kind === 'high'
+                            ? tx(lang, `swing high confirmed ${d}`, `阶段高点确认 ${d}`)
+                            : tx(lang, `swing low confirmed ${d}`, `阶段低点确认 ${d}`)}
+                        </span>
+                        {' · '}
+                        {tx(lang, `confirmed ${sw.lagBars} trading days later`, `确认滞后${sw.lagBars}个交易日`)}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
               {storySymbol === p.symbol && (
