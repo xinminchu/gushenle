@@ -125,6 +125,8 @@ export const STOCK_LIST: StockInfo[] = [
   { code: 'MPWR', en: 'Monolithic Power', zh: '芯源', sector: '半导体', themes: ['芯片'], blurb: '电源管理芯片，手机快充和服务器电源都用它' },
   { code: 'TER', en: 'Teradyne', zh: '泰瑞达', sector: '半导体', themes: ['芯片'], blurb: '芯片测试设备，芯片出厂前的"终考官"' },
   { code: 'ENTG', en: 'Entegris', zh: '英特格', sector: '半导体', themes: ['芯片'], blurb: '半导体材料（高纯化学品）' },
+  { code: 'SOXL', en: 'Direxion Semiconductor Bull 3X', zh: '半导体3倍多', sector: '半导体', themes: ['芯片', '杠杆'], blurb: '3倍做多半导体的杠杆ETF，每日重置只适合短线' },
+  { code: 'SOXS', en: 'Direxion Semiconductor Bear 3X', zh: '半导体3倍空', sector: '半导体', themes: ['芯片', '杠杆'], blurb: '3倍做空半导体的杠杆ETF，每日重置只适合短线' },
   // ---- 通信传媒 ----
   { code: 'GOOGL', en: 'Alphabet', zh: '谷歌', sector: '通信', themes: ['AI', '云计算'], blurb: '搜索加YouTube加安卓，广告印钞机，AI追赶中' },
   { code: 'META', en: 'Meta', zh: 'Meta', sector: '通信', themes: ['社交', 'AI'], blurb: 'Facebook、Instagram和WhatsApp，广告加AI' },
