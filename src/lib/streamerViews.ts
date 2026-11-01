@@ -1192,7 +1192,32 @@ const BATCH_2026_10_29: SymbolViewGroup[] = [
   },
 ];
 
+const BATCH_2026_11_01: SymbolViewGroup[] = [
+  {
+    symbol: 'MSFT',
+    label: '微软',
+    views: [
+      {
+        id: 'msft-selina-1',
+        blogger: 'Selina聊美股',
+        stance: 'cautious',
+        horizon: 'short',
+        kind: 'view',
+        headline: '盘后逼近历史前高，适合持有、不宜追高',
+        reason:
+          '她拆了 10 月 29 日盘后的财报：Azure 同比增速达 48%，是几家重金砸 AI 的巨头里唯一还保持正向自由现金流的，基本面她看得扎实；但她同时认为当前估值偏高、性价比不足，所以结论是拿住不加仓。',
+        caveat:
+          '她的前提是 12 月议息会议仍悬而未决：加息预期没彻底结束之前，科技股难有全面普涨、只会有结构性分化；盘后观点，待下个交易日价格验证。',
+        source: 'Selina聊美股《谷歌盘后暴跌 11%！万亿市值蒸发……》',
+        published: '10/31',
+        note: '原片：https://www.youtube.com/watch?v=Kr1dHy8eHvs（微软段落为 part 4）',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-11-01', groups: BATCH_2026_11_01 },
   { date: '2026-10-30', groups: BATCH_2026_10_30 },
   { date: '2026-10-29', groups: BATCH_2026_10_29 },
   { date: '2026-10-28', groups: BATCH_2026_10_28 },
