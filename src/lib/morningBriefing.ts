@@ -583,8 +583,73 @@ const BATCH_2026_10_30: MorningBriefing = {
   ],
 };
 
+/* 2026-11-02（周一）：Mas 按来源逐条核实后写入。
+   数字交叉核对：上周五收盘（eOption/Reuters/TradingView 三源一致：标普 7,580.07/-1.82%、纳指 25,437/-2.86%、道指 51,770.31/-1.09%）、
+   期货盘前（Reuters 5:15 ET：NQ +0.89%、ES +0.52%、YM +0.52%；eOption 早盘：NQ +0.84%、ES +0.54%、YM +0.61%）、
+   油价（Reuters/AP：Brent -4.2% 至 108.68、WTI -4.2% 至 99.77，美伊外交进展）、QQQ/VIX（站内生产 API）。 */
+const BATCH_2026_11_02: MorningBriefing = {
+  date: '2026-11-02',
+  overnight: [
+    {
+      text: '美股上周五大跌：标普 500 跌 1.82% 收 7,580.07 点，道指跌 1.09% 收 51,770.31 点，纳指跌 2.86% 收 25,437 点（6 月 5 日以来最大单日跌幅）；纳指 10 月累计跌 5.3%，为 2025 年 3 月以来最差单月；三大指数连续第三周下跌（3 月以来最长连跌）。',
+      source: 'eOption / Reuters / TradingView 盘前',
+      url: 'https://www.eoption.com/morning-preview-november-02-2026/',
+    },
+    {
+      text: '英特尔上周五暴跌约 28.6%（1980 年代以来最大单日跌幅），因四季度营收指引不及预期；纳斯达克 100 指数 10 月市值蒸发超 2.5 万亿美元，逼近回调区间。',
+      source: 'Reuters / swingfolio',
+      url: 'https://www.reuters.com/business/media-telecom/wall-street-futures-rise-ai-stocks-catch-their-breath-midterms-focus-2026-11-02/',
+    },
+    {
+      text: '国际油价周一重挫：Brent 跌约 4.2% 至 108.68 美元/桶，WTI 跌约 4.2% 至 99.77 美元/桶；诱因是美伊外交出现进展信号（伊朗谈判代表在卡塔尔）。',
+      source: 'Reuters / AP',
+      url: 'https://www.reuters.com/business/media-telecom/wall-street-futures-rise-ai-stocks-catch-their-breath-midterms-focus-2026-11-02/',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货周一盘前反弹（约 5:15 ET）：纳指 100 期货涨约 0.89%、标普 500 期货涨约 0.52%、道指期货涨约 0.52%。',
+      source: 'Reuters',
+      url: 'https://www.reuters.com/business/media-telecom/wall-street-futures-rise-ai-stocks-catch-their-breath-midterms-focus-2026-11-02/',
+    },
+    {
+      text: '盘前个股：英伟达涨超 1%、SpaceX（SPCX）涨约 2%、Palantir 涨超 1%（盘后财报）；苹果基本持平（盘后财报）；英特尔再跌约 0.6%（延续上周五跌势）；Okta 涨 3.6%（将被纳入标普 500，替换 Kenvue）。',
+      source: 'Investopedia / Reuters',
+      url: 'https://www.investopedia.com/5-things-to-know-stock-market-november-2-2026-12206140',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日美东 10:00（美中 9:00）公布 10 月 ISM 制造业 PMI（预期 54.5，持平前值）；9:45 公布 Markit 制造业 PMI 终值。',
+      source: 'TradingView / dataforgestudio 经济日历',
+      url: 'https://www.tradingview.com/news/tradingview:c7205a4de094b:0-ixic-nasdaq-futures-rebound-with-apple-earnings-us-midterm-elections-ahead/',
+    },
+    {
+      text: '今日财报：盘后苹果（AAPL）、Palantir（PLTR）；盘前雅诗兰黛（EL）、万豪（MAR）、Clorox 等，全天约 464 家公司发布财报。',
+      source: 'eOption / dataforgestudio',
+      url: 'https://www.eoption.com/morning-preview-november-02-2026/',
+    },
+    {
+      text: '本周其余关键事件：周二（11-03）美国中期选举；周三 ISM 服务业 PMI；周五（11-06）10 月非农就业报告。',
+      source: 'Reuters / TradingView',
+      url: 'https://www.reuters.com/business/media-telecom/wall-street-futures-rise-ai-stocks-catch-their-breath-midterms-focus-2026-11-02/',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日收盘 17.2（口径：FRED VIXCLS，数据日期 2026-10-29）。',
+      source: '站内 /api/macro（FRED VIXCLS）',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-10-30）收 690.49 美元（-3.47%）；连续第 2 个交易日收于 50 日线（725 美元）之下，仍站上 200 日线（679.52 美元）。',
+      source: '站内 /api/rhythm',
+    },
+  ],
+};
+
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_11_02,
   BATCH_2026_10_30,
   BATCH_2026_10_29,
   BATCH_2026_10_28,
