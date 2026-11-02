@@ -22,6 +22,63 @@ export interface PiisWeek {
 
 export const PIIS_WEEKS: PiisWeek[] = [
   {
+    id: '2026-11-02',
+    rangeZh: '10/26–11/02',
+    rangeEn: '10/26–11/02',
+    formulaZh: 'AI 资本开支的回报兑现度 ＞ 被油价与通胀顶住的资本成本 + 融资风险 + 估值要求',
+    formulaEn: 'Verified payoff of AI capex > cost of capital (held up by oil and inflation) + financing risk + valuation demands',
+    points: [
+      {
+        tag: '宏观',
+        tagEn: 'Macro',
+        zh: 'Q3 GDP 初值 +3.4% 年化（超预期；消费 +3.8%、设备投资 +20.9% 为 2020Q3 以来最快），9 月 PCE +3.6% 同比、核心 +3.1%——增长强、通胀黏；申领失业金 19.4 万（近 60 年低位），消费者信心 91.7 大超预期的 80.5。',
+        en: 'Q3 GDP printed +3.4% annualized (above consensus; consumption +3.8%, equipment investment +20.9%, fastest since 2020Q3) while September PCE ran +3.6% YoY with core at +3.1% — strong growth, sticky inflation; jobless claims fell to 194K (near a 60-year low) and consumer confidence jumped to 91.7 vs 80.5 expected.',
+      },
+      {
+        tag: '利率',
+        tagEn: 'Rates',
+        zh: 'FOMC 10–2 鹰派按兵不动（3.75%–4.00%，Cook、Hammack 要求立即加息），经济上调为"strong"，Warsh 拒绝对 12 月给指引并宣布 2027 年起一年一次会议改为战略专场；12 月加息押注 75%–87%，10 年期周三触 5.05% 后回落至 4.94%（一周前 4.99%）。',
+        en: 'The FOMC held 3.75%–4.00% in a hawkish 10–2 vote (Cook and Hammack wanted a hike now), upgraded growth to "strong", Warsh gave no December guidance and announced one 2027 meeting becomes strategy-only; December hike odds ran 75%–87% while the 10Y touched 5.05% Wednesday then eased to 4.94% (4.99% a week earlier).',
+      },
+      {
+        tag: '大盘',
+        tagEn: 'Market',
+        zh: '全周记分牌：标普 −0.57%、纳指 −2.00%（10 月整月 −5.3%，2025 年 3 月以来最差）、道指 −0.85%、罗素 2000 +1.29%、费半 −0.84%；连续三周下跌（3 月以来最长），上周五纳指 −2.86% 为 6 月以来最差单日。',
+        en: 'The weekly scoreboard: S&P 500 −0.57%, Nasdaq −2.00% (−5.3% for October, worst month since March 2025), Dow −0.85%, Russell 2000 +1.29%, SOX −0.84%; a third straight weekly decline (longest since March), with Friday’s −2.86% the Nasdaq’s worst day since June.',
+      },
+      {
+        tag: '轮动',
+        tagEn: 'Rotation',
+        zh: '钱从大票科技流向防御与小票：医疗保健 +3.12% 为本周最佳板块、能源周五 +1.91%、罗素连涨两周，vs 通信服务 −5.53%、科技 −2%；BofA 客户连续第二周净卖出美股（$3.5B，通信服务领衔流出）。',
+        en: 'Money rotated from big tech into defensives and small caps: health care +3.12% led the week, energy +1.91% on Friday, Russell up a second straight week — vs communication services −5.53% and tech −2%; BofA clients net-sold US equities a second straight week ($3.5B, led by communication services).',
+      },
+      {
+        tag: 'AI 硬件',
+        tagEn: 'AI HW',
+        zh: '费半全周 −0.84%、周五单日 −7.20%：英特尔 Q4 指引崩塌（营收中点 $15.5B vs 预期 $17.1B），股价 −28.6%（1974 年以来最差单日），AMD −10.9%、台积电 −5.95%；但英特尔数据中心收入 +78%——跌的是 PC 敞口，不是 AI 需求。',
+        en: 'The SOX fell −0.84% on the week and −7.20% on Friday: Intel’s Q4 guide collapsed (revenue midpoint $15.5B vs $17.1B expected), the stock −28.6% (worst day since 1974), AMD −10.9%, TSMC −5.95%; yet Intel’s data-center revenue rose 78% — what sold off is PC exposure, not AI demand.',
+      },
+      {
+        tag: 'AI 资本开支',
+        tagEn: 'AI Capex',
+        zh: '三朵云收入全面加速（Google Cloud +103%、Azure +48%、AWS +39% 为近五年最快）但自由现金流全部转负（Alphabet −$9.1B、Amazon −$33.5B）；五巨头单季 capex 约 $2270 亿（环比 +20%），Alphabet 指引 2027 年 capex 超 $3000 亿——账单先于回报到来。',
+        en: 'All three clouds accelerated (Google Cloud +103%, Azure +48%, AWS +39%, fastest in five years) yet all turned free-cash-flow negative (Alphabet −$9.1B, Amazon −$33.5B); the five hyperscalers spent ~$227B in quarterly capex (+20% QoQ) with Alphabet guiding 2027 capex above $300B — the bill arrives before the payoff.',
+      },
+      {
+        tag: '消费',
+        tagEn: 'Consumer',
+        zh: '消费者信心 91.7 大超预期（80.5），但钱包没跟上：9 月个人收入仅 +0.2%、支出 +0.5%（实际几乎零增长），ECI +0.8% 而实际工资 −0.6%——信心与钱包背离。',
+        en: 'Consumer confidence surprised at 91.7 vs 80.5 expected, but wallets did not follow: September personal income rose only 0.2% and spending 0.5% (near-zero in real terms), while the ECI rose 0.8% yet real wages fell 0.6% — confidence and cash diverge.',
+      },
+      {
+        tag: '能源',
+        tagEn: 'Energy',
+        zh: '布伦特（1 月主力合约）周五收 $113.43、WTI $104.12，10 月分别 +13.6%/+15.2%：美–伊冲突 + 霍尔木兹油轮遇袭的地缘溢价；能源→通胀预期→收益率→估值，这条链本周又跑了一遍。',
+        en: 'Brent (January contract) closed Friday at $113.43 and WTI at $104.12, up 13.6%/15.2% in October on US–Iran tensions and the Hormuz tanker attacks; energy → inflation expectations → yields → valuations — the chain ran again this week.',
+      },
+    ],
+  },
+  {
     id: '2026-10-26',
     rangeZh: '10/19–10/26',
     rangeEn: '10/19–10/26',
