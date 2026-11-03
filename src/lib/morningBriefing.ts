@@ -587,6 +587,66 @@ const BATCH_2026_10_30: MorningBriefing = {
    数字交叉核对：上周五收盘（eOption/Reuters/TradingView 三源一致：标普 7,580.07/-1.82%、纳指 25,437/-2.86%、道指 51,770.31/-1.09%）、
    期货盘前（Reuters 5:15 ET：NQ +0.89%、ES +0.52%、YM +0.52%；eOption 早盘：NQ +0.84%、ES +0.54%、YM +0.61%）、
    油价（Reuters/AP：Brent -4.2% 至 108.68、WTI -4.2% 至 99.77，美伊外交进展）、QQQ/VIX（站内生产 API）。 */
+const BATCH_2026_11_03: MorningBriefing = {
+  date: '2026-11-03',
+  overnight: [
+    {
+      text: '苹果发布 2026 财年四季度财报：营收 1145 亿美元（同比 +12%）、EPS 2.10 美元，均超预期；iPhone 收入 576 亿美元创同期纪录（+17%）；但 12 月季度毛利率指引仅 45-46%（低于本季 47.9%），存储芯片成本上升；盘后跌约 2.8%。',
+      source: 'Apple 官网 / Motley Fool',
+      url: 'https://www.apple.com/newsroom/2026/11/apple-reports-fourth-quarter-results/',
+    },
+    {
+      text: 'Palantir 财报：季度营收同比 +96% 至约 23.1 亿美元，并上调全年营收指引至约 85.3 亿美元；但因合同增速放缓担忧，盘后跌约 3%、盘前一度跌约 8%。',
+      source: 'investinglive / investopedia',
+      url: 'https://investinglive.com/stocks/apple-and-palantir-beat-earnings-why-did-both-stocks-fall/',
+    },
+    {
+      text: '美股周一收盘涨跌互现：标普 500 跌 0.51% 收 7,541.40 点，纳指跌 1.07% 收 25,164.32 点，道指涨 0.41% 收 51,983.98 点；纳斯达克 100 指数较历史高点跌超 10%，进入技术性回调区间。',
+      source: 'Reuters / AP',
+      url: 'https://kwsn.com/2026/11/03/us-stock-futures-mixed-as-apple-slides-midterms-loom/',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货周二盘前涨跌互现（约 7:36 ET）：标普 500 期货基本持平（约 -0.1%）、纳指 100 期货涨约 0.3%、道指期货跌约 0.5%；10 年期美债收益率约 4.93%。',
+      source: 'swingfolio / Reuters 盘前',
+      url: 'https://swingfolio.com/daily/us/2026-11-03/morning',
+    },
+    {
+      text: '盘前个股：苹果跌约 4%（财报后）、Palantir 跌约 8%（财报后）、AMD 涨约 2.8%（盘后财报）；原油反弹，Brent 涨约 2% 至 106 美元/桶附近。',
+      source: 'Reuters / investopedia',
+      url: 'https://www.investopedia.com/5-things-to-know-stock-market-november-3-2026-12206961',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日为美国中期选举投票日：改选众议院全部 435 席、参议院约三分之一席位及多个州长；预测市场预计民主党约 75% 概率拿下参议院控制权。',
+      source: 'TipRanks / kucoin',
+      url: 'https://www.tipranks.com/news/stock-market-today-nov-3-futures-mixed-on-midterm-election-day-apple-and-palantir-shares-slide-after-earnings',
+    },
+    {
+      text: '今日财报：盘后 AMD、SMCI；Pfizer、Block、Amgen 等今日发布。',
+      source: 'TipRanks',
+      url: 'https://www.tipranks.com/news/stock-market-today-nov-3-futures-mixed-on-midterm-election-day-apple-and-palantir-shares-slide-after-earnings',
+    },
+    {
+      text: '今日美东 10:00（美中 9:00）有两项推迟的 9 月宏观数据公布；无美东 8:30 数据。',
+      source: 'Yahoo 财经日历 / swingfolio',
+      url: 'https://swingfolio.com/daily/us/2026-11-03/morning',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日收盘 19.4（口径：FRED VIXCLS，数据日期 2026-10-30）。',
+      source: '站内 /api/macro（FRED VIXCLS）',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-11-02）收 681.09 美元（-1.36%）；连续第 3 个交易日收于 50 日线（724.35 美元）之下，仍站上 200 日线（679.82 美元）。',
+      source: '站内 /api/rhythm',
+    },
+  ],
+};
+
 const BATCH_2026_11_02: MorningBriefing = {
   date: '2026-11-02',
   overnight: [
@@ -649,6 +709,7 @@ const BATCH_2026_11_02: MorningBriefing = {
 
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_11_03,
   BATCH_2026_11_02,
   BATCH_2026_10_30,
   BATCH_2026_10_29,
