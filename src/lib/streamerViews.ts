@@ -1216,7 +1216,84 @@ const BATCH_2026_11_01: SymbolViewGroup[] = [
   },
 ];
 
+/* ---------------- 11/03 批：11/02 盘后节目（视野环球） ----------------
+   水位线 2026-11-01；今日 11 个新条目（9 源全抓成功；Kova Substack 与 Kova YT 无新内容），
+   3 个观点入库，8 条丢弃：阳光财经（标题梗＋简介只有会员推广，无标的级内容）、
+   NaNa（「翻车接人了！」标题梗、无标的）、Selina 11/02 直播（标题为事实描述＋提问，
+   无明确倾向）、投资TALK君 1515 期（无标的、无可辨倾向、无期限）、Money or Life
+   （Anthropic 为非上市公司、无标的）、老王 6 条（均为疑问句/话题时间轴，
+   未给出明确倾向与期限）。 */
+const BATCH_2026_11_03: SymbolViewGroup[] = [
+  {
+    symbol: 'AAPL',
+    label: '苹果',
+    views: [
+      {
+        id: 'aapl-shiye-1',
+        blogger: '视野环球财经',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: 'AAPL 多个业务增速放缓',
+        reason:
+          '他在 11/02 盘后节目里把 AAPL 放在标题首条：多个业务的增速都在放缓，是当天看空的重点之一。',
+        caveat:
+          '仅凭标题提炼：具体的增速口径、对应段落与他的反转条件要看正片；这是事件驱动的短期信号。',
+        source:
+          '视野环球财经《美股 AAPL多个增速放缓！ORCL再融资，信贷雪上加霜！MRVL收购LITE，双方股东都不满意！…》',
+        published: '11/02（美东 11/02 盘后节目）',
+        note: '原片：https://www.youtube.com/watch?v=qcdt6yQKt_4',
+      },
+    ],
+  },
+  {
+    symbol: 'ORCL',
+    label: '甲骨文',
+    views: [
+      {
+        id: 'orcl-shiye-1',
+        blogger: '视野环球财经',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: 'ORCL 再融资，信贷担忧加重',
+        reason:
+          '他在同一期里提到 ORCL 又要再融资，并形容当前的信贷环境是雪上加霜，指向债务成本的压力。',
+        caveat:
+          '仅凭标题提炼：融资规模、条款与他的完整逻辑看正片；事件驱动的短期信号。',
+        source:
+          '视野环球财经《美股 AAPL多个增速放缓！ORCL再融资，信贷雪上加霜！MRVL收购LITE，双方股东都不满意！…》',
+        published: '11/02（美东 11/02 盘后节目）',
+        note: '原片：https://www.youtube.com/watch?v=qcdt6yQKt_4',
+      },
+    ],
+  },
+  {
+    symbol: 'MRVL',
+    label: '迈威尔',
+    views: [
+      {
+        id: 'mrvl-shiye-1',
+        blogger: '视野环球财经',
+        stance: 'cautious',
+        horizon: 'short',
+        kind: 'view',
+        headline: 'MRVL 收购 LITE，两边股东都不买账',
+        reason:
+          '他报道 MRVL 对 LITE 的收购交易，特别点出双方股东都不满意——市场当下并不认可这笔交易。',
+        caveat:
+          '仅凭标题提炼：交易条款、他的时间轴判断看正片；收购宣布带来的短期谨慎，不涉及交易长期整合能否成功。',
+        source:
+          '视野环球财经《美股 AAPL多个增速放缓！ORCL再融资，信贷雪上加霜！MRVL收购LITE，双方股东都不满意！…》',
+        published: '11/02（美东 11/02 盘后节目）',
+        note: '原片：https://www.youtube.com/watch?v=qcdt6yQKt_4',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-11-03', groups: BATCH_2026_11_03 },
   { date: '2026-11-01', groups: BATCH_2026_11_01 },
   { date: '2026-10-30', groups: BATCH_2026_10_30 },
   { date: '2026-10-29', groups: BATCH_2026_10_29 },
