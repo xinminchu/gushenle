@@ -647,6 +647,66 @@ const BATCH_2026_11_03: MorningBriefing = {
   ],
 };
 
+const BATCH_2026_11_04: MorningBriefing = {
+  date: '2026-11-04',
+  overnight: [
+    {
+      text: '美联社已宣布民主党拿下参众两院控制权：参议院翻转 7 席至 54 席多数，众议院翻转 16 席、预计约 228 席；德州 Talarico 当选参议员（1988 年来首位民主党人）、Hinojosa 击败 Abbott 当选州长，Jeffries 将成为首位黑人众议长；密西西比与阿拉斯加参议院席位仍未定；新一届国会 2027 年 1 月 3 日就职。',
+      source: 'AP / CNN / USA Today',
+      url: 'https://www.cnn.com/2026/11/03/politics/midterm-election-night-takeaways?cid=external-feeds_iluminar_meta',
+    },
+    {
+      text: 'AMD 盘后发布创纪录三季报：营收 133.8 亿美元（同比 +45%）、数据中心业务 85.5 亿美元（同比 +97%、占营收 64%）、non-GAAP EPS 2.09 美元（同比 +74%）；四季度指引约 170 亿美元（同比约 +66%）；预计 2027 年服务器收入翻倍、数据中心 AI 收入增速更快。',
+      source: 'AMD 8-K / Reuters',
+      url: 'https://evidinvest.com/blog/amd-anet-smci-q3-2026-read-back-2026-11-04',
+    },
+    {
+      text: '美股周二收盘涨跌互现：标普 500 涨 0.29% 收 7,563.40 点，纳指涨 0.62% 收 25,319.75 点，道指跌 0.49% 收 51,727.46 点。',
+      source: 'Reuters / KuCoin',
+      url: 'https://www.kucoin.com/news/insight/NVDA/6aeb15d1bbcb52000745c93c',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货周三盘前由跌转涨（约 6:24 ET）：道指期货涨约 1.4%、标普 500 期货涨约 1.0%、纳指 100 期货涨约 0.9%；隔夜曾因大选结果下跌，纳指 100 期货最多跌约 2.4%。',
+      source: 'Reuters / Kitco',
+      url: 'https://www.kitco.com/news/off-the-wire/2026-11-04/wall-st-futures-jump-democrats-sweep-midterms',
+    },
+    {
+      text: '盘前个股：AMD 涨超 6%（财报后）；IREN、Hut 8、Applied Digital 等数据中心概念股走低；SpaceX（SPCX）跌超 4%、特斯拉走低；亚马逊涨约 3%，英伟达、Meta、谷歌涨超 1%。',
+      source: 'Reuters / Kitco',
+      url: 'https://www.kitco.com/news/off-the-wire/2026-11-04/us-stock-futures-rise-investors-assess-democrats-midterm-sweep',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日宏观（美东）：8:15 ADP 就业（预期 +6.5–7 万人）、8:30 贸易逆差（预期 -1080 亿美元）与财政部季度再融资公告、10:00 ISM 服务业 PMI（预期 54.8）、10:30 EIA 原油库存。',
+      source: 'TheStreet Pro / deepscope',
+      url: 'https://pro.thestreet.com/stock-market-today/2026-11-04',
+    },
+    {
+      text: '今日财报：盘前 Uber、麦当劳、CVS Health；盘后 DoorDash。',
+      source: 'Reuters',
+      url: 'https://www.kitco.com/news/off-the-wire/2026-11-04/us-stock-futures-rise-investors-assess-democrats-midterm-sweep',
+    },
+    {
+      text: '本周后续：周四初请失业金，周五（11-06）10 月非农就业报告。',
+      source: 'greeksoup.ai',
+      url: 'https://greeksoup.ai/stocks/us/macro/',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日收盘 21.2（口径：FRED VIXCLS，数据日期 2026-11-02）。',
+      source: '站内 /api/macro（FRED VIXCLS）',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-11-03）收 685.28 美元（+0.62%）；收于 50 日线（723.93 美元）之下，仍站上 200 日线（680.14 美元）。',
+      source: '站内 /api/rhythm',
+    },
+  ],
+};
+
 const BATCH_2026_11_02: MorningBriefing = {
   date: '2026-11-02',
   overnight: [
@@ -709,6 +769,7 @@ const BATCH_2026_11_02: MorningBriefing = {
 
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_11_04,
   BATCH_2026_11_03,
   BATCH_2026_11_02,
   BATCH_2026_10_30,
