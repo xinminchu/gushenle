@@ -1223,6 +1223,128 @@ const BATCH_2026_11_01: SymbolViewGroup[] = [
    无明确倾向）、投资TALK君 1515 期（无标的、无可辨倾向、无期限）、Money or Life
    （Anthropic 为非上市公司、无标的）、老王 6 条（均为疑问句/话题时间轴，
    未给出明确倾向与期限）。 */
+/* ---------------- 11/04 批：11/03 盘后节目 ----------------
+   水位线 2026-11-03；9 源全抓成功，共 9 条新条目，6 个观点入库，8 条/段丢弃：
+   阳光财经 11/03 盘后（AMD 仅"盘后急涨"事实陈述、无观点；"大盘还要再跌9%"属
+   第三方"砖家"且标题带问号质疑，未明确博主本人倾向）、NaNa 11/03（"选后真能暴涨？"
+   无标的）、Selina 2 条（11/03 INTC"十年抄底还是深渊开始"、11/03 直播"选举后
+   会大涨吗"均为设问式，未明确给出倾向）、老王 3 条（"利空出尽？""被错杀？"
+   "能抱？能买？"均为提问句）、视野"横扫概率极高，AI承压"（所指标的与方向不明）。
+   Kova Substack（最新 10/23）、投资TALK君（最新 11/01）、Money or Life（最新 11/02）
+   无新文。 */
+const BATCH_2026_11_04: SymbolViewGroup[] = [
+  {
+    symbol: 'AMD',
+    label: '超威半导体',
+    views: [
+      {
+        id: 'amd-shiye-1',
+        blogger: '视野环球财经',
+        stance: 'bullish',
+        horizon: 'short',
+        kind: 'view',
+        headline: 'AMD 前瞻大好，但暗藏隐忧',
+        reason:
+          '他在 11/03 盘后节目的标题里形容 AMD 的前瞻大好，明显偏向看好一侧，同时用"暗藏隐忧"给出了保留。',
+        caveat:
+          '仅凭标题提炼：前瞻与隐忧的具体论证、他的反转条件要看正片；财报盘后节目的事件驱动短期信号。',
+        source: '视野环球财经',
+        published: '11/03（美东 11/03 盘后节目）',
+        note: '原片：https://www.youtube.com/watch?v=IcDRffqDfTo',
+      },
+    ],
+  },
+  {
+    symbol: 'PLTR',
+    label: '帕兰蒂尔',
+    views: [
+      {
+        id: 'pltr-shiye-1',
+        blogger: '视野环球财经',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '增速放缓，估值高不可攀',
+        reason:
+          '他在同一期标题里指出 PLTR 增速放缓，同时形容价格高不可攀，指向短期偏空。',
+        caveat:
+          '仅凭标题提炼：他的数据口径与反转条件看正片；事件驱动的短期信号。',
+        source: '视野环球财经',
+        published: '11/03（美东 11/03 盘后节目）',
+        note: '原片：https://www.youtube.com/watch?v=IcDRffqDfTo',
+      },
+    ],
+  },
+  {
+    symbol: 'SOX',
+    label: '费城半导体',
+    views: [
+      {
+        id: 'sox-kova-4',
+        blogger: 'Kova动量交易',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '继续做空半导体，方向维持不动',
+        reason:
+          '他在 11/03 直播标题里继续摆出三倍做空半导体的姿态，与 10/23 起披露的做空方向一致。',
+        caveat:
+          '仅凭标题提炼：杠杆做空的期限与转手条件看正片；三倍杠杆有衰减与逼空风险。',
+        source: 'Kova动量交易',
+        published: '11/03（中国直播）',
+        note: '原片：https://www.youtube.com/watch?v=bvm6AXXGRuQ',
+      },
+      {
+        id: 'sox-kova-4-pos',
+        blogger: 'Kova动量交易',
+        stance: 'neutral',
+        horizon: 'short',
+        kind: 'position',
+        headline: '已披露：继续持有 3x 做空半导体',
+        reason: '',
+        caveat: '杠杆方向产品本身的衰减与反向挤压风险由产品承担，不是"稳赚"承诺。',
+        source: 'Kova动量交易',
+        published: '11/03（中国直播）',
+        note: '原片：https://www.youtube.com/watch?v=bvm6AXXGRuQ',
+      },
+    ],
+  },
+  {
+    symbol: 'SPX',
+    label: '大盘',
+    views: [
+      {
+        id: 'spx-kova-2',
+        blogger: 'Kova动量交易',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '三倍继续做空大盘',
+        reason:
+          '他在 11/03 直播标题里继续摆出三倍做空大盘的姿态，空头立场未变。',
+        caveat:
+          '仅凭标题提炼：做空期限与反转条件看正片；这是直播标题给出的短期判断。',
+        source: 'Kova动量交易',
+        published: '11/03（中国直播）',
+        note: '原片：https://www.youtube.com/watch?v=bvm6AXXGRuQ',
+      },
+      {
+        id: 'spx-kova-2-pos',
+        blogger: 'Kova动量交易',
+        stance: 'neutral',
+        horizon: 'short',
+        kind: 'position',
+        headline: '已披露：继续持有 3x 做空大盘',
+        reason: '',
+        caveat: '杠杆方向产品本身的衰减与反向挤压风险由产品承担，不是"稳赚"承诺。',
+        source: 'Kova动量交易',
+        published: '11/03（中国直播）',
+        note: '原片：https://www.youtube.com/watch?v=bvm6AXXGRuQ',
+      },
+    ],
+  },
+];
+
 const BATCH_2026_11_03: SymbolViewGroup[] = [
   {
     symbol: 'AAPL',
@@ -1293,6 +1415,7 @@ const BATCH_2026_11_03: SymbolViewGroup[] = [
 ];
 
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-11-04', groups: BATCH_2026_11_04 },
   { date: '2026-11-03', groups: BATCH_2026_11_03 },
   { date: '2026-11-01', groups: BATCH_2026_11_01 },
   { date: '2026-10-30', groups: BATCH_2026_10_30 },
