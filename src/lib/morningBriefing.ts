@@ -647,6 +647,66 @@ const BATCH_2026_11_03: MorningBriefing = {
   ],
 };
 
+const BATCH_2026_11_05: MorningBriefing = {
+  date: '2026-11-05',
+  overnight: [
+    {
+      text: '美股周三（11-04）大涨：道指涨 1,569.40 点（约 3.0%）收 53,356.12 点，创 2025 年 4 月以来最佳单日表现；标普 500 涨 1.58% 收 7,688.62 点，纳指涨 1.44% 收 25,736.51 点；主要推手是油价大跌（WTI 跌超 8% 至 88.12 美元/桶）与中期选举后不确定性缓解；布伦特原油周四盘前反弹超 1%。',
+      source: 'Reuters / Sharecast',
+      url: 'https://www.reuters.com/business/sp-500-futures-steady-after-midterm-rally-nasdaq-lags-chip-weakness-2026-11-05/',
+    },
+    {
+      text: '康菲石油发布三季报：EPS 3.34 美元（调整后 3.27 美元）、营收 194.4 亿美元，季度股息上调 11% 至每股 0.93 美元；今日美东 12:00 召开电话会。',
+      source: 'ConocoPhillips 官网 / Business Wire',
+      url: 'https://www.conocophillips.com/news-media/story/conocophillips-announces-third-quarter-2026-results-and-increases-quarterly-ordinary-dividend-by-11/',
+    },
+    {
+      text: '高通四季度智能手机芯片销售额不及华尔街预期，盘前跌约 10%；Arm 财报后同样走低。',
+      source: 'Reuters / Invezz',
+      url: 'https://www.reuters.com/business/sp-500-futures-steady-after-midterm-rally-nasdaq-lags-chip-weakness-2026-11-05/',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货周四盘前分化（约 5:04 ET）：道指期货涨 258 点（约 0.48%）、标普 500 期货基本持平（涨 0.5 点，约 0.01%）、纳指 100 期货跌 181 点（约 0.63%）。',
+      source: 'Reuters',
+      url: 'https://www.reuters.com/business/sp-500-futures-steady-after-midterm-rally-nasdaq-lags-chip-weakness-2026-11-05/',
+    },
+    {
+      text: '盘前个股：高通跌约 10%（财报后）；英伟达、英特尔、AMD、博通等芯片股走低；亚马逊、Meta、谷歌涨约 0.5%；SpaceX（SPCX）与特斯拉跌超 1%；QQQ 盘前跌约 0.79% 至 686.5 美元（8:26 ET）。',
+      source: 'Reuters / Invezz / 站内 /api/rhythm',
+      url: 'https://www.reuters.com/business/sp-500-futures-steady-after-midterm-rally-nasdaq-lags-chip-weakness-2026-11-05/',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日美东 8:30（美中 7:30）公布每周初请失业金（预期约 19.7 万人，前值 19.4 万人），同时公布三季度非农生产力初值。',
+      source: 'Invezz / Sharecast',
+      url: 'https://invezz.com/news/2026/11/05/dow-futures-up-nasdaq-futures-slide-five-things-to-know-before-wall-street-opens/',
+    },
+    {
+      text: '今日财报：盘前康菲石油、丰田、索尼、Cummins、卡地纳健康等；盘后 Airbnb、Monster Beverage、Cloudflare、华纳兄弟探索等。',
+      source: 'Themenon Lab / Skip and Grow',
+      url: 'https://signals.themenonlab.com/blog/evening-intel-2026-11-05/',
+    },
+    {
+      text: '英国央行今日公布利率决议（伦敦时间中午，美东 7:00），市场预期加息 25 个基点至 4%；里士满联储主席 Barkin 等至少三位美联储官员今日讲话；周五（11-06）公布 10 月非农就业报告。',
+      source: 'The Retest / Reuters',
+      url: 'https://theretest.com/brief/2026-11-05-morning',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日收盘 20.8（口径：FRED VIXCLS，数据日期 2026-11-03）。',
+      source: '站内 /api/macro（FRED VIXCLS）',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-11-04）收 691.95 美元（+0.97%）；连续第 5 个交易日收于 50 日线（723.56 美元）之下，仍站上 200 日线（680.56 美元），连续第 147 个交易日收于 200 日线之上。',
+      source: '站内 /api/rhythm',
+    },
+  ],
+};
+
 const BATCH_2026_11_04: MorningBriefing = {
   date: '2026-11-04',
   overnight: [
@@ -769,6 +829,7 @@ const BATCH_2026_11_02: MorningBriefing = {
 
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_11_05,
   BATCH_2026_11_04,
   BATCH_2026_11_03,
   BATCH_2026_11_02,
