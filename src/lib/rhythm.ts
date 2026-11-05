@@ -8,8 +8,12 @@
  * ③ 分数 = 位置分×0.5 + 趋势分×0.3 + 速度分×0.2，谷峰用 5%/95% 分位数，抗离群点；
  * ④ 阈值按波动率自适应：高波股用 85/15、稳健股用 80/20，档位由 trailing 66 天
  *    波动率决定（慢变量，不跳变）；权重与阈值集中在本文件顶部，可随时调整。
- * ⑤ 涨太猛了（触发沉思乐）= 分数 ≥过热阈值 且 速度分 ≥90（短期抛物线），
+ * ⑤ 涨太猛了（触发沉思乐）= 分数 ≥过热阈值 且 加速口径成立（近 5 日涨幅 ≥8%
+ *    且大于前一 5 日涨幅，v3.1 起；之前是速度分 ≥90 即近 5 日 ≥5%，慢牛中误报太多），
  *    不看趋势分——趋势分与综合分高度相关，"高分+弱趋势"现实中几乎到不了。
+ * ⑥ 跌过头了 = 分数 ≤5（极低区）+ 速度分 ≤15（近 5 日跌幅 ≥4.4%，恐慌性杀跌）
+ *    + 缓和迹象（跌速较前一 5 日放缓 ≥2 个百分点，或当日反弹 ≥2%），v3.1 起；
+ *    之前要求趋势分 >45，但分数触底时趋势分必同步触底，属死代码。
  */
 
 import type { Lang } from './i18n';
@@ -85,9 +89,20 @@ const HOT_STABLE = 80; // 稳健档：过热阈值
 const COLD_STABLE = 20; // 稳健档：超卖阈值
 const HOT_HIGHVOL = 85; // 高波档：过热阈值（收紧，减少泛滥信号）
 const COLD_HIGHVOL = 15; // 高波档：超卖阈值（收紧）
-const VEL_PARABOLIC = 90; // 抛物线触发线：速度分 ≥90（近 5 日涨幅 ≥5%）视为短期失速，
-  // 分数同时 ≥过热阈值即判"涨太猛了"并触发沉思乐（方向a：不看趋势分，
-  // 因趋势分与综合分高度相关，"高分+弱趋势"在现实中几乎到不了）
+const VEL_PARABOLIC = 90; // 抛物线触发线（旧口径，v3.1 起仅作兜底）：速度分 ≥90
+  // （近 5 日涨幅 ≥5%）视为短期失速；无加速数据（accel 未传入）时仍用它。
+const ROC5_PARABOLIC = 8; // 抛物线加速口径（v3.1）：近 5 日涨幅 ≥8% 且大于前一 5 日涨幅
+  // 才算"涨太猛了"。慢牛里 5 日 +5% 反复出现会误报（2026-11-04 回测：NVDA 12 次
+  // 预警 10 次误报），加速口径只抓真正的抛物线段。
+const VEL_EXHAUSTED = 15; // 抛压衰竭线（v3.1）：速度分 ≤15（近 5 日跌幅 ≥4.4%）。
+  // 分数已到极低区 + 恐慌性杀跌 + 出现缓和迹象 = "跌过头了"。旧口径要求趋势分 >45，
+  // 但分数触底时趋势分必同步触底，402 个交易日 0 触发，属死代码（2026-11-04 回测）。
+const SCORE_DEEP_OVERSOLD = 5; // 极低分区（v3.1）："跌过头了"要求综合分 ≤5，
+  // 远低于超卖线（15/20），只在真正的恐慌底出现，避免超卖区常驻刷屏。
+const DECEL_MARGIN = 2; // 跌速放缓口径（v3.1）：近 5 日跌幅比较前一 5 日收窄 ≥2 个百分点，
+  // 才算"抛压衰竭"。过滤 ±1 以内的噪音摆动。
+const BOUNCE_MIN = 2; // 反弹口径（v3.1）：当日涨幅 ≥2% 才算"收涨转信号"，
+  // 过滤 +0.x% 的噪音（水瀑中这种小阳线比比皆是）。
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const r1 = (v: number) => Math.round(v * 10) / 10;
@@ -324,13 +339,46 @@ export function convictionOf(score: number, th: RhythmThresholds): Conviction {
   return 'none';
 }
 
+/** 加速口径输入：近 5 日涨跌速率与 related 动量（%，可为负；逻辑判断用原始值，不四舍五入） */
+export interface AccelInput {
+  /** 近 5 日涨幅（相对 5 日前收盘） */
+  roc5: number;
+  /** 前一 5 日涨幅；数据不足时为 null，此时判抛物线退回旧的速度分口径 */
+  roc5Prev: number | null;
+  /** 当日涨跌幅（相对昨日收盘）；数据不足时为 0 */
+  dayRet: number;
+}
+
+/**
+ * 某日收盘时的加速输入：roc5 = 相对 5 日前收盘的涨幅；
+ * roc5Prev = 前一 5 日窗口的涨幅（10 日前收盘 → 5 日前收盘）；
+ * dayRet = 当日相对昨日收盘的涨跌幅。
+ * 只使用 closes[0..endIdx] 的数据（无未来函数），可直接用于历史复盘。
+ */
+export function accelAt(closes: number[], endIdx: number): AccelInput {
+  const last = closes[endIdx];
+  const ref5 = closes[Math.max(0, endIdx - 5)];
+  const ref10 = endIdx - 10 >= 0 ? closes[endIdx - 10] : null;
+  const prevClose = endIdx - 1 >= 0 ? closes[endIdx - 1] : null;
+  const roc5 = ref5 > 0 ? ((last - ref5) / ref5) * 100 : 0;
+  const roc5Prev =
+    ref10 != null && ref10 > 0 && ref5 > 0 ? ((ref5 - ref10) / ref10) * 100 : null;
+  const dayRet =
+    prevClose != null && prevClose > 0 ? ((last - prevClose) / prevClose) * 100 : 0;
+  return { roc5, roc5Prev, dayRet };
+}
+
 export function judgeFromScore(
   score: number,
   trend: number,
   vel: number,
   th: RhythmThresholds,
   lang: Lang = 'zh',
+  accel?: AccelInput,
 ): { statusKey: StatusKey; advice: string; overheated: boolean } {
+  // trend 参数保留（调用方按位置传参，签名稳定）；v3.1 起判定不再用趋势分：
+  // 超卖端改走抛压衰竭口径（见 VEL_EXHAUSTED）。
+  void trend;
   const pick = (statusKey: StatusKey, overheated: boolean) => ({
     statusKey,
     // 繁体走中文链路，输出前由 API 层 toHantDeep 统一转繁体
@@ -338,7 +386,13 @@ export function judgeFromScore(
     overheated,
   });
   if (score >= th.hot) {
-    if (vel >= VEL_PARABOLIC) return pick('overheated', true);
+    // 抛物线判定（v3.1 加速口径）：近 5 日涨幅 ≥8% 且大于前一 5 日涨幅；
+    // 未传入加速数据时退回旧口径（速度分 ≥90）。
+    const parabolic = accel
+      ? accel.roc5 >= ROC5_PARABOLIC &&
+        (accel.roc5Prev == null || accel.roc5 > accel.roc5Prev)
+      : vel >= VEL_PARABOLIC;
+    if (parabolic) return pick('overheated', true);
     const base = pick('hotStrong', false);
     if (score >= 90) {
       // 90+ 分：位置已到近 3 个月极高位——趋势健康照样拿着，但新开仓/加仓要更慎
@@ -354,8 +408,16 @@ export function judgeFromScore(
   if (score >= 60) return pick('risingAccel', false);
   if (score >= 40) return pick('sideways', false);
   if (score >= th.cold) return pick('bottomUp', false);
-  if (trend <= 45) return pick('weakLow', false);
-  return pick('oversoldBottom', false);
+  // 超卖区（v3.1 抛压衰竭口径）："跌过头了" = 分数已到极低区（≤5）+ 近 5 日恐慌性
+  // 杀跌（速度分 ≤15）+ 出现缓和迹象——跌速较前一 5 日明显放缓（≥2 个百分点），
+  // 或当日有力度的反弹（≥2%）。三者缺一即 "还在往下跌"，保证信号稀少可信。
+  if (score <= SCORE_DEEP_OVERSOLD && vel <= VEL_EXHAUSTED) {
+    const decel =
+      accel?.roc5Prev != null && accel.roc5 - accel.roc5Prev >= DECEL_MARGIN;
+    const bounce = (accel?.dayRet ?? 0) >= BOUNCE_MIN;
+    if (decel || bounce) return pick('oversoldBottom', false);
+  }
+  return pick('weakLow', false);
 }
 
 /**
@@ -469,7 +531,14 @@ export function buildJudgment(closes: number[], lang: Lang = 'zh'): Judgment {
       note: tx(lang, 'Not enough data', '数据不足'),
     };
   }
-  const { statusKey, advice, overheated } = judgeFromScore(s.score, s.trend, s.vel, thresholds, lang);
+  const { statusKey, advice, overheated } = judgeFromScore(
+    s.score,
+    s.trend,
+    s.vel,
+    thresholds,
+    lang,
+    accelAt(closes, closes.length - 1),
+  );
   return {
     ...s,
     statusKey,

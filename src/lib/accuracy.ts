@@ -15,6 +15,7 @@
 import {
   scoreAt,
   judgeFromScore,
+  accelAt,
   volatilityAt,
   thresholdsFor,
   type RhythmThresholds,
@@ -95,7 +96,7 @@ export async function computeAccuracy(symbol: string): Promise<AccuracyResult> {
     if (!s) continue;
     // 当时的 trailing 波动率 -> 当时的阈值档位（慢变量，无未来函数）
     const th: RhythmThresholds = thresholdsFor(volatilityAt(closes, t));
-    const j = judgeFromScore(s.score, s.trend, s.vel, th);
+    const j = judgeFromScore(s.score, s.trend, s.vel, th, 'zh', accelAt(closes, t));
     const key: SignalStatusKey | null = (SIGNAL_KEYS as readonly string[]).includes(j.statusKey)
       ? (j.statusKey as SignalStatusKey)
       : null;

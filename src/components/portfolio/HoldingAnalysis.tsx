@@ -19,6 +19,7 @@ import {
   volatilityAt,
   thresholdsFor,
   judgeFromScore,
+  accelAt,
   type RhythmResponse,
 } from '@/lib/rhythm';
 import { holdingDays, sectorOf, type Position } from '@/lib/positions';
@@ -140,7 +141,7 @@ export default function HoldingAnalysis({
       const s = scoreAt(closes, i);
       if (!s) continue;
       const th = thresholdsFor(volatilityAt(closes, i), 'zh');
-      const { statusKey } = judgeFromScore(s.score, s.trend, s.vel, th, 'zh');
+      const { statusKey } = judgeFromScore(s.score, s.trend, s.vel, th, 'zh', accelAt(closes, i));
       total++;
       if (statusKey === 'overheated' || statusKey === 'hotStrong') buckets[0].n++;
       else if (statusKey === 'risingAccel') buckets[1].n++;

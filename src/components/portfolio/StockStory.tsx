@@ -5,7 +5,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  scoreAt, volatilityAt, thresholdsFor, judgeFromScore, statusLabel,
+  scoreAt, volatilityAt, thresholdsFor, judgeFromScore, accelAt, statusLabel,
   type RhythmPoint, type RhythmResponse,
 } from '@/lib/rhythm';
 import { loadOperations, type OperationRecord } from '@/lib/operations';
@@ -42,7 +42,7 @@ export function judgmentAt(
   const s = scoreAt(closes, closes.length - 1);
   if (!s) return null;
   const th = thresholdsFor(volatilityAt(closes, closes.length - 1));
-  const j = judgeFromScore(s.score, s.trend, s.vel, th);
+  const j = judgeFromScore(s.score, s.trend, s.vel, th, lang, accelAt(closes, closes.length - 1));
   return { score: s.score, statusKey: j.statusKey, status: statusLabel(j.statusKey, lang) };
 }
 
