@@ -1223,6 +1223,63 @@ const BATCH_2026_11_01: SymbolViewGroup[] = [
    无明确倾向）、投资TALK君 1515 期（无标的、无可辨倾向、无期限）、Money or Life
    （Anthropic 为非上市公司、无标的）、老王 6 条（均为疑问句/话题时间轴，
    未给出明确倾向与期限）。 */
+/* ---------------- 11/06 批：11/05 盘后节目 + Kova Substack 长文 ----------------
+   水位线 2026-11-04；9 源全抓成功，共 18 条新条目，2 个观点入库，16 条丢弃：
+   Kova Substack 长文内观点二、观点三在付费墙后（仅见标题，正文不可见）；
+   阳光财经 2 条（"美股暴跌，为什么和怎么办""24小时精彩反转"简介只有会员推广，
+   无标的级内容）；视野 2 条（11/06"计划内建仓一只股票"未点名是哪只；
+   11/05"半导体打爆，还能玩吗"为设问，简介只有会员推广）；NaNa 2 条
+   （"Margin call 电话都打爆了"无标的；"牛市狂奔？？？"为设问）；Selina
+   2 条直播（11/06"美股崩盘"与 11/05"选举对美股的三大影响"均为设问，
+   简介只有标签与会员推广）；投资TALK君 2 条（"美股血流成河"无标的；
+   美光短视频"毛利见顶就该跑？"为设问）；Money or Life（"投资美股两年"
+   为个人回顾，无标的/倾向）；老王 5 条（均为提问句或话题时间轴，
+   未给出明确倾向与期限）。Kova YouTube 无新内容。 */
+const BATCH_2026_11_06: SymbolViewGroup[] = [
+  {
+    symbol: 'LLY',
+    label: '礼来',
+    views: [
+      {
+        id: 'lly-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'neutral',
+        horizon: 'long',
+        kind: 'view',
+        headline: 'AI叙事不构成持有理由，价值看GLP-1兑现',
+        reason:
+          '他在长文里拆解三季报：利润由GLP-1药物驱动，电话会上管理层与分析师全程未谈AI；AI投入相对研发预算很小，更像一份期权而非经营变量。',
+        caveat:
+          '若礼来开始披露可归因于AI的效率指标、或把AI写进业绩指引，观点即被推翻；12月7日投资者交流会是第一个检验点。',
+        source: 'Kova动量交易 Substack《AI制药最大的赢家，可能不是AI公司》',
+        published: '11/05',
+        note: '原文：https://kovainvest.substack.com/p/aiai',
+      },
+    ],
+  },
+  {
+    symbol: 'MRVL',
+    label: '迈威尔',
+    views: [
+      {
+        id: 'mrvl-selina-1',
+        blogger: 'Selina聊美股',
+        stance: 'cautious',
+        horizon: 'short',
+        kind: 'view',
+        headline: '方向正确，但价格需要证明，兑现前不追高',
+        reason:
+          '她认为收购光连接龙头的方向正确、逻辑通顺，但23.9%溢价把未来数年增长提前打满、股权大幅摊薄，交割又要等到2028年上半年。',
+        caveat:
+          '在看到订单兑现、协同落地、新增利润覆盖摊薄之前，不建议只凭"AI需要光"追高；三点观察：纸面订单能否变现、联合方案能否拿到真单、利润能否覆盖成本。',
+        source: 'Selina聊美股',
+        published: '11/05',
+        note: '原片：https://www.youtube.com/watch?v=Jfai_egj4Bk',
+      },
+    ],
+  },
+];
+
 /* ---------------- 11/04 批：11/03 盘后节目 ----------------
    水位线 2026-11-03；9 源全抓成功，共 9 条新条目，6 个观点入库，8 条/段丢弃：
    阳光财经 11/03 盘后（AMD 仅"盘后急涨"事实陈述、无观点；"大盘还要再跌9%"属
@@ -1415,6 +1472,7 @@ const BATCH_2026_11_03: SymbolViewGroup[] = [
 ];
 
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-11-06', groups: BATCH_2026_11_06 },
   { date: '2026-11-04', groups: BATCH_2026_11_04 },
   { date: '2026-11-03', groups: BATCH_2026_11_03 },
   { date: '2026-11-01', groups: BATCH_2026_11_01 },
