@@ -647,6 +647,68 @@ const BATCH_2026_11_03: MorningBriefing = {
   ],
 };
 
+/* 2026-11-06：核实要点——11-05 大跌后盘前分化反弹；VIX 用收盘值 28.18（FRED VIXCLS
+   仍停在 11-03 的 20.8，已过期，弃用）；QQQ 首次跌破 200 日线；IREN 盘后财报超预期；
+   非农今日 8:30 ET 公布，写预期值（实际值发稿时未见可信来源）。 */
+const BATCH_2026_11_06: MorningBriefing = {
+  date: '2026-11-06',
+  overnight: [
+    {
+      text: '美股周四（11-05）大跌：标普 500 跌 4.36% 收 7,353.73 点，纳指跌 5.52% 收 24,315.00 点、进入修正区间，纳指 100 跌 6.36%，道指跌 3.44%（-1,833 点）收 51,523.06 点；为 4 月以来最差单日。',
+      source: 'TipRanks / The Retest',
+      url: 'https://www.tipranks.com/news/stock-market-today-nov-6-futures-mixed-as-nasdaq-futures-rebound-after-tech-selloff',
+    },
+    {
+      text: '跌势推手是数据中心限建担忧：德州候任州长承诺上任后立即暂停数据中心建设，高盛警告最多 45% 的美国在建数据中心扩建可能受影响；高通手机芯片销售不及预期亦拖累芯片股。',
+      source: 'Reuters / 高盛',
+    },
+    {
+      text: 'IREN 盘后发布 2027 财年一季报：营收 2.28 亿美元（环比 +66%，超预期的 2.21 亿美元），AI 云收入 2 亿美元（环比 +182%），毛利率 86%，每股亏损 0.54 美元（好于预期的亏损 0.72 美元）；但 40 亿美元 ARR 目标推迟至 2027 年 1 月（可能延至 2 月）。',
+      source: 'TipRanks',
+      url: 'https://www.tipranks.com/news/iren-stock-rallies-after-earnings-as-ai-cloud-revenue-nearly-triples-despite-data-center-delays',
+    },
+    {
+      text: 'Cloudflare、AppLovin、Moderna 财报超预期，盘前科技股随之反弹。',
+      source: 'The Retest',
+      url: 'https://theretest.com/brief/2026-11-06-morning',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货周五盘前分化（约 5:35 ET）：纳指 100 期货涨 1.35%、标普 500 期货涨 0.27%、道指期货跌 0.82%。',
+      source: 'TipRanks',
+      url: 'https://www.tipranks.com/news/stock-market-today-nov-6-futures-mixed-as-nasdaq-futures-rebound-after-tech-selloff',
+    },
+    {
+      text: '盘前个股：IREN 涨 18.25%（财报后）、MU 涨 8.30%、NBIS 涨 7.67%、SPCX 涨 4.55%；NVDA 盘前 189.45 美元、涨约 4.3%（Finnhub，8:25 ET）。',
+      source: 'KuCoin / Finnhub',
+      url: 'https://www.kucoin.com/news/flash/pre-market-ai-and-tech-stocks-rally-mu-and-sandisk-surge-over-8',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日美东 8:30（美中 7:30）公布 10 月非农就业报告：路透调查预期新增 6.5 万人（9 月仅增 2.9 万人），失业率 4.2%，时薪环比 +0.3%；道琼斯调查预期为新增 5.9 万人。',
+      source: 'The Retest / TipRanks',
+      url: 'https://theretest.com/brief/2026-11-06-morning',
+    },
+    {
+      text: '持仓股今日无财报：IREN 已于昨日盘后公布；NVDA 财报在 11 月 17 日，MU 下次财报在 12 月中旬（日期未确认）。',
+      source: 'TipRanks / Vantage Markets',
+      url: 'https://www.vantagemarkets.com/market-analysis/mu-stock-price-today-micron-monthly-outlook/',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日（11-05）收 28.18，大涨约 69%。',
+      source: 'Finnhub / Fool 收盘数据',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-11-05）收 647.05 美元（-6.49%）；连续第 6 个交易日收于 50 日线（722.27 美元）之下，首次收于 200 日线（680.71 美元）之下（此前连续 147 个交易日站上 200 日线）。',
+      source: '站内 /api/rhythm',
+    },
+  ],
+};
+
 const BATCH_2026_11_05: MorningBriefing = {
   date: '2026-11-05',
   overnight: [
@@ -829,6 +891,7 @@ const BATCH_2026_11_02: MorningBriefing = {
 
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_11_06,
   BATCH_2026_11_05,
   BATCH_2026_11_04,
   BATCH_2026_11_03,
