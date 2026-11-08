@@ -1223,6 +1223,35 @@ const BATCH_2026_11_01: SymbolViewGroup[] = [
    无明确倾向）、投资TALK君 1515 期（无标的、无可辨倾向、无期限）、Money or Life
    （Anthropic 为非上市公司、无标的）、老王 6 条（均为疑问句/话题时间轴，
    未给出明确倾向与期限）。 */
+/* ---------------- 11/08 批：中期选举后分化（Selina）+ 老王台股短视频 ----------------
+   水位线 2026-11-07；9 源全抓成功，共 2 条真正新条目，1 个观点入库，1 条丢弃：
+   Selina 11/07 晚「中期选举后，AI行情要变天？」（NVDA 长期分批越跌越买，1 条入库）；
+   老王 11/08 短视频「短線空頭，什麼時候可以買？」（台股大盘提问、无标的，简介只有播客链接与免责声明）。
+   其余 7 源无新内容（Kova Substack 最新仍为 11/05；阳光财经、视野、NaNa、投资TALK君、Money or Life、Kova YouTube 均无 11-07 之后的新条目）。 */
+const BATCH_2026_11_08: SymbolViewGroup[] = [
+  {
+    symbol: 'NVDA',
+    label: '英伟达',
+    views: [
+      {
+        id: 'nvda-selina-1',
+        blogger: 'Selina聊美股',
+        stance: 'bullish',
+        horizon: 'long',
+        kind: 'view',
+        headline: '芯片长期逻辑未动摇，分批越跌越买',
+        reason:
+          '她认为选举落地后资金在做风格切换：传统板块领涨、芯片与 AI 硬件回调，叠加数据中心用电与碳排放管控预期，压制了芯片采购需求预期；但这波调整更多是高增长预期向中速增长的修正，加前期领涨后的轮动与获利兑现，AI 算力与存储的核心需求并未证伪。',
+        caveat:
+          '分批布局、不一次性梭哈；若云厂商资本开支放缓超预期演变为需求断档，或 AI 算力与存储核心需求走弱，越跌越买的逻辑即失效。据视频简介提炼，未看正片。',
+        source: 'Selina聊美股',
+        published: '11/07',
+        note: '原片：https://www.youtube.com/watch?v=H0LK-egYFm0',
+      },
+    ],
+  },
+];
+
 /* ---------------- 11/07 批：11/06 盘后节目 ----------------
    水位线 2026-11-06；9 源全抓成功，共 7 条新条目，1 个观点入库，6 条丢弃：
    阳光财经（"净挑暴雷的买"为策略口号、未点名个股，简介只有会员推广）；
@@ -1505,6 +1534,7 @@ const BATCH_2026_11_03: SymbolViewGroup[] = [
 ];
 
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-11-08', groups: BATCH_2026_11_08 },
   { date: '2026-11-07', groups: BATCH_2026_11_07 },
   { date: '2026-11-06', groups: BATCH_2026_11_06 },
   { date: '2026-11-04', groups: BATCH_2026_11_04 },
