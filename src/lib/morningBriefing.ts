@@ -889,8 +889,99 @@ const BATCH_2026_11_02: MorningBriefing = {
   ],
 };
 
+/* 2026-11-10：核实要点——周一（11-09）大反弹后 CPI 日；VIX 用周一收盘 19.92（Cboe，
+   FRED VIXCLS 仍停在 11-06 的 25.6，已过期，弃用）；QQQ 均线 streak 按已发布各期
+   站内日线续算（50 日线之下第 8 天、200 日线之下第 3 天）；站内 Nasdaq 管线盘前
+   数据今晨部分滞后（多数持仓股仍显示周一收盘），个股盘前价改用外部来源并注明；
+   NVDA 两条取自 11-09 晚已核实的简报草稿（众议院函件 / 董事会声明），公司指引
+   与市场预期数字未对英伟达 IR 核实，本期不写。 */
+const BATCH_2026_11_10: MorningBriefing = {
+  date: '2026-11-10',
+  overnight: [
+    {
+      text: '美股周一（11-09）大涨：标普 500 涨 2.35% 收 7,549.94 点（4 月 8 日以来最佳单日），纳指涨 2.74% 收 25,253.14 点，道指涨 2.15%（+1,104 点）收 52,389.75 点，罗素 2000 涨约 3.2%；芯片股抄底与油价大跌推动反弹。',
+      source: 'Reuters / TipRanks / Univest',
+      url: 'https://www.tipranks.com/news/stock-market-today-nov-10-markets-await-the-consumer-inflation-report',
+    },
+    {
+      text: '油价大跌：Brent 周一跌 5.85% 至 92.57 美元/桶，周二盘前跌破 90 美元（8 月以来首次）；诱因是特朗普称美伊战争有望"很快"结束，伊朗局势降温预期升温。',
+      source: 'Reuters / Ocean Capital',
+      url: 'https://www.reuters.com/business/sp-500-dow-futures-climb-oil-slide-lifts-sentiment-2026-11-10/',
+    },
+    {
+      text: '黄仁勋须在 11 月 11 日（周三）前回复三位众议院委员会主席是否接受 11 月 18 日的闭门简报，谈英伟达防间谍安全制度及他与 Megaspeed 高管 Alice Huang 的往来；是邀请不是传票，无公开听证、无直播。',
+      source: '众议院中国特设委员会 11 月 4 日函件 / Reuters',
+    },
+    {
+      text: '英伟达董事会 11 月 8 日启动独立调查，黄仁勋同日在内部信中承认与 Alice Huang 的关系并道歉，留任 CEO；NVDA 周一逆市跌 4.3% 收 178.67 美元，盘中触及约七个月低点，周二盘前涨约 1.2–1.3%。',
+      source: 'NYT 10-29 / 董事会 11-08 声明 / MarketSnap / Reuters',
+      url: 'https://marketsnap.com/stock-market-summary-november-9-2026/',
+    },
+    {
+      text: 'Anthropic 预计今日正式启动 IPO 路演，定价在下周；公司 10 月 27 日已公开递交 S-1，上半年收入 162.9 亿美元。',
+      source: 'Reuters',
+      url: 'https://www.reuters.com/business/sp-500-dow-futures-climb-oil-slide-lifts-sentiment-2026-11-10/',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货盘前分化（约 8:08 ET，延迟约 10 分钟）：标普 500 期货 +0.02%（7,576 点）、纳指 100 期货 -0.40%（27,901 点）、道指期货 +0.37%（52,693 点）。',
+      source: 'Regards of Wall Street',
+      url: 'https://www.regardsofwallstreet.com/premarket',
+    },
+    {
+      text: 'QQQ 盘前约 677.73 美元（-0.24%）；个股盘前：NVDA 涨约 1.2–1.3%，CoreWeave 涨约 2.4%，MU 涨约 1%，AMD 跌约 1.7%（站内 8:30 ET 盘前价 499.99 美元，前收 508.58 美元），INTC 跌约 0.5–1.2%。',
+      source: 'TradingView / Reuters / KuCoin / 站内 /api/rhythm',
+      url: 'https://www.tradingview.com/news/benzinga:5e8176584094b:0-stock-market-today-dow-s-p-500-futures-rise-nasdaq-100-futures-fall-as-trump-signals-iran-war-to-end-fairly-soon-crwv-ttwo-bw-in-focus/',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日美东 8:30（美中 7:30）公布 10 月 CPI：市场预期环比 +0.3%（9 月 +0.6%）、同比 +3.9%（9 月 3.7%），核心 CPI 预期环比 +0.2%（9 月 +0.3%）。',
+      source: 'TipRanks / Reuters / Trading Economics',
+      url: 'https://www.tipranks.com/news/stock-market-today-nov-10-markets-await-the-consumer-inflation-report',
+    },
+    {
+      text: '美联储理事 Waller 周二表态支持 12 月加息，若通胀加速不排除加 50 个基点；CME FedWatch 显示市场定价 12 月加息概率约 82%。',
+      source: 'KuCoin（转述 Waller 表态）/ TradingView（FedWatch）',
+      url: 'https://www.kucoin.com/news/flash/u-s-stock-futures-mixed-ahead-of-cpi-data-fed-official-signals-potential-50-basis-point-hike',
+    },
+    {
+      text: '今日（美东）还将拍卖 10 年期国债，多位美联储官员讲话。',
+      source: 'Simon Hertz 盘前笔记',
+      url: 'https://simonhertz.com/2026/11/10/nasdaq-futures-dip-oil-slides-desk-notes-cpi-november-2026/',
+    },
+    {
+      text: '今日财报：盘后 D-Wave Quantum、CoreWeave、Capricor、Firefly Aerospace 等；自选/持仓股今日无财报。',
+      source: 'Stocktwits / 站内 /api/earnings',
+      url: 'https://stocktwits.com/news-articles/markets/equity/us-stock-futures-mixed-as-investors-await-cpi-data-amd-crwv-rklb-stocks-in-focus/cNGug0DR97u',
+    },
+    {
+      text: 'NVDA 财报在 11 月 17 日（周二）盘后，电话会美东 17:00；财报日已在站内财经日历（Nasdaq 官方日历接口）。',
+      source: '站内 /api/earnings（Nasdaq 官方日历）',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日（11-09）收 19.92，大跌 22.31%（前值 25.64）。',
+      source: 'Cboe / ad-hoc-news',
+      url: 'https://www.ad-hoc-news.de/boerse/news/marktberichte/vix-at-19-92-after-22-31-prozent-slide-cpi-ahead/70485950',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-11-09）收 679.35 美元（+3.54%）；收盘价低于 50 日线（720.23 美元）约 5.7%，连续第 8 个交易日收于 50 日线之下；低于 200 日线（681.17 美元）约 0.3%，连续第 3 个交易日收于 200 日线之下。',
+      source: '站内 /api/rhythm',
+    },
+    {
+      text: '10 年期美债收益率约 4.89%（盘前，7:24 ET）。',
+      source: 'CNBC（Simon Hertz 转述）',
+      url: 'https://simonhertz.com/2026/11/10/nasdaq-futures-dip-oil-slides-desk-notes-cpi-november-2026/',
+    },
+  ],
+};
+
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_11_10,
   BATCH_2026_11_06,
   BATCH_2026_11_05,
   BATCH_2026_11_04,
