@@ -895,6 +895,80 @@ const BATCH_2026_11_02: MorningBriefing = {
    数据今晨部分滞后（多数持仓股仍显示周一收盘），个股盘前价改用外部来源并注明；
    NVDA 两条取自 11-09 晚已核实的简报草稿（众议院函件 / 董事会声明），公司指引
    与市场预期数字未对英伟达 IR 核实，本期不写。 */
+const BATCH_2026_11_11: MorningBriefing = {
+  date: '2026-11-11',
+  overnight: [
+    {
+      text: '美国 10 月 CPI 环比 +0.4%，高于预期的 +0.3%，加息预期升温；高盛随即调整了此前预测。',
+      source: 'Piggo’s Substack / Longbridge',
+      url: 'https://piggostradingdesk.substack.com/p/tomorrows-market-picks-november-11',
+    },
+    {
+      text: '美股周二（11-10）全线收跌：标普 500 跌 0.38% 收 7,520.93 点，纳指跌 0.73% 收 25,065.87 点，道指跌 0.30% 收 52,231.89 点。',
+      source: 'DataForge / TradingView',
+      url: 'https://dataforgestudio.xyz/2026/11/morning-market-brief-wednesday-november-11-2026/',
+    },
+    {
+      text: 'CoreWeave 三季度营收超预期并上调全年指引，盘前涨约 13%。',
+      source: 'Stocktwits / Upstox / TradingView',
+      url: 'https://stocktwits.com/news-articles/markets/equity/s-and-p-500-nasdaq-futures-rise-premarket-crwv-gpro-spcx-nvda-nlst-stocks-in-focus/cNGug0DR97u',
+    },
+    {
+      text: '布伦特原油从两个月低点反弹，盘前涨约 2% 至 93.25 美元/桶；霍尔木兹海峡附近航运遇袭，供应担忧未散。',
+      source: 'TradingView / Stocktwits',
+      url: 'https://www.tradingview.com/news/benzinga:0da05cc35094b:0-stock-market-today-dow-jones-s-p-500-futures-rise-as-bessent-urges-us-china-to-de-risk-crwv-rgti-fnv-in-focus/',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货盘前齐涨（约 06:35 ET）：纳指 100 期货 +1.8%（28,355 点）、标普 500 期货 +0.8%（7,607 点）、道指期货 +0.1%（52,371 点）。',
+      source: 'Upstox / Longbridge',
+      url: 'https://upstox.com/news/market-news/us-stocks/dow-jones-s-and-p-500-nasdaq-futures-hint-positive-opening-on-nov-11-core-weave-tech-stocks-in-focus/article-203309/',
+    },
+    {
+      text: 'QQQ 盘前约 688.51 美元（+2.04%，08:26 ET）；个股盘前：CoreWeave 涨约 13%，NVDA 涨约 3%（前两个交易日累计跌 9.5%），INTC 涨约 5%。',
+      source: 'Finnhub / TradingView / KuCoin',
+      url: 'https://www.kucoin.com/news/flash/us-major-stock-index-futures-rise-nasdaq-futures-up-1-67',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日无重要宏观数据公布；退伍军人节，美国债市休市。',
+      source: 'TradingView / Stocktwits',
+      url: 'https://stocktwits.com/news-articles/markets/equity/s-and-p-500-nasdaq-futures-rise-premarket-crwv-gpro-spcx-nvda-nlst-stocks-in-focus/cNGug0DR97u',
+    },
+    {
+      text: '今日是黄仁勋回复是否出席 11 月 18 日闭门简报的截止日（众议院三位委员会主席 11 月 4 日函件所定）。',
+      source: '众议院中国特设委员会 11 月 4 日函件 / Reuters',
+    },
+    {
+      text: '今日财报：Kenvue 盘前，Brighthouse Financial、Mosaic、Corteva 盘后；自选/持仓股今日无财报。',
+      source: 'DataForge / Stocktwits',
+      url: 'https://dataforgestudio.xyz/2026/11/morning-market-brief-wednesday-november-11-2026/',
+    },
+    {
+      text: 'NVDA 财报在 11 月 17 日（周二）盘后，电话会美东 17:00；财报日已在站内财经日历（Nasdaq 官方日历接口）。',
+      source: '站内 /api/earnings（Nasdaq 官方日历）',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日（11-10）收 19.46，跌 2.31%（前值 19.92）。',
+      source: 'Cboe / MarketWatch',
+      url: 'https://www.ad-hoc-news.de/boerse/marktberichte/vix-closes-at-19-46-as-hot-us-inflation-keeps-rate-fears-elevated/70492013',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-11-10）收 674.76 美元（-0.68%）；收盘价低于 50 日线（719.39 美元）约 6.2%，连续第 9 个交易日收于 50 日线之下；低于 200 日线（681.42 美元）约 1.0%，连续第 4 个交易日收于 200 日线之下。',
+      source: '站内 /api/rhythm',
+    },
+    {
+      text: '10 年期美债收益率约 4.98%（盘前），逼近 5%。',
+      source: 'DataForge',
+      url: 'https://dataforgestudio.xyz/2026/11/morning-market-brief-wednesday-november-11-2026/',
+    },
+  ],
+};
+
 const BATCH_2026_11_10: MorningBriefing = {
   date: '2026-11-10',
   overnight: [
@@ -981,6 +1055,7 @@ const BATCH_2026_11_10: MorningBriefing = {
 
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_11_11,
   BATCH_2026_11_10,
   BATCH_2026_11_06,
   BATCH_2026_11_05,
