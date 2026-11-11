@@ -133,7 +133,12 @@ export default function RhythmChart({
       return { hi: Math.max(...vals), lo: Math.min(...vals) };
     };
 
-    /** 黄金分割参考线：金色虚线，轴上标比例 */
+    /**
+     * 黄金分割参考线：金色虚线，轴上只标价。
+     * 之前轴标签带了比例 title（+0.786 这类），库把它和价格画成左右两块宽标签，
+     * 价格轴被撑到约 1/3 屏宽，K线最右边一个月被挤没了。比例改放左上角图例，
+     * 轴上只留价格方块（和普通刻度一样宽），K线不再被挡。
+     */
     const drawFibLines = (s: {
       createPriceLine: (opts: CreatePriceLineOptions) => unknown;
     }) => {
@@ -149,12 +154,11 @@ export default function RhythmChart({
           lineStyle: LineStyle.Dashed,
           axisLabelVisible: true,
           axisLabelColor: pill,
-          title: fibRatioLabel(lv),
         });
       }
     };
 
-    /** 最后一根日线收盘线：玫瑰红虚线，轴上标价，左上角图例给名字 */
+    /** 最后一根日线收盘线：玫瑰红虚线，轴上标价，左上角图例给名字（不带 title，免得轴标签变宽） */
     const drawPrevCloseLine = (s: {
       createPriceLine: (opts: CreatePriceLineOptions) => unknown;
     }) => {
@@ -165,11 +169,10 @@ export default function RhythmChart({
         lineWidth: 1,
         lineStyle: LineStyle.Dashed,
         axisLabelVisible: true,
-        title: prevCloseLabel.text,
       });
     };
 
-    /** 关键价位线：细虚线 + 轴上小标签，不参与自动缩放（超出可视范围就自然裁掉） */
+    /** 关键价位线：细虚线 + 轴上标价，名字放左上角图例（不带 title，免得轴标签变宽）；不参与自动缩放（超出可视范围就自然裁掉） */
     const drawKeyLevels = (s: {
       createPriceLine: (opts: CreatePriceLineOptions) => unknown;
     }) => {
@@ -181,7 +184,6 @@ export default function RhythmChart({
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
           axisLabelVisible: true,
-          title: k.label,
         });
       }
     };
@@ -456,13 +458,27 @@ export default function RhythmChart({
           {fibLevels && fibLevels.length > 0 && (
             <span>
               <span className="inline-block w-2.5 h-0 border-t border-dashed border-yellow-600/80 mr-1 align-middle" />
-              {tx(lang, 'Fibonacci', '黄金分割')}
+              {tx(lang, 'Fibonacci', '黄金分割')}{' '}
+              {[...fibLevels]
+                .sort((a, b) => b.price - a.price)
+                .map((lv) => (
+                  <span key={`${lv.ratio}-${lv.price}`} className="whitespace-nowrap mr-2">
+                    {fibRatioLabel(lv)}·{lv.price.toFixed(2)}
+                  </span>
+                ))}
             </span>
           )}
           {showKeyLevels && keyLevels && keyLevels.length > 0 && (
             <span>
               <span className="inline-block w-2.5 h-0 border-t border-dashed border-slate-400/70 mr-1 align-middle" />
-              {tx(lang, 'Key levels', '关键价位')}
+              {tx(lang, 'Key levels', '关键价位')}{' '}
+              {[...keyLevels]
+                .sort((a, b) => b.price - a.price)
+                .map((k) => (
+                  <span key={`${k.label}-${k.price}`} className="whitespace-nowrap mr-2">
+                    {k.label}·{k.price.toFixed(2)}
+                  </span>
+                ))}
             </span>
           )}
           {hasMarkers && (
