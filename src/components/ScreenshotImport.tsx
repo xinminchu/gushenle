@@ -3,14 +3,16 @@
 /**
  * 券商截图批量导入：在记忆页选多张交易历史截图 -> Gemini vision 识别
  * -> 预览勾选 -> 批量记入操作记录，并按日期从旧到新同步到持仓（买入加权成本，卖出扣减股数）。
- * 已存在于操作记录的交易自动去重（不重复记，也不重复同步）。
+ * 已存在于操作记录的交易自动去重（不重复记）。
+ * 例外：已存在、但从未同步到持仓的记录会单独标出（「已存在 · 未同步到持仓」），
+ * 勾选后只补同步、不重复记账——流水与持仓是两本账，去重不能默认"已同步"。
  */
 import { useRef, useState } from 'react';
 import { Camera, CheckCircle2, Loader2, XCircle, Upload } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { tx } from '@/lib/hant';
 import { loadOperations } from '@/lib/operations';
-import { saveOperationAndSync } from '@/lib/positions';
+import { saveOperationAndSync, applyOperationToPositions, lastSyncAt, markSynced } from '@/lib/positions';
 
 interface ScannedOp {
   date: string;
@@ -20,6 +22,10 @@ interface ScannedOp {
   price: number;
   checked: boolean;
   dup: boolean;
+  /** 已存在、且同步日志里没有它的同步记录：可勾选只补同步，不重复记账 */
+  dupUnsynced?: boolean;
+  /** 已存在时对应操作记录的 id（补同步用） */
+  dupOpId?: string;
 }
 
 type Phase = 'idle' | 'working' | 'preview' | 'done';
@@ -193,9 +199,12 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
           tx(lang, 'No trades recognized — try clearer screenshots', '没识别出交易记录，换更清晰的截图试试'),
         );
       }
-      // 去重：跟已有操作记录比
-      const existing = new Set(
-        loadOperations().map((r) =>
+      // 去重：跟已有操作记录比。注意"记录已存在"不等于"已同步到持仓"——
+      // 流水和持仓是两本账，一条记录可能只进了流水、从未动过持仓。
+      // 这种记录单独标出，可勾选只补同步（不重复记账）。
+      const existingByKey = new Map<string, string>();
+      for (const r of loadOperations()) {
+        existingByKey.set(
           dupKey({
             symbol: r.symbol,
             date: r.date,
@@ -203,12 +212,22 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
             qty: r.qty ?? 0,
             price: r.price,
           }),
-        ),
-      );
+          r.id,
+        );
+      }
       const seen = new Set<string>();
       for (const o of all) {
         const k = dupKey(o);
-        if (existing.has(k) || seen.has(k)) {
+        const exId = existingByKey.get(k);
+        if (exId !== undefined) {
+          o.dup = true;
+          o.checked = false;
+          o.dupOpId = exId;
+          // 只有第一次出现才可补同步；同一批里重复出现的是纯重复。
+          // lastSyncAt 为空也可能是同步日志被裁剪（只留最近 200 条）的老记录，
+          // 所以补同步默认不勾选，由用户逐笔确认。
+          if (!seen.has(k) && lastSyncAt(exId) === null) o.dupUnsynced = true;
+        } else if (seen.has(k)) {
           o.dup = true;
           o.checked = false;
         }
@@ -238,13 +257,31 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
   };
 
   const confirmImport = () => {
-    // 按日期从旧到新同步：同一只股票先买后卖，卖出才不会因持仓不足失败
+    // 按日期从旧到新同步：同一只股票先买后卖，卖出才不会因持仓不足失败。
+    // 未同步的重复记录（dupUnsynced）只补同步、不重复记账。
     const picked = ops
-      .filter((o) => o.checked && !o.dup)
+      .filter((o) => o.checked && (!o.dup || o.dupUnsynced))
       .sort((a, b) => a.date.localeCompare(b.date));
     const synced: string[] = [];
+    const resynced: string[] = [];
     const failed: string[] = [];
     for (const o of picked) {
+      if (o.dup && o.dupUnsynced && o.dupOpId) {
+        const r = applyOperationToPositions({
+          symbol: o.symbol,
+          action: o.action,
+          price: o.price,
+          qty: o.qty,
+          date: o.date,
+        });
+        if (r.ok) {
+          markSynced(o.dupOpId);
+          resynced.push(r.msg);
+        } else {
+          failed.push(r.msg);
+        }
+        continue;
+      }
       const { syncMsg, syncOk } = saveOperationAndSync({
         symbol: o.symbol,
         action: o.action,
@@ -257,9 +294,18 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
       if (syncMsg) (syncOk ? synced : failed).push(syncMsg);
     }
     onImported();
+    const importedCount = picked.filter((o) => !o.dup).length;
     const syncLine =
       synced.length > 0
         ? tx(lang, `Holdings synced: ${synced.join('；')}`, `持仓已同步：${synced.join('；')}`)
+        : '';
+    const resyncLine =
+      resynced.length > 0
+        ? tx(
+            lang,
+            `Resynced ${resynced.length}: ${resynced.join('；')}`,
+            `补同步 ${resynced.length} 笔：${resynced.join('；')}`,
+          )
         : '';
     const failLine =
       failed.length > 0
@@ -269,11 +315,16 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
             `${failed.length} 笔没能同步到持仓：${failed.join('；')}——可去记忆页点这条记录下的「同步到持仓」再试。`,
           )
         : '';
+    const inner = [syncLine, resyncLine].filter(Boolean).join('；');
+    const head =
+      importedCount > 0
+        ? tx(lang, `Imported ${importedCount} trades ✓`, `已导入 ${importedCount} 笔 ✓`)
+        : tx(lang, 'Nothing new to import ✓', '没有新交易导入 ✓');
     setResult(
       tx(
         lang,
-        `Imported ${picked.length} trades ✓${syncLine ? ` (${syncLine})` : ''}${failLine ? ` ${failLine}` : ''}`,
-        `已导入 ${picked.length} 笔 ✓${syncLine ? `（${syncLine}）` : ''}${failLine ? ` ${failLine}` : ''}`,
+        `${head}${inner ? ` (${inner})` : ''}${failLine ? ` ${failLine}` : ''}`,
+        `${head}${inner ? `（${inner}）` : ''}${failLine ? ` ${failLine}` : ''}`,
       ),
     );
     setPhase('done');
@@ -335,6 +386,15 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
               `识别出 ${ops.length} 笔——不对的取消勾选，确认后导入：`,
             )}
           </p>
+          {ops.some((o) => o.dupUnsynced) && (
+            <p className="text-[11px] text-amber-300 leading-relaxed">
+              {tx(
+                lang,
+                'Some entries already exist but were never synced to holdings — check them to sync only, without duplicating the journal.',
+                '有几笔记录已存在、但从未同步到持仓——勾选可只补同步，不会重复记账。',
+              )}
+            </p>
+          )}
           <div className="max-h-64 overflow-y-auto rounded-lg border border-slate-800">
             <table className="w-full text-[11px]">
               <thead className="sticky top-0 bg-slate-800">
@@ -349,12 +409,17 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
               </thead>
               <tbody>
                 {ops.map((o, i) => (
-                  <tr key={i} className={`border-t border-slate-800 ${o.dup ? 'opacity-40' : ''}`}>
+                  <tr
+                    key={i}
+                    className={`border-t border-slate-800 ${
+                      o.dupUnsynced ? 'bg-amber-950/40' : o.dup ? 'opacity-40' : ''
+                    }`}
+                  >
                     <td className="py-1.5 px-2">
                       <input
                         type="checkbox"
                         checked={o.checked}
-                        disabled={o.dup}
+                        disabled={o.dup && !o.dupUnsynced}
                         onChange={() => toggle(i)}
                         className="w-3.5 h-3.5 accent-emerald-500"
                       />
@@ -365,6 +430,12 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
                       {o.action === 'buy' ? tx(lang, 'Buy', '买入') : tx(lang, 'Sell', '卖出')}
                       {o.dup && (
                         <span className="text-slate-500"> · {tx(lang, 'dup', '已存在')}</span>
+                      )}
+                      {o.dupUnsynced && (
+                        <span className="text-amber-300">
+                          {' '}
+                          · {tx(lang, 'not synced to holdings', '未同步到持仓')}
+                        </span>
                       )}
                     </td>
                     <td className="py-1.5 px-1 text-right text-slate-300 tabular-nums">{o.qty}</td>
@@ -383,11 +454,12 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
             </button>
             <button
               onClick={confirmImport}
-              disabled={!ops.some((o) => o.checked && !o.dup)}
+              disabled={!ops.some((o) => o.checked && (!o.dup || o.dupUnsynced))}
               className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs py-2 rounded-lg font-medium flex items-center justify-center gap-1"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />{' '}
-              {tx(lang, 'Import selected', '导入选中')} ({ops.filter((o) => o.checked && !o.dup).length})
+              {tx(lang, 'Import selected', '导入选中')} (
+              {ops.filter((o) => o.checked && (!o.dup || o.dupUnsynced)).length})
             </button>
           </div>
         </>
