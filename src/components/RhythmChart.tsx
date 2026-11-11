@@ -97,6 +97,27 @@ export default function RhythmChart({
   const [zoomed, setZoomed] = useState(false);
   const UP = upHex(scheme);
   const DOWN = downHex(scheme);
+  /**
+   * 图例放上边还是下边：算上下哪边空白多（轴范围取数据极值与参考价的并集，
+   * 下边空白 = 最低 K线到轴底的距离，上边空白 = 轴顶到最高 K线的距离），
+   * 空白多的一边放图例——IREN/NVDA 这种跌下来的，空白在下面，图例就放下面；
+   * 涨上去的股空白在上面，图例就放上面。免得图例盖住 K线。
+   */
+  const legendAtBottom = (() => {
+    if (series.length === 0) return false;
+    let dataLow = Infinity;
+    let dataHigh = -Infinity;
+    for (const p of series) {
+      const lo = p.low ?? p.close;
+      const hi = p.high ?? p.close;
+      if (lo < dataLow) dataLow = lo;
+      if (hi > dataHigh) dataHigh = hi;
+    }
+    const scaleVals = (fibScaleLevels && fibScaleLevels.length > 0 ? fibScaleLevels : fibLevels ?? []).map((l) => l.price);
+    const axisMin = Math.min(dataLow, ...scaleVals);
+    const axisMax = Math.max(dataHigh, ...scaleVals);
+    return dataLow - axisMin >= axisMax - dataHigh;
+  })();
   // 区间高低点数值：画在左上角 HTML 图例里，避免压住右侧价格轴
   const [hl, setHl] = useState<{ hi: number; lo: number } | null>(null);
   const hasMarkers = !!eventMarkers && eventMarkers.length > 0;
@@ -432,7 +453,7 @@ export default function RhythmChart({
         hasMarkers ||
         (showKeyLevels && keyLevels && keyLevels.length > 0)) &&
         chartType !== 'ohlc' && (
-        <div className="absolute top-1 left-1 right-20 flex flex-wrap items-center gap-x-2 gap-y-0.5 chart-legend text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
+        <div className={`absolute ${legendAtBottom ? 'bottom-7' : 'top-1'} left-1 right-20 flex flex-wrap items-center gap-x-2 gap-y-0.5 chart-legend text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none`}>
           {prevCloseLabel && (
             <span>
               <span className="inline-block w-2.5 h-0 border-t border-dashed border-rose-500/70 mr-1 align-middle" />
@@ -459,11 +480,20 @@ export default function RhythmChart({
               </span>
               {[...fibLevels]
                 .sort((a, b) => b.price - a.price)
-                .map((lv) => (
-                  <span key={`${lv.ratio}-${lv.price}`} className="whitespace-nowrap">
-                    {fibRatioLabel(lv)}·{lv.price.toFixed(2)}
-                  </span>
-                ))}
+                .map((lv) => {
+                  // 红绿色块的方向含义搬进图例：线上（压力/上行目标）用涨色，线下（支撑/下行目标）用跌色；
+                  // 颜色+价格一眼可读，但不再占价格轴、不盖 K线。
+                  const pill = lv.kind === 'resistance' || lv.kind === 'target-up' ? UP : DOWN;
+                  return (
+                    <span
+                      key={`${lv.ratio}-${lv.price}`}
+                      className="whitespace-nowrap rounded px-1.5 py-px text-[11px] font-semibold"
+                      style={{ background: pill, color: '#fff' }}
+                    >
+                      {fibRatioLabel(lv)}·{lv.price.toFixed(2)}
+                    </span>
+                  );
+                })}
             </>
           )}
           {showKeyLevels && keyLevels && keyLevels.length > 0 && (
@@ -493,7 +523,7 @@ export default function RhythmChart({
       )}
       {/* 四线图例 */}
       {chartType === 'ohlc' && (
-        <div className="absolute top-1 left-1 right-20 flex flex-wrap items-center gap-x-2 gap-y-0.5 chart-legend text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
+        <div className={`absolute ${legendAtBottom ? 'bottom-7' : 'top-1'} left-1 right-20 flex flex-wrap items-center gap-x-2 gap-y-0.5 chart-legend text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none`}>
           {(
             [
               [tx(lang, 'High', '最高'), OHLC_COLORS.high],
