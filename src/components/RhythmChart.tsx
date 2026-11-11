@@ -452,30 +452,34 @@ export default function RhythmChart({
             </>
           )}
           {fibLevels && fibLevels.length > 0 && (
-            <span>
-              <span className="inline-block w-2.5 h-0 border-t border-dashed border-yellow-600/80 mr-1 align-middle" />
-              {tx(lang, 'Fibonacci', '黄金分割')}{' '}
+            <>
+              <span>
+                <span className="inline-block w-2.5 h-0 border-t border-dashed border-yellow-600/80 mr-1 align-middle" />
+                {tx(lang, 'Fibonacci', '黄金分割')}
+              </span>
               {[...fibLevels]
                 .sort((a, b) => b.price - a.price)
                 .map((lv) => (
-                  <span key={`${lv.ratio}-${lv.price}`} className="whitespace-nowrap mr-2">
+                  <span key={`${lv.ratio}-${lv.price}`} className="whitespace-nowrap">
                     {fibRatioLabel(lv)}·{lv.price.toFixed(2)}
                   </span>
                 ))}
-            </span>
+            </>
           )}
           {showKeyLevels && keyLevels && keyLevels.length > 0 && (
-            <span>
-              <span className="inline-block w-2.5 h-0 border-t border-dashed border-slate-400/70 mr-1 align-middle" />
-              {tx(lang, 'Key levels', '关键价位')}{' '}
+            <>
+              <span>
+                <span className="inline-block w-2.5 h-0 border-t border-dashed border-slate-400/70 mr-1 align-middle" />
+                {tx(lang, 'Key levels', '关键价位')}
+              </span>
               {[...keyLevels]
                 .sort((a, b) => b.price - a.price)
                 .map((k) => (
-                  <span key={`${k.label}-${k.price}`} className="whitespace-nowrap mr-2">
+                  <span key={`${k.label}-${k.price}`} className="whitespace-nowrap">
                     {k.label}·{k.price.toFixed(2)}
                   </span>
                 ))}
-            </span>
+            </>
           )}
           {hasMarkers && (
             <span>
