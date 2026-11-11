@@ -134,31 +134,27 @@ export default function RhythmChart({
     };
 
     /**
-     * 黄金分割参考线：金色虚线，轴上只标价。
-     * 之前轴标签带了比例 title（+0.786 这类），库把它和价格画成左右两块宽标签，
-     * 价格轴被撑到约 1/3 屏宽，K线最右边一个月被挤没了。比例改放左上角图例，
-     * 轴上只留价格方块（和普通刻度一样宽），K线不再被挡。
+     * 黄金分割参考线：金色虚线，轴上不标（数值全在左上角图例）。
+     * 教训：轴标签再短也会把价格轴撑宽、挤占 K线——之前带比例 title 时轴占约 1/3 屏宽，
+     * 只留价格方块仍占约 1/5 屏宽、还盖住了图例最后一项。干脆轴上什么都不标，
+     * 线本身 + 图例里的"比例·价格"就是全部信息，K线不再被挡。
      */
     const drawFibLines = (s: {
       createPriceLine: (opts: CreatePriceLineOptions) => unknown;
     }) => {
       if (!fibLevels || fibLevels.length === 0) return;
       for (const lv of fibLevels) {
-        // 上方（压力/上行目标）用涨色块，下方（支撑/下行目标）用跌色块；
-        // 线保持金色虚线（黄金分割的身份），只给轴标签方块按方向上色。
-        const pill = lv.kind === 'resistance' || lv.kind === 'target-up' ? UP : DOWN;
         s.createPriceLine({
           price: lv.price,
           color: 'rgba(212, 160, 23, 0.6)',
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
-          axisLabelVisible: true,
-          axisLabelColor: pill,
+          axisLabelVisible: false,
         });
       }
     };
 
-    /** 最后一根日线收盘线：玫瑰红虚线，轴上标价，左上角图例给名字（不带 title，免得轴标签变宽） */
+    /** 最后一根日线收盘线：玫瑰红虚线，轴上不标（数值在左上角图例），免得轴标签挤占 K线 */
     const drawPrevCloseLine = (s: {
       createPriceLine: (opts: CreatePriceLineOptions) => unknown;
     }) => {
@@ -168,11 +164,11 @@ export default function RhythmChart({
         color: 'rgba(244, 63, 94, 0.55)',
         lineWidth: 1,
         lineStyle: LineStyle.Dashed,
-        axisLabelVisible: true,
+        axisLabelVisible: false,
       });
     };
 
-    /** 关键价位线：细虚线 + 轴上标价，名字放左上角图例（不带 title，免得轴标签变宽）；不参与自动缩放（超出可视范围就自然裁掉） */
+    /** 关键价位线：细虚线，轴上不标（名字+价格在左上角图例）；不参与自动缩放（超出可视范围就自然裁掉） */
     const drawKeyLevels = (s: {
       createPriceLine: (opts: CreatePriceLineOptions) => unknown;
     }) => {
@@ -183,7 +179,7 @@ export default function RhythmChart({
           color: k.color,
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
-          axisLabelVisible: true,
+          axisLabelVisible: false,
         });
       }
     };
@@ -436,7 +432,7 @@ export default function RhythmChart({
         hasMarkers ||
         (showKeyLevels && keyLevels && keyLevels.length > 0)) &&
         chartType !== 'ohlc' && (
-        <div className="absolute top-1 left-1 right-16 flex flex-wrap items-center gap-x-2 gap-y-0.5 chart-legend text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
+        <div className="absolute top-1 left-1 right-20 flex flex-wrap items-center gap-x-2 gap-y-0.5 chart-legend text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
           {prevCloseLabel && (
             <span>
               <span className="inline-block w-2.5 h-0 border-t border-dashed border-rose-500/70 mr-1 align-middle" />
@@ -493,7 +489,7 @@ export default function RhythmChart({
       )}
       {/* 四线图例 */}
       {chartType === 'ohlc' && (
-        <div className="absolute top-1 left-1 right-16 flex flex-wrap items-center gap-x-2 gap-y-0.5 chart-legend text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
+        <div className="absolute top-1 left-1 right-20 flex flex-wrap items-center gap-x-2 gap-y-0.5 chart-legend text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none">
           {(
             [
               [tx(lang, 'High', '最高'), OHLC_COLORS.high],
