@@ -1223,6 +1223,81 @@ const BATCH_2026_11_01: SymbolViewGroup[] = [
    无明确倾向）、投资TALK君 1515 期（无标的、无可辨倾向、无期限）、Money or Life
    （Anthropic 为非上市公司、无标的）、老王 6 条（均为疑问句/话题时间轴，
    未给出明确倾向与期限）。 */
+/* ---------------- 11/11 批：新云三大利空（Selina）+ Kova 继续 3 倍做空半导体 ----------------
+   水位线 2026-11-08；9 源全抓成功，共 20 条新条目，3 条入库（2 个观点 + 1 个持仓），18 条丢弃：
+   阳光财经 2 条（"微软突然又软了"无期限与理由、"英伟达抄底还是割肉"为开放提问，简介只有会员推广）；
+   视野 2 条（多话题标题清单，简介只有会员推广，无具体观点与时间戳）；
+   NaNa 2 条（"每天默念价值投资一百遍"无标的、"买巨头怎么全是雷"未点名，简介只有会员推广）；
+   Selina 直播 2 条（11.10 抄底提问、11.9 见底提问，简介无观点细节）；
+   投资TALK君 2 条（1517 期通胀与加息提问、1516 期"英伟达要卖吗"提问，简介只有链接）；
+   Kova YouTube 2 条（两条同名"黄仁勋捅破了AI泡沫？"提问式标题，疑似重复上传，简介只有网站链接）；
+   老王 6 条（均为台股内容，无美股标的观点）。
+   Kova Substack（最新仍为 11/05）、Money or Life（最新 11/07）无新内容。 */
+const BATCH_2026_11_11: SymbolViewGroup[] = [
+  {
+    symbol: 'CRWV',
+    label: '新云算力',
+    views: [
+      {
+        id: 'crwv-selina-2',
+        blogger: 'Selina聊美股',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '三大利空压顶，财报前别抄底，反弹只当减仓窗口',
+        reason:
+          '她认为微软退租旧款 GPU 算力、收紧星云合作导致机房延期、谷歌砸 170 亿美元自建数据中心，三件事合起来动摇了新云的底层逻辑：巨头正从外包转向自建。CRWV 订单约 67% 靠微软，租金涨价红利见顶，债券收益率冲到约 15%、全年利息近 9 亿美元而经营利润仅 2 亿多，抗风险能力弱。',
+        caveat:
+          'CRWV 财报是板块风向标：若订单、指引、融资与微软合作的回应超预期，判断即需修正；若财报爆雷，整个新云板块会被带崩。据视频简介提炼，未看正片。',
+        source: 'Selina聊美股',
+        published: '11/10',
+        note: '原片：https://www.youtube.com/watch?v=oF8RN2sbX3M',
+      },
+    ],
+  },
+  {
+    symbol: 'NBIS',
+    label: '新云算力',
+    views: [
+      {
+        id: 'nbis-selina-2',
+        blogger: 'Selina聊美股',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '别因相对稳健就冲进去抄底，板块联动不分好坏',
+        reason:
+          '她承认 NBIS 财务质地相对更好，但板块联动极强、情绪杀跌不分好坏：十月 CRWV 债暴跌时 NBIS 也跟跌一成，本周回调中跌幅甚至更大；NBIS 自身仍面临百亿美元级资本开支与融资压力，微软合作节奏变化同样会冲击收入确认。',
+        caveat:
+          '若 CRWV 财报超预期带动板块情绪修复，或 NBIS 在财报中给出订单与融资的明确利好，判断即需修正。据视频简介提炼，未看正片。',
+        source: 'Selina聊美股',
+        published: '11/10',
+        note: '原片：https://www.youtube.com/watch?v=oF8RN2sbX3M',
+      },
+    ],
+  },
+  {
+    symbol: 'SOX',
+    label: '费城半导体',
+    views: [
+      {
+        id: 'sox-kova-4-pos',
+        blogger: 'Kova动量交易',
+        stance: 'neutral',
+        horizon: 'short',
+        kind: 'position',
+        headline: '已披露：继续持有 3 倍做空半导体',
+        reason: '',
+        caveat:
+          '三倍杠杆做空有衰减与逼空风险；标题未披露具体工具、仓位大小与离场条件，大盘一侧未点名具体标的故未记入。',
+        source: 'Kova动量交易',
+        published: '11/10',
+        note: '原片：https://www.youtube.com/watch?v=P33eNFYM80U',
+      },
+    ],
+  },
+];
+
 /* ---------------- 11/08 批：中期选举后分化（Selina）+ 老王台股短视频 ----------------
    水位线 2026-11-07；9 源全抓成功，共 2 条真正新条目，1 个观点入库，1 条丢弃：
    Selina 11/07 晚「中期选举后，AI行情要变天？」（NVDA 长期分批越跌越买，1 条入库）；
@@ -1534,6 +1609,7 @@ const BATCH_2026_11_03: SymbolViewGroup[] = [
 ];
 
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-11-11', groups: BATCH_2026_11_11 },
   { date: '2026-11-08', groups: BATCH_2026_11_08 },
   { date: '2026-11-07', groups: BATCH_2026_11_07 },
   { date: '2026-11-06', groups: BATCH_2026_11_06 },
