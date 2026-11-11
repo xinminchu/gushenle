@@ -1,5 +1,5 @@
 // GET /api/macro —— 「分母」指标：30Y / 10Y 美债收益率（FRED DGS30/DGS10，免费 key）
-// + 「市场情绪」：VIX（FRED VIXCLS，需 key）与 CNN 贪婪指数（免 key，浏览器头）。
+// + 「市场情绪」：VIX（Cboe 官方优先、FRED 兜底）与 CNN 贪婪指数（免 key，浏览器头）。
 // 服务端缓存 6 小时（日度数据，不必频繁刷）。取不到就字段为 null，前端静默隐藏。
 import { NextResponse } from 'next/server';
 
@@ -23,6 +23,22 @@ async function fredLatest(seriesId: string, key: string): Promise<{ date: string
   for (const o of obs) {
     const v = parseFloat(o.value);
     if (o.value !== '.' && Number.isFinite(v)) return { date: o.date, value: v };
+  }
+  return null;
+}
+
+/** VIX：Cboe 官方延迟报价历史（VIX 的发布方就是 Cboe，免 key；收盘后更新）。
+ * FRED VIXCLS 滞后约 2 个交易日（2026-11-10/11 两天都给了 11-06 的过期数），故 Cboe 优先。 */
+async function cboeVixLatest(): Promise<{ date: string; value: number } | null> {
+  const r = await fetch('https://cdn.cboe.com/api/global/delayed_quotes/charts/historical/_VIX.json', {
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!r.ok) throw new Error(`cboe vix ${r.status}`);
+  const j = await r.json();
+  const rows: { date: string; close: string }[] = j?.data || [];
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const v = parseFloat(rows[i].close);
+    if (Number.isFinite(v)) return { date: rows[i].date, value: v };
   }
   return null;
 }
@@ -107,11 +123,19 @@ export async function GET() {
     denom.reason = 'no_key';
   }
 
-  // 市场情绪：VIX（需 key）+ CNN 贪婪指数（免 key）
+  // 市场情绪：VIX（Cboe 优先，FRED 兜底）+ CNN 贪婪指数（免 key）
   let vix: { date: string; value: number } | null = null;
-  if (key) {
+  let vixSource: string | null = null;
+  try {
+    vix = await cboeVixLatest();
+    if (vix) vixSource = 'Cboe';
+  } catch {
+    vix = null;
+  }
+  if (!vix && key) {
     try {
       vix = await fredLatest('VIXCLS', key);
+      if (vix) vixSource = 'FRED VIXCLS';
     } catch {
       vix = null;
     }
@@ -122,6 +146,7 @@ export async function GET() {
       ? {
           vix: vix ? Math.round(vix.value * 100) / 100 : null,
           vixDate: vix ? vix.date : null,
+          vixSource: vixSource,
           vixDateCN: vix ? fmtDateCN(vix.date) : null,
           vixDateEn: vix ? fmtDateEn(vix.date) : null,
           fearGreed: fg ? fg.score : null,

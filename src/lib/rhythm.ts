@@ -578,7 +578,7 @@ export interface RhythmResponse {
   availableRanges: string[];
   /** 主判断：永远锚定近 3 月 */
   judgment: Judgment;
-  source: 'nasdaq' | 'yahoo' | 'naver' | 'fred' | 'coinbase' | 'simulated';
+  source: 'nasdaq' | 'yahoo' | 'naver' | 'fred' | 'coinbase' | 'cboe' | 'simulated';
   updatedAt: string;
 }
 

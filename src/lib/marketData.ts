@@ -4,7 +4,7 @@
 
 import type { RhythmPoint } from '@/lib/rhythm';
 
-export type DataSource = 'nasdaq' | 'yahoo' | 'naver' | 'fred' | 'coinbase' | 'simulated';
+export type DataSource = 'nasdaq' | 'yahoo' | 'naver' | 'fred' | 'coinbase' | 'cboe' | 'simulated';
 
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -279,6 +279,41 @@ async function fetchFred(symbol: string): Promise<RhythmPoint[]> {
   return series;
 }
 
+/* ---------- Cboe（VIX 官方源，免 key；FRED VIXCLS 滞后约 2 个交易日） ---------- */
+async function fetchCboeVix(): Promise<RhythmPoint[]> {
+  const res = await fetch('https://cdn.cboe.com/api/global/delayed_quotes/charts/historical/_VIX.json', {
+    next: { revalidate: 3600 },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`Cboe status ${res.status}`);
+  const json = (await res.json()) as {
+    data?: { date: string; open: string; high: string; low: string; close: string }[];
+  };
+  const rows = json.data || [];
+  const cutoff = new Date();
+  cutoff.setFullYear(cutoff.getFullYear() - 3);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  const series: RhythmPoint[] = [];
+  for (const r of rows) {
+    if (r.date < cutoffStr) continue;
+    const close = parseFloat(r.close);
+    if (!Number.isFinite(close)) continue;
+    const open = parseFloat(r.open);
+    const high = parseFloat(r.high);
+    const low = parseFloat(r.low);
+    const c = Number(close.toFixed(2));
+    series.push({
+      date: r.date,
+      close: c,
+      open: Number.isFinite(open) ? Number(open.toFixed(2)) : c,
+      high: Number.isFinite(high) ? Number(high.toFixed(2)) : c,
+      low: Number.isFinite(low) ? Number(low.toFixed(2)) : c,
+    });
+  }
+  if (series.length < 2) throw new Error('Cboe returned too few points');
+  return series;
+}
+
 /* ---------- Coinbase（加密货币免 key；BTC 等） ---------- */
 async function fetchCoinbase(symbol: string): Promise<RhythmPoint[]> {
   // symbol 如 BTC-USD -> Coinbase product BTC-USD
@@ -435,11 +470,27 @@ export async function getFullSeries(symbol: string): Promise<{
   const isCrypto = /-USD$/i.test(key);
   if (isMacroFuture) {
     // 宏观期货/指数：FRED（美联储官方，需 key）；Yahoo 从机房 IP 被限，不可用
-    try {
-      series = await fetchFred(key);
-      source = 'fred';
-    } catch (e1) {
-      errors.fred = e1 instanceof Error ? e1.message : String(e1);
+    if (key === '^VIX') {
+      // VIX：Cboe 官方优先（FRED VIXCLS 滞后约 2 个交易日），FRED 兜底
+      try {
+        series = await fetchCboeVix();
+        source = 'cboe';
+      } catch (e0) {
+        errors.cboe = e0 instanceof Error ? e0.message : String(e0);
+        try {
+          series = await fetchFred(key);
+          source = 'fred';
+        } catch (e1) {
+          errors.fred = e1 instanceof Error ? e1.message : String(e1);
+        }
+      }
+    } else {
+      try {
+        series = await fetchFred(key);
+        source = 'fred';
+      } catch (e1) {
+        errors.fred = e1 instanceof Error ? e1.message : String(e1);
+      }
     }
   } else if (isCrypto) {
     // 加密货币：Coinbase（免 key）

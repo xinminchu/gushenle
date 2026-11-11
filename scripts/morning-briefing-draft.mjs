@@ -93,7 +93,7 @@ async function main() {
   try {
     const m = await getJSON(`${SITE}/api/macro?kind=sentiment`);
     if (m?.sentiment?.vix != null) {
-      vixLine = `VIX 上一交易日收盘 ${fmtNum(m.sentiment.vix, 1)}（口径：FRED VIXCLS，数据日期 ${m.sentiment.vixDate || '见接口'}）`;
+      vixLine = `VIX 上一交易日收盘 ${fmtNum(m.sentiment.vix, 1)}（口径：${m.sentiment.vixSource || 'Cboe'}，数据日期 ${m.sentiment.vixDate || '见接口'}）`;
     }
   } catch { /* 保持待查 */ }
 
@@ -136,7 +136,7 @@ ${calLines.join('\n')}
 
 ## 四、情绪市况（只写状态事实，不打分、不预测）
 
-- [ ] ${vixLine.replace('VIX 上一交易日收盘：__待查__（/api/macro 未返回）', '上一交易日 VIX 收盘 __（FRED VIXCLS 口径）')}
+- [ ] ${vixLine.replace('VIX 上一交易日收盘：__待查__（/api/macro 未返回）', '上一交易日 VIX 收盘 __（Cboe 口径）')}
 - [ ] ${qqqLine}；${maLine}
 
 ## 核对清单
