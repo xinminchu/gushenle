@@ -85,6 +85,24 @@ async function compressImage(file: File): Promise<{ data: string; mimeType: stri
 const dupKey = (o: { symbol: string; date: string; action: string; qty: number; price: number }) =>
   `${o.symbol}|${o.date}|${o.action}|${o.qty}|${o.price}`;
 
+type TradeFields = { symbol: string; date: string; action: string; qty: number; price: number };
+
+/**
+ * 近似同一笔（五项全等之外的兜底）：同一笔交易在不同券商页面里日期会差几天
+ * （成交日 vs 结算日），识别价格也会差 1–2 分——实测 MU 卖出已记为
+ * 2026-11-10 / $696.39，新截图识别成 11-09 / $696.38，全等匹配漏掉，
+ * 被当成新记录默认勾选。全等之外再判：代码/方向/股数全同、价格差 ≤ $0.025
+ * （约 2 分，留浮点余量）、日期差 ≤ 4 天（覆盖周末+假日的结算日偏移）。
+ */
+const sameTradeNear = (a: TradeFields, b: TradeFields): boolean => {
+  if (a.symbol !== b.symbol || a.action !== b.action || a.qty !== b.qty) return false;
+  if (Math.abs(a.price - b.price) > 0.025) return false;
+  const ta = Date.parse(a.date);
+  const tb = Date.parse(b.date);
+  if (Number.isNaN(ta) || Number.isNaN(tb)) return false;
+  return Math.abs(ta - tb) / 86400000 <= 4;
+};
+
 export default function ScreenshotImport({ onImported }: { onImported: () => void }) {
   const { lang } = useLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -202,36 +220,32 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
       // 去重：跟已有操作记录比。注意"记录已存在"不等于"已同步到持仓"——
       // 流水和持仓是两本账，一条记录可能只进了流水、从未动过持仓。
       // 这种记录单独标出，可勾选只补同步（不重复记账）。
-      const existingByKey = new Map<string, string>();
-      for (const r of loadOperations()) {
-        existingByKey.set(
-          dupKey({
-            symbol: r.symbol,
-            date: r.date,
-            action: r.action,
-            qty: r.qty ?? 0,
-            price: r.price,
-          }),
-          r.id,
-        );
-      }
-      const seen = new Set<string>();
+      const existingOps: (TradeFields & { id: string })[] = loadOperations().map((r) => ({
+        id: r.id,
+        symbol: r.symbol,
+        date: r.date,
+        action: r.action,
+        qty: r.qty ?? 0,
+        price: r.price,
+      }));
+      const seenOps: TradeFields[] = [];
+      const seenBefore = (o: TradeFields) =>
+        seenOps.some((s) => dupKey(s) === dupKey(o) || sameTradeNear(s, o));
       for (const o of all) {
-        const k = dupKey(o);
-        const exId = existingByKey.get(k);
-        if (exId !== undefined) {
+        const ex = existingOps.find((r) => dupKey(r) === dupKey(o) || sameTradeNear(r, o));
+        if (ex) {
           o.dup = true;
           o.checked = false;
-          o.dupOpId = exId;
+          o.dupOpId = ex.id;
           // 只有第一次出现才可补同步；同一批里重复出现的是纯重复。
           // lastSyncAt 为空也可能是同步日志被裁剪（只留最近 200 条）的老记录，
           // 所以补同步默认不勾选，由用户逐笔确认。
-          if (!seen.has(k) && lastSyncAt(exId) === null) o.dupUnsynced = true;
-        } else if (seen.has(k)) {
+          if (!seenBefore(o) && lastSyncAt(ex.id) === null) o.dupUnsynced = true;
+        } else if (seenBefore(o)) {
           o.dup = true;
           o.checked = false;
         }
-        seen.add(k);
+        seenOps.push(o);
       }
       // 按日期倒序
       all.sort((a, b) => b.date.localeCompare(a.date));
