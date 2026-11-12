@@ -895,6 +895,86 @@ const BATCH_2026_11_02: MorningBriefing = {
    数据今晨部分滞后（多数持仓股仍显示周一收盘），个股盘前价改用外部来源并注明；
    NVDA 两条取自 11-09 晚已核实的简报草稿（众议院函件 / 董事会声明），公司指引
    与市场预期数字未对英伟达 IR 核实，本期不写。 */
+const BATCH_2026_11_12: MorningBriefing = {
+  date: '2026-11-12',
+  overnight: [
+    {
+      text: '美股周三（11-11）全线反弹：纳指涨 1.60% 收 25,466.19 点，标普 500 涨 1.31% 收 7,619.38 点，道指涨 0.49% 收 52,486.49 点。',
+      source: 'Fool / Company Chronicle',
+      url: 'https://www.fool.com/coverage/stock-market-today/2026/11/11/stock-market-today-nov-11-stock-market-today-nov-11-nasdaq-surges-as-coreweave-s-25-rally-reignites-the-ai-trade/?source=iedfolrf0000001',
+    },
+    {
+      text: 'CoreWeave 涨 24.71% 至 60.77 美元，创 2025 年 4 月以来最佳单日表现；三季度营收 36.6 亿美元（同比 +168%），超预期的约 35.5 亿美元，并上调全年指引。',
+      source: 'Fool / XTB',
+      url: 'https://www.fool.com/coverage/stock-market-today/2026/11/11/stock-market-today-nov-11-stock-market-today-nov-11-nasdaq-surges-as-coreweave-s-25-rally-reignites-the-ai-trade/?source=iedfolrf0000001',
+    },
+    {
+      text: 'Nebius（NBIS）盘前公布三季度财报：营收 9.808 亿美元（同比 +571%），超预期的 9.075 亿美元；但 2026 年全年营收指引落到 30–34 亿美元区间下限，2027 年资本支出指引高达 400–450 亿美元，盘前跌约 10%。',
+      source: 'Reuters / Morningstar',
+      url: 'https://www.reuters.com/technology/nebius-beats-quarterly-revenue-estimates-strong-ai-demand-2026-11-12/',
+    },
+    {
+      text: 'NVDA 涨 2.87% 至 173.73 美元，终结两日连跌；费城半导体指数涨 5.66% 至 10,564.11 点。',
+      source: 'Longbridge',
+      url: 'https://longbridge.com/en/news/305213237',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货盘前分化（约 07:00 ET）：纳指 100 期货约 -0.9%（28,209 点）、标普 500 期货约 -0.4%（7,609 点）、道指期货约 +0.04%（52,597 点）。',
+      source: 'Reuters / Regards of Wall Street',
+      url: 'https://www.regardsofwallstreet.com/premarket',
+    },
+    {
+      text: 'NVDA 盘前跌约 7%：路透报道称董事会正在权衡罢免 CEO 黄仁勋，相关报道涉及其两起婚外情；芯片股盘前跟跌（INTC、MRVL、MU 跌 2.6–3.4%），CRWV 跌 7.2%。',
+      source: 'Reuters',
+      url: 'https://wnflsports.com/2026/11/12/nasdaq-futures-fall-as-nvidia-turmoil-rattles-ai-stocks/',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日 8:30 ET 公布初请失业金（截至 11 月 7 日当周），市场预期约 19.5 万人，前值 18.9 万人（57 年低点附近）。',
+      source: '美国劳工部 / TipRanks',
+      url: 'https://www.TipRanks.com/currencies/fx:usd-cny/economic-calendar',
+    },
+    {
+      text: '今日 10:00 ET 公布 10 月成屋销售年化（预期约 385 万套，前值 399 万套）；美联储官员讲话：Hammack 9:00、Barr 10:00、Goolsbee 11:30（均为 ET）。',
+      source: 'TipRanks',
+      url: 'https://www.TipRanks.com/currencies/fx:usd-cny/economic-calendar',
+    },
+    {
+      text: '今日 13:00 ET 拍卖 250 亿美元 30 年期国债（上次中标收益率 5.618%）；债市昨日因退伍军人节休市，今日恢复交易。',
+      source: 'TipRanks / Way of the Trader',
+      url: 'https://wayofthetrader.com/news/nq-week-ahead-november-9-13-2026',
+    },
+    {
+      text: '今日财报：Cisco、Applied Materials 盘后（美东 16:30 电话会）；NVDA 财报在 11 月 17 日（周二）盘后，电话会美东 17:00。',
+      source: 'Way of the Trader / 站内 /api/earnings（Nasdaq 官方日历）',
+      url: 'https://wayofthetrader.com/news/nq-week-ahead-november-9-13-2026',
+    },
+    {
+      text: '明日 8:30 ET 公布 10 月 PPI（预期环比 +0.4%，前值 +1.3%）。',
+      source: 'TipRanks',
+      url: 'https://www.TipRanks.com/currencies/fx:usd-cny/economic-calendar',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日（11-11）收 17.49，跌约 10.1%（前值 19.46）。',
+      source: 'Cboe（站内 /api/macro）',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-11-11）收 690.38 美元（+2.31%）；收盘价低于 50 日线（719.04 美元）约 4.0%，连续第 10 个交易日收于 50 日线之下；收回 200 日线（681.71 美元）之上约 1.3%，此前连续 4 个交易日收于 200 日线之下。',
+      source: '站内 /api/rhythm',
+    },
+    {
+      text: '10 年期美债收益率 4.98%（周二收盘；债市周三因退伍军人节休市，无新价）。',
+      source: '美国财政部 / World Money Roadmap',
+      url: 'https://worldmoneyroadmap.com/en/reports/2026-11-11-evening/',
+    },
+  ],
+};
+
 const BATCH_2026_11_11: MorningBriefing = {
   date: '2026-11-11',
   overnight: [
@@ -1055,6 +1135,7 @@ const BATCH_2026_11_10: MorningBriefing = {
 
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_11_12,
   BATCH_2026_11_11,
   BATCH_2026_11_10,
   BATCH_2026_11_06,
