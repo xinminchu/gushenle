@@ -1608,7 +1608,82 @@ const BATCH_2026_11_03: SymbolViewGroup[] = [
   },
 ];
 
+/* ---------------- 11/12 批：CRWV 财报大超预期（Selina 11.11 直播）+ NVDA 最大危机（TALK君 1518 期）+ 大盘反弹最简单部分走完（视野）
+   水位线 2026-11-11；今日 11 个新条目，3 个观点入库，8 条丢弃：
+   Kova Substack（最新仍为 11/05）、Money or Life（最新仍为 11/07）无新内容；
+   阳光财经（"ANT能不能买"为提问且 ANT 未上市，"达子盘后崩"为事实陈述，简介只有会员推广）；
+   视野 11/11 晚（多话题标题清单，无单一明确倾向；"持仓计划更新"未披露具体标的与数量，未记入持仓）；
+   NaNa（"为什么受伤的总是我"为情绪标题，无标的/倾向/期限）；
+   Kova YouTube（"双十一"直播标题无内容，简介只有网站链接）；
+   老王 4 条（均为台股内容，无美股标的观点）。 */
+const BATCH_2026_11_12: SymbolViewGroup[] = [
+  {
+    symbol: 'CRWV',
+    label: '新云算力',
+    views: [
+      {
+        id: 'crwv-selina-3',
+        blogger: 'Selina聊美股',
+        stance: 'bullish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '财报大超预期，资本支出持续性增加',
+        reason:
+          '她在 11 月 11 日晚直播里说 CRWV 财报大超预期、资本支出持续性增加，财报落地后短期情绪转向积极。',
+        caveat:
+          '仅凭标题提炼：财报超预期的具体口径与她的后续操作建议看正片；前一日她还提示财报前别抄底、反弹只当减仓窗口，财报落地后判断是否修正待正片确认；"重仓猛干"是节目提问，不是结论。',
+        source: 'Selina聊美股',
+        published: '11/11（美东 11/11 晚直播）',
+        note: '原片：https://www.youtube.com/watch?v=9MTqwsONkBA',
+      },
+    ],
+  },
+  {
+    symbol: 'NVDA',
+    label: '英伟达',
+    views: [
+      {
+        id: 'nvda-talkjun-2',
+        blogger: '投资TALK君',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '英伟达迎来最大危机',
+        reason:
+          '他在第 1518 期节目标题里说英伟达迎来最大危机，并给出开仓逻辑，是事件驱动的短期偏空。',
+        caveat:
+          '仅凭标题提炼："最大危机"的实质内容、"开仓逻辑"指的是抄底建仓还是做空、以及触发条件都要看正片；"最大危机"是节目措辞。',
+        source: '投资TALK君（第 1518 期）',
+        published: '11/11（美东 11/11 晚节目）',
+        note: '原片：https://www.youtube.com/watch?v=PUGJ4yhNt88',
+      },
+    ],
+  },
+  {
+    symbol: 'SPX',
+    label: '大盘',
+    views: [
+      {
+        id: 'spx-shiye-2',
+        blogger: '视野环球财经',
+        stance: 'cautious',
+        horizon: 'short',
+        kind: 'view',
+        headline: '大盘反弹最简单部分走完',
+        reason:
+          '他在 11 月 11 日盘后视频的标题里说大盘反弹最简单的一段已经走完，意思是接下来再往上走没那么容易。',
+        caveat:
+          '仅凭标题提炼：反弹后半段的判断依据与他的反转条件看正片；"最简单部分走完"是他对反弹节奏的描述，不等于看空大盘趋势。',
+        source: '视野环球财经',
+        published: '11/11（美东盘后视频）',
+        note: '原片：https://www.youtube.com/watch?v=84hnnVx-8AQ',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-11-12', groups: BATCH_2026_11_12 },
   { date: '2026-11-11', groups: BATCH_2026_11_11 },
   { date: '2026-11-08', groups: BATCH_2026_11_08 },
   { date: '2026-11-07', groups: BATCH_2026_11_07 },
