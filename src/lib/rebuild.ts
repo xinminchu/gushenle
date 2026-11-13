@@ -3,7 +3,7 @@
 // 用途：补录导入历史交易后，流水变全了，但持仓/已实现还是旧的部分同步结果——
 // 重放一遍，两本账重新对齐。重放前先把当前持仓+账户快照存一份，可一键恢复。
 
-import { loadOperations } from './operations';
+import { loadOperations, saveOperation, type OpAction } from './operations';
 import {
   loadPositions,
   savePositions,
@@ -135,5 +135,108 @@ export function restoreRebuildBackup(): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+// —— 以清单为准重建：整表替换流水 ——
+// 与上面的持仓快照（BACKUP_KEY）是两回事：这里备份的是「流水整表」。
+// 流水里若混有重复/缺失记录，怎么重放都对不平；以券商全量清单为准整表替换，
+// 才能得到确定性的结果。替换前整表备份并回读校验笔数，备份不成立绝不清表。
+const OPS_KEY = 'gushenle_operations_v1'; // 与 operations.ts 的 KEY 同值
+const OPS_BACKUP_KEY = 'gushenle:backup:ops-before-replace';
+
+export interface BackfillRow {
+  date: string;
+  symbol: string;
+  action: OpAction;
+  qty: number;
+  price: number;
+}
+
+export interface OpsBackupInfo {
+  savedAt: number;
+  count: number;
+}
+
+export function getOperationsBackupInfo(): OpsBackupInfo | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(OPS_BACKUP_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { savedAt?: number; ops?: unknown };
+    if (!Array.isArray(parsed?.ops)) return null;
+    return { savedAt: parsed.savedAt ?? 0, count: parsed.ops.length };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 以清单为准替换流水：现有流水整表备份（回读校验笔数一致才继续）→ 清空 →
+ * 逐行写入清单 → createdAt 按「操作日 + 清单顺序」改写，保证重放顺序与清单完全一致。
+ * 备份不成立时返回 null 且不动流水。持仓重建由调用方随后跑 rebuildPositionsFromOperations()。
+ */
+export function replaceOperationsWithRows(
+  rows: BackfillRow[],
+): { backedUp: number; written: number } | null {
+  if (typeof window === 'undefined') return null;
+  const current = loadOperations();
+  try {
+    window.localStorage.setItem(
+      OPS_BACKUP_KEY,
+      JSON.stringify({ savedAt: Date.now(), ops: current }),
+    );
+  } catch {
+    return null;
+  }
+  const info = getOperationsBackupInfo();
+  if (!info || info.count !== current.length) return null; // 备份没存稳，绝不清表
+
+  try {
+    window.localStorage.setItem(OPS_KEY, '[]');
+  } catch {
+    return null;
+  }
+  const ids: string[] = [];
+  for (const r of rows) {
+    const rec = saveOperation({
+      date: r.date,
+      symbol: r.symbol,
+      action: r.action,
+      price: r.price,
+      qty: r.qty,
+      source: 'import',
+      thesis: '清单重建',
+    });
+    ids.push(rec.id);
+  }
+  // createdAt 改写：与补录导入同一手法，单独一遍完成（失败则同日顺序退化为写入时刻）
+  try {
+    const raw = window.localStorage.getItem(OPS_KEY);
+    const list = raw ? (JSON.parse(raw) as Array<{ id: string; date: string; createdAt: number }>) : [];
+    const byId = new Map(list.map((o) => [o.id, o]));
+    ids.forEach((id, i) => {
+      const o = byId.get(id);
+      if (o) o.createdAt = Date.parse(o.date) + i;
+    });
+    window.localStorage.setItem(OPS_KEY, JSON.stringify(list));
+  } catch {
+    /* 改写失败不影响重建本身 */
+  }
+  return { backedUp: current.length, written: ids.length };
+}
+
+/** 把替换前的流水整表写回。返回恢复笔数；没有备份返回 0。持仓由调用方随后重放。 */
+export function restoreOperationsBackup(): number {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const raw = window.localStorage.getItem(OPS_BACKUP_KEY);
+    if (!raw) return 0;
+    const parsed = JSON.parse(raw) as { ops?: unknown };
+    if (!Array.isArray(parsed?.ops)) return 0;
+    window.localStorage.setItem(OPS_KEY, JSON.stringify(parsed.ops));
+    return parsed.ops.length;
+  } catch {
+    return 0;
   }
 }

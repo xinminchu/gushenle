@@ -24,7 +24,11 @@ import {
   rebuildPositionsFromOperations,
   restoreRebuildBackup,
   hasRebuildBackup,
+  replaceOperationsWithRows,
+  restoreOperationsBackup,
+  getOperationsBackupInfo,
   type RebuildResult,
+  type OpsBackupInfo,
 } from '@/lib/rebuild';
 import { trackFunnelEvent } from '@/lib/funnel';
 import { lastSyncAt, markSynced, SYNC_DUP_WINDOW_MS, saveOperationAndSync, undoSaveAndSync, type SaveAndSyncResult } from '@/lib/positions';
@@ -150,14 +154,23 @@ function readBackfillSummary(): BackfillSummary {
 function BackfillImport({ onChanged }: { onChanged: () => void }) {
   const { lang } = useLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<{ fresh: BackfillRow[]; dup: number; bad: number } | null>(null);
+  const [preview, setPreview] = useState<{
+    fresh: BackfillRow[];
+    valid: BackfillRow[];
+    dup: number;
+    bad: number;
+  } | null>(null);
   const [error, setError] = useState('');
   const [rebuildResult, setRebuildResult] = useState<RebuildResult | null>(null);
   const [summary, setSummary] = useState<BackfillSummary | null>(null);
   const [restoreMsg, setRestoreMsg] = useState('');
   const [backupExists, setBackupExists] = useState(false);
+  const [opsBackup, setOpsBackup] = useState<OpsBackupInfo | null>(null);
+  const [confirmReplace, setConfirmReplace] = useState(false);
+  const [actionMsg, setActionMsg] = useState('');
   useEffect(() => {
     setBackupExists(hasRebuildBackup());
+    setOpsBackup(getOperationsBackupInfo());
   }, []);
 
   const handleFile = async (file: File | null) => {
@@ -166,6 +179,8 @@ function BackfillImport({ onChanged }: { onChanged: () => void }) {
     setPreview(null);
     setRebuildResult(null);
     setRestoreMsg('');
+    setConfirmReplace(false);
+    setActionMsg('');
     try {
       const text = await file.text();
       const parsed: unknown = JSON.parse(text);
@@ -218,7 +233,7 @@ function BackfillImport({ onChanged }: { onChanged: () => void }) {
           fresh.push(row);
         }
       }
-      setPreview({ fresh, dup, bad });
+      setPreview({ fresh, valid, dup, bad });
     } catch (e) {
       setError(
         e instanceof Error
@@ -283,6 +298,52 @@ function BackfillImport({ onChanged }: { onChanged: () => void }) {
     setSummary(readBackfillSummary());
     setBackupExists(hasRebuildBackup());
     setRestoreMsg('');
+    onChanged();
+  };
+
+  /** 以所选清单为准重建：整表备份现有流水 → 只写入清单 → 全量重放 */
+  const handleReplace = () => {
+    if (!preview) return;
+    const replaced = replaceOperationsWithRows(preview.valid);
+    if (!replaced) {
+      setError(
+        tx(
+          lang,
+          'Backup of your current log failed — nothing was changed.',
+          '备份现有流水失败，已中止，流水没有改动。',
+        ),
+      );
+      return;
+    }
+    const result = rebuildPositionsFromOperations();
+    setRebuildResult(result);
+    setSummary(readBackfillSummary());
+    setBackupExists(hasRebuildBackup());
+    setOpsBackup(getOperationsBackupInfo());
+    setPreview(null);
+    setConfirmReplace(false);
+    setRestoreMsg('');
+    setActionMsg(
+      tx(
+        lang,
+        `Rebuilt from the file: your previous ${replaced.backedUp} log entries are backed up; ${replaced.written} file entries are now the log.`,
+        `已按清单重建：原流水 ${replaced.backedUp} 笔已整体备份，现流水为清单的 ${replaced.written} 笔。`,
+      ),
+    );
+    onChanged();
+  };
+
+  /** 恢复重建前备份的全部流水，并重放回那套流水对应的持仓 */
+  const handleRestoreOps = () => {
+    const n = restoreOperationsBackup();
+    if (!n) return;
+    const result = rebuildPositionsFromOperations();
+    setRebuildResult(result);
+    setSummary(readBackfillSummary());
+    setBackupExists(hasRebuildBackup());
+    setActionMsg(
+      tx(lang, `Restored the backed-up log (${n} entries) and replayed it.`, `已恢复备份的全部流水（${n} 笔）并重放。`),
+    );
     onChanged();
   };
 
@@ -355,6 +416,38 @@ function BackfillImport({ onChanged }: { onChanged: () => void }) {
               {tx(lang, 'Nothing new in this file — everything is already in your log.', '这个文件里没有新交易，都已经记过了。')}
             </p>
           )}
+          <div className="border-t border-slate-700/60 pt-2 space-y-2">
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              {tx(
+                lang,
+                `Authoritative rebuild: your current log (${loadOperations().length} entries) is backed up in full, then replaced by exactly the ${preview.valid.length} entries in this file and replayed. Use this when the log itself has duplicate or missing entries that no replay can reconcile. The backup can be restored below.`,
+                `以这份清单为准重建：现有流水（${loadOperations().length} 笔）先整体备份，然后只保留这份文件的 ${preview.valid.length} 笔并重放。流水本身有重复或缺失、怎么重放都对不平时用这个。备份可在下方恢复。`,
+              )}
+            </p>
+            {!confirmReplace ? (
+              <button
+                onClick={() => setConfirmReplace(true)}
+                className="w-full text-[11px] text-red-300/90 hover:text-red-200 border border-red-500/30 hover:border-red-500/50 rounded-lg px-2.5 py-1.5 transition-colors"
+              >
+                {tx(lang, 'Rebuild from this file only', '以这份清单为准重建')}
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmReplace(false)}
+                  className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs py-2 rounded-lg font-medium"
+                >
+                  {tx(lang, 'Cancel', '取消')}
+                </button>
+                <button
+                  onClick={handleReplace}
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white text-xs py-2 rounded-lg font-medium"
+                >
+                  {tx(lang, 'Confirm rebuild', '确认重建')}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -416,12 +509,29 @@ function BackfillImport({ onChanged }: { onChanged: () => void }) {
         <p className="text-[11px] text-emerald-300 leading-relaxed">{restoreMsg}</p>
       )}
 
+      {actionMsg && (
+        <p className="text-[11px] text-emerald-300 leading-relaxed">{actionMsg}</p>
+      )}
+
       {backupExists && (
         <button
           onClick={handleRestore}
           className="w-full text-[11px] text-amber-300/90 hover:text-amber-200 border border-amber-500/30 hover:border-amber-500/50 rounded-lg px-2.5 py-1.5 transition-colors"
         >
           {tx(lang, 'Restore pre-import backup', '恢复导入前备份')}
+        </button>
+      )}
+
+      {opsBackup && (
+        <button
+          onClick={handleRestoreOps}
+          className="w-full text-[11px] text-sky-300/90 hover:text-sky-200 border border-sky-500/30 hover:border-sky-500/50 rounded-lg px-2.5 py-1.5 transition-colors"
+        >
+          {tx(
+            lang,
+            `Restore the backed-up log (${opsBackup.count} entries) & replay`,
+            `恢复重建前的全部流水（${opsBackup.count} 笔）并重放`,
+          )}
         </button>
       )}
 
