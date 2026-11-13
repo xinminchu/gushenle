@@ -8,7 +8,16 @@ import { tx } from '@/lib/hant';
 import type { Lang } from '@/lib/i18n';
 import { loadPositions, savePositions, holdingDays, sectorOf, setUniverseSectors, type Position } from '@/lib/positions';
 import { loadUniverse } from '@/lib/universe';
-import { loadAccount, saveAccount, todayStr, type AccountInfo } from '@/lib/account';
+import {
+  loadAccount,
+  saveAccount,
+  todayStr,
+  adjustmentsTotal,
+  addCashAdjustment,
+  removeCashAdjustment,
+  type AccountInfo,
+  type CashAdjustmentKind,
+} from '@/lib/account';
 import { SYNC_EVENT } from '@/lib/userSync';
 import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
 import { statusLabel, type RhythmResponse } from '@/lib/rhythm';
@@ -74,6 +83,12 @@ export default function PortfolioTab({
   const [acctCapital, setAcctCapital] = useState('');
   const [acctRealized, setAcctRealized] = useState('');
   const [acctError, setAcctError] = useState('');
+  // 非交易现金项录入（利息/分红/规费/其他）：增删即时落盘，不等账户表单保存
+  const [adjDate, setAdjDate] = useState('');
+  const [adjKind, setAdjKind] = useState<CashAdjustmentKind>('interest');
+  const [adjAmount, setAdjAmount] = useState('');
+  const [adjNote, setAdjNote] = useState('');
+  const [adjError, setAdjError] = useState('');
   const [quotes, setQuotes] = useState<Record<string, RhythmResponse | null>>({});
   const [refreshing, setRefreshing] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -288,8 +303,9 @@ export default function PortfolioTab({
     }
   });
   const realized = account?.realized ?? 0;
-  // 总盈亏 = 持仓浮动盈亏 + 已落袋的：股票涨了，总资产可以超过投入本金
-  const totalPnl = totalValue - totalCost + realized;
+  const adjTotal = adjustmentsTotal(account);
+  // 总盈亏 = 持仓浮动盈亏 + 已落袋的 + 非交易现金项（利息/分红/规费）：股票涨了，总资产可以超过投入本金
+  const totalPnl = totalValue - totalCost + realized + adjTotal;
   const totalPnlPct =
     account && account.capital > 0
       ? (totalPnl / account.capital) * 100
@@ -298,8 +314,8 @@ export default function PortfolioTab({
         : 0;
   const totalDayPnlPct = totalValue - totalDayPnl > 0 ? (totalDayPnl / (totalValue - totalDayPnl)) * 100 : 0;
 
-  // 现金 = 投入本金 − 持仓总成本 + 已实现盈亏：只随买卖变，不随涨跌变
-  const cashValue = account ? account.capital - totalCost + realized : null;
+  // 现金 = 投入本金 − 持仓总成本 + 已实现盈亏 + 非交易现金项：只随买卖与现金项变，不随涨跌变
+  const cashValue = account ? account.capital - totalCost + realized + adjTotal : null;
   // 总资产 = 现金 + 持仓总市值：浮动，股票涨了可超本金
   const totalEquity = cashValue != null ? cashValue + totalValue : totalValue;
   // 仓位分母：设了账户就用总资产，没设回退到持仓总市值
@@ -423,6 +439,10 @@ export default function PortfolioTab({
     setAcctCapital(account ? String(account.capital) : '');
     setAcctRealized(account?.realized ? String(account.realized) : '');
     setAcctError('');
+    setAdjDate(todayStr());
+    setAdjAmount('');
+    setAdjNote('');
+    setAdjError('');
     setShowAccount(true);
   };
   const saveAccountEditor = () => {
@@ -443,6 +463,8 @@ export default function PortfolioTab({
       return;
     }
     const info: AccountInfo = {
+      // 保留分股已实现与非交易现金项：这个表单只管券商/本金/总已实现，别把另外两本账抹了
+      ...(account ?? {}),
       brokerage: b,
       capital: c,
       realized: Math.round(r * 100) / 100,
@@ -451,6 +473,43 @@ export default function PortfolioTab({
     saveAccount(info);
     setAccount(info);
     setShowAccount(false);
+  };
+
+  const ADJ_KIND_LABEL: Record<CashAdjustmentKind, { en: string; zh: string }> = {
+    interest: { en: 'Margin interest', zh: '保证金利息' },
+    dividend: { en: 'Dividend', zh: '分红' },
+    fee: { en: 'Fees', zh: '规费' },
+    other: { en: 'Other', zh: '其他' },
+  };
+  const handleAddAdjustment = () => {
+    const date = adjDate || todayStr();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) {
+      setAdjError(tx(lang, 'Date format is off', '日期格式不对'));
+      return;
+    }
+    const amount = Number(String(adjAmount).replace(/,/g, ''));
+    if (!Number.isFinite(amount) || amount === 0) {
+      setAdjError(tx(lang, 'Enter a non-zero amount (negative for charges)', '金额填个非零数字，支出用负数'));
+      return;
+    }
+    const next = addCashAdjustment({
+      date,
+      kind: adjKind,
+      amount,
+      ...(adjNote.trim() ? { note: adjNote.trim() } : {}),
+    });
+    if (!next) {
+      setAdjError(tx(lang, 'Set up the account first', '先把账户保存了再加'));
+      return;
+    }
+    setAccount(next);
+    setAdjAmount('');
+    setAdjNote('');
+    setAdjError('');
+  };
+  const handleRemoveAdjustment = (id: string) => {
+    const next = removeCashAdjustment(id);
+    if (next) setAccount(next);
   };
 
   return (
@@ -555,6 +614,92 @@ export default function PortfolioTab({
               className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
             />
           </div>
+          {account && (
+            <div className="border-t border-slate-800 pt-3 space-y-2">
+              <div className="flex items-baseline justify-between">
+                <span className="text-[11px] text-slate-400">
+                  {tx(lang, 'Non-trade cash items (interest / dividends / fees)', '非交易现金项（利息 / 分红 / 规费）')}
+                </span>
+                <span className="text-[11px] text-slate-500 tabular-nums">
+                  {tx(lang, 'Total', '合计')} {adjTotal < 0 ? '-' : ''}$
+                  {Math.abs(adjTotal).toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              {(account.adjustments ?? []).length > 0 && (
+                <div className="space-y-1">
+                  {[...(account.adjustments ?? [])]
+                    .sort((x, y) => x.date.localeCompare(y.date))
+                    .map((adj) => (
+                      <div key={adj.id} className="flex items-center gap-2 text-[11px] bg-slate-800/50 rounded-lg px-2.5 py-1.5">
+                        <span className="text-slate-500 tabular-nums">{adj.date}</span>
+                        <span className="text-slate-300">{tx(lang, ADJ_KIND_LABEL[adj.kind].en, ADJ_KIND_LABEL[adj.kind].zh)}</span>
+                        {adj.note && <span className="text-slate-500 truncate">{adj.note}</span>}
+                        <span className={`ml-auto tabular-nums font-medium ${adj.amount >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {adj.amount >= 0 ? '+' : '-'}$
+                          {Math.abs(adj.amount).toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}
+                        </span>
+                        <button
+                          onClick={() => handleRemoveAdjustment(adj.id)}
+                          className="text-slate-500 hover:text-rose-300 px-1"
+                          aria-label={tx(lang, 'Delete', '删除')}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="date"
+                  value={adjDate}
+                  onChange={(e) => setAdjDate(e.target.value)}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+                />
+                <select
+                  value={adjKind}
+                  onChange={(e) => setAdjKind(e.target.value as CashAdjustmentKind)}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+                >
+                  {(Object.keys(ADJ_KIND_LABEL) as CashAdjustmentKind[]).map((k) => (
+                    <option key={k} value={k}>
+                      {tx(lang, ADJ_KIND_LABEL[k].en, ADJ_KIND_LABEL[k].zh)}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={adjAmount}
+                  onChange={(e) => {
+                    setAdjAmount(e.target.value);
+                    setAdjError('');
+                  }}
+                  inputMode="decimal"
+                  placeholder={tx(lang, 'Amount $ (charges negative)', '金额 $（支出填负数）')}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+                <input
+                  value={adjNote}
+                  onChange={(e) => setAdjNote(e.target.value)}
+                  placeholder={tx(lang, 'Note (optional)', '备注（可空）')}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              {adjError && <div className="text-[11px] text-rose-400">{adjError}</div>}
+              <button
+                onClick={handleAddAdjustment}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs py-2 rounded-lg font-medium transition-colors"
+              >
+                {tx(lang, 'Add cash item', '添加现金项')}
+              </button>
+              <p className="text-[10px] text-slate-600 leading-relaxed">
+                {tx(
+                  lang,
+                  'Interest, dividends and trading fees are not trade P&L — logging them here keeps realized P&L clean and lets cash reconcile to the cent with your brokerage.',
+                  '利息、分红、规费不是买卖盈亏：记在这里，已实现盈亏保持干净，现金也能和券商对到分。',
+                )}
+              </p>
+            </div>
+          )}
           {acctError && <div className="text-[11px] text-rose-400">{acctError}</div>}
           <div className="flex gap-2">
             <button

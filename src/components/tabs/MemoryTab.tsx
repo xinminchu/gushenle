@@ -19,7 +19,7 @@ import {
 } from '@/lib/operations';
 import { applyOperationToPositions } from '@/lib/positions';
 import { loadPositions, type Position } from '@/lib/positions';
-import { loadAccount } from '@/lib/account';
+import { loadAccount, adjustmentsTotal } from '@/lib/account';
 import {
   rebuildPositionsFromOperations,
   restoreRebuildBackup,
@@ -141,7 +141,7 @@ function readBackfillSummary(): BackfillSummary {
   return {
     positions,
     realized: r2(realized),
-    cash: account ? r2(account.capital - cost + realized) : null,
+    cash: account ? r2(account.capital - cost + realized + adjustmentsTotal(account)) : null,
   };
 }
 
