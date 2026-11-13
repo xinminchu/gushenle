@@ -895,6 +895,67 @@ const BATCH_2026_11_02: MorningBriefing = {
    数据今晨部分滞后（多数持仓股仍显示周一收盘），个股盘前价改用外部来源并注明；
    NVDA 两条取自 11-09 晚已核实的简报草稿（众议院函件 / 董事会声明），公司指引
    与市场预期数字未对英伟达 IR 核实，本期不写。 */
+/* 2026-11-13 核实记录：指数收盘（AP/FXNews 与 Reuters 一致：标普 7,592.40/-0.35%、纳指 25,366.09/-0.39%、道指 52,297.09/-0.36%、罗素 2,799.06/-1.66%）；黄仁勋辞职（AP/Barron's 一致：周四宣布、立即生效、未说明原因，Kress 临时 CEO、Jones 首任董事长，NVDA -4.34% 收 166.19 美元）；10 年期 5.10%（Main Street Independent）；PPI 预期（Dow Jones 共识：环比 +0.4%、同比 +6.6%、核心环比 +0.3%）；期货（Regards of Wall Street 07:39 ET）；均线天数由站内 /api/rhythm 1Y 日线（252 点）逐日算出：50 日线下连续第 11 天、200 日线上连续第 2 天。 */
+const BATCH_2026_11_13: MorningBriefing = {
+  date: '2026-11-13',
+  overnight: [
+    {
+      text: '美股周四（11-12）收跌：标普 500 跌 0.35% 收 7,592.40 点，纳指跌 0.39% 收 25,366.09 点，道指跌 0.36% 收 52,297.09 点，罗素 2000 跌 1.66% 收 2,799.06 点。',
+      source: 'AP / FXNews',
+      url: 'https://fxnews.ai/news/russell2000-underperforms-sp500-november12-2026-us-close/',
+    },
+    {
+      text: '英伟达宣布 CEO 黄仁勋周四辞职，立即生效，未说明原因；CFO Colette Kress 任临时 CEO，Harvey C. Jones 任公司首任董事长；NVDA 跌 4.34% 收 166.19 美元，创 3 月 30 日以来最低收盘。',
+      source: 'AP / Barron’s',
+      url: 'https://www.barrons.com/articles/nvidia-stock-price-huang-affair-ceo-ouster-26c99dad',
+    },
+    {
+      text: '10 年期美债收益率升至 5.10%；市场已完全计入美联储 12 月加息 25 个基点，加息 50 个基点的概率约 12–15%。',
+      source: 'Reuters / Main Street Independent',
+      url: 'https://mainstreetindependent.com/articles/2026-11-12-financial-market-recap',
+    },
+  ],
+  premarket: [
+    {
+      text: '股指期货盘前小幅走高（约 07:39 ET）：标普 500 期货约 +0.21%（7,631 点）、纳指 100 期货约 +0.03%（28,393 点）、道指期货约 +0.12%（52,452 点）。',
+      source: 'Regards of Wall Street',
+      url: 'https://www.regardsofwallstreet.com/premarket',
+    },
+    {
+      text: 'NVDA 盘前涨约 1.8%（05:03 ET），此前一日跌 4.34%；MU 盘前跌约 0.7%（约 04:30 ET）。',
+      source: 'Reuters / BBX',
+      url: 'https://northlandnewsradio.com/2026/11/13/nasdaq-futures-dip-as-nvidia-tumult-keeps-investors-on-edge/',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日 8:30 ET 公布 10 月 PPI（BLS）：市场预期环比 +0.4%（前值 +1.3%）、同比 +6.6%（前值 +6.3%）；核心 PPI 预期环比 +0.3%（前值 +0.7%）、同比持平 5.0%。这是 12 月 8–9 日美联储会议前最后一份主要通胀数据。',
+      source: 'BLS / Dow Jones 共识（Longbridge）',
+      url: 'https://longbridge.com/en/news/305450583',
+    },
+    {
+      text: 'NVDA 三季度财报定于 11 月 17 日（周二）盘后公布（约 13:20 PT 发布、14:00 PT 电话会），按原计划进行；今日无重要公司财报。',
+      source: 'Barron’s / Sharecast',
+      url: 'https://www.barrons.com/articles/nvidia-stock-price-huang-affair-ceo-ouster-26c99dad',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日（11-12）收 18.70（口径：Cboe）。',
+      source: 'Cboe（站内 /api/macro）',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-11-12）收 688.17 美元（-0.32%）；收盘价低于 50 日线（718.62 美元）约 4.2%，连续第 11 个交易日收于 50 日线之下；收于 200 日线（681.99 美元）之上约 0.9%，连续第 2 个交易日。',
+      source: '站内 /api/rhythm（1Y 日线核对）',
+    },
+    {
+      text: '纽交所下跌股与上涨股之比约 3.4:1，纳指约 3.18:1。',
+      source: 'Reuters（经 MarketsOnDeck）',
+      url: 'https://medium.com/@marketsondeck/nvidia-sinks-4-3-the-indexes-hide-a-rougher-day-9c0513bce08e',
+    },
+  ],
+};
+
 const BATCH_2026_11_12: MorningBriefing = {
   date: '2026-11-12',
   overnight: [
@@ -1135,6 +1196,7 @@ const BATCH_2026_11_10: MorningBriefing = {
 
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_11_13,
   BATCH_2026_11_12,
   BATCH_2026_11_11,
   BATCH_2026_11_10,
