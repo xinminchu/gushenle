@@ -54,6 +54,18 @@ export default function MorningBriefing() {
   const { lang } = useLanguage();
   const [latest, ...past] = MORNING_BRIEFING_HISTORY;
   const [shareState, setShareState] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
+  /* 往期默认整段收起（Sam 2026-11-13：往期列表不许占太多页面）：一行开关，
+     展开后按月分组的日期小片，点哪天看哪天，只展开一期。 */
+  const [pastOpen, setPastOpen] = useState(false);
+  const [pastDate, setPastDate] = useState<string | null>(null);
+  const pastByMonth: [string, MorningBriefing[]][] = [];
+  for (const b of past) {
+    const m = b.date.slice(0, 7);
+    const g = pastByMonth.find(([k]) => k === m);
+    if (g) g[1].push(b);
+    else pastByMonth.push([m, [b]]);
+  }
+  const selectedPast = past.find((b) => b.date === pastDate) ?? null;
 
   const onShare = async () => {
     setShareState('working');
@@ -92,22 +104,55 @@ export default function MorningBriefing() {
       ))}
 
       {past.length > 0 && (
-        <div className="mt-4 space-y-2">
-          <h4 className="text-xs font-semibold text-slate-400">
-            📌 {tx(lang, 'Past briefings', '往期早报')}
-          </h4>
-          {past.map((b) => (
-            <details key={b.date} className="rounded-xl border border-slate-800 bg-slate-800/40 px-3 py-2">
-              <summary className="cursor-pointer text-xs text-slate-300">
-                {b.date} · {tx(lang, '4 sections', '四栏目')}
-              </summary>
-              <div className="mt-1 pb-1">
-                {briefingSections(b).map(({ id, items }, si) => (
-                  <SectionBlock key={id} b={b} si={si} id={id} items={items} />
-                ))}
-              </div>
-            </details>
-          ))}
+        <div className="mt-4">
+          <button
+            onClick={() => setPastOpen((v) => !v)}
+            className="flex w-full items-center justify-between rounded-xl border border-slate-800 bg-slate-800/40 px-3 py-2 text-left"
+          >
+            <span className="text-xs font-semibold text-slate-300">
+              📌 {tx(lang, 'Past briefings', '往期早报')}
+              <span className="ml-1.5 font-normal text-slate-500">
+                {past.length} {tx(lang, 'issues', '期')}
+              </span>
+            </span>
+            <span className="text-xs text-slate-500">{pastOpen ? '▾' : '▸'}</span>
+          </button>
+          {pastOpen && (
+            <div className="mt-2 rounded-xl border border-slate-800 bg-slate-800/30 px-3 py-2.5">
+              {pastByMonth.map(([m, list]) => (
+                <div key={m} className="mb-2 last:mb-0">
+                  <p className="text-[11px] text-slate-500">
+                    {tx(lang, m, `${m.slice(0, 4)} 年 ${Number(m.slice(5))} 月`)}
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {list.map((b) => (
+                      <button
+                        key={b.date}
+                        onClick={() => setPastDate((d) => (d === b.date ? null : b.date))}
+                        className={`rounded-full border px-2.5 py-1 text-[11px] ${
+                          pastDate === b.date
+                            ? 'border-amber-500/60 bg-amber-500/15 text-amber-200'
+                            : 'border-slate-700 bg-slate-800/50 text-slate-300'
+                        }`}
+                      >
+                        {b.date.slice(5)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {selectedPast && (
+                <div className="mt-2 border-t border-slate-800 pt-1">
+                  <p className="mt-1 text-xs font-semibold text-slate-300">
+                    {selectedPast.date} · {tx(lang, '4 sections', '四栏目')}
+                  </p>
+                  {briefingSections(selectedPast).map(({ id, items }, si) => (
+                    <SectionBlock key={id} b={selectedPast} si={si} id={id} items={items} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </section>

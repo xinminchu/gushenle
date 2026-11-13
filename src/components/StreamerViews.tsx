@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   STREAMER_VIEW_HISTORY,
   STANCE_ZH,
@@ -106,15 +107,15 @@ function GroupBlock({ g }: { g: SymbolViewGroup }) {
   );
 }
 
-function HistoryItem({ b }: { b: DailyBatch }) {
+function HistoryContent({ b }: { b: DailyBatch }) {
   const { lang } = useLanguage();
   const bloggerCount = new Set(b.groups.flatMap((g) => g.views.map((v) => v.blogger))).size;
   return (
-    <details className="rounded-xl border border-slate-800 bg-slate-800/40 px-3 py-2">
-      <summary className="cursor-pointer text-xs text-slate-300">
+    <div>
+      <p className="text-xs font-semibold text-slate-300">
         {b.date} · {bloggerCount} {tx(lang, 'bloggers', '位博主')} · {b.groups.length}{' '}
         {tx(lang, 'symbols', '个标的')}
-      </summary>
+      </p>
       <div className="mt-2 space-y-2">
         {b.groups.map((g) => (
           <div key={g.symbol}>
@@ -132,13 +133,25 @@ function HistoryItem({ b }: { b: DailyBatch }) {
           </div>
         ))}
       </div>
-    </details>
+    </div>
   );
 }
 
 export default function StreamerViews() {
   const { lang } = useLanguage();
   const [latest, ...past] = STREAMER_VIEW_HISTORY;
+  /* 往期默认整段收起（与早报同一改法，Sam 2026-11-13）：一行开关，
+     展开后按月分组的日期小片，点哪天看哪天，只展开一天。 */
+  const [pastOpen, setPastOpen] = useState(false);
+  const [pastDate, setPastDate] = useState<string | null>(null);
+  const pastByMonth: [string, DailyBatch[]][] = [];
+  for (const b of past) {
+    const m = b.date.slice(0, 7);
+    const g = pastByMonth.find(([k]) => k === m);
+    if (g) g[1].push(b);
+    else pastByMonth.push([m, [b]]);
+  }
+  const selectedPast = past.find((b) => b.date === pastDate) ?? null;
   const bloggerCount = new Set(latest.groups.flatMap((g) => g.views.map((v) => v.blogger))).size;
   return (
     <section className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
@@ -169,13 +182,50 @@ export default function StreamerViews() {
       </div>
 
       {past.length > 0 && (
-        <div className="mt-4 space-y-2">
-          <h4 className="text-xs font-semibold text-slate-400">
-            📌 {tx(lang, 'Past reviews', '往期回看')}
-          </h4>
-          {past.map((b) => (
-            <HistoryItem key={b.date} b={b} />
-          ))}
+        <div className="mt-4">
+          <button
+            onClick={() => setPastOpen((v) => !v)}
+            className="flex w-full items-center justify-between rounded-xl border border-slate-800 bg-slate-800/40 px-3 py-2 text-left"
+          >
+            <span className="text-xs font-semibold text-slate-300">
+              📌 {tx(lang, 'Past reviews', '往期回看')}
+              <span className="ml-1.5 font-normal text-slate-500">
+                {past.length} {tx(lang, 'days', '天')}
+              </span>
+            </span>
+            <span className="text-xs text-slate-500">{pastOpen ? '▾' : '▸'}</span>
+          </button>
+          {pastOpen && (
+            <div className="mt-2 rounded-xl border border-slate-800 bg-slate-800/30 px-3 py-2.5">
+              {pastByMonth.map(([m, list]) => (
+                <div key={m} className="mb-2 last:mb-0">
+                  <p className="text-[11px] text-slate-500">
+                    {tx(lang, m, `${m.slice(0, 4)} 年 ${Number(m.slice(5))} 月`)}
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {list.map((b) => (
+                      <button
+                        key={b.date}
+                        onClick={() => setPastDate((d) => (d === b.date ? null : b.date))}
+                        className={`rounded-full border px-2.5 py-1 text-[11px] ${
+                          pastDate === b.date
+                            ? 'border-teal-500/60 bg-teal-500/15 text-teal-200'
+                            : 'border-slate-700 bg-slate-800/50 text-slate-300'
+                        }`}
+                      >
+                        {b.date.slice(5)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {selectedPast && (
+                <div className="mt-2 border-t border-slate-800 pt-2">
+                  <HistoryContent b={selectedPast} />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </section>
