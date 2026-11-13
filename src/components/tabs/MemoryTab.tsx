@@ -408,10 +408,11 @@ function BackfillImport({ onChanged }: { onChanged: () => void }) {
         </button>
       )}
 
+      {/* 不设 accept：iOS 文件选择器按类型过滤会把 .json 也灰掉（UTI 识别不一致），
+          反正 handleFile 里会校验内容，选错文件只会提示解析失败，不会写坏数据 */}
       <input
         ref={fileRef}
         type="file"
-        accept=".json,application/json"
         className="hidden"
         onChange={(e) => {
           handleFile(e.target.files?.[0] ?? null);
