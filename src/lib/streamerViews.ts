@@ -1682,7 +1682,63 @@ const BATCH_2026_11_12: SymbolViewGroup[] = [
   },
 ];
 
+/* ---------------- 11/13 批：Selina 11.12 直播看空大盘（"明天还会跌，别抄底"）+ Kova 11.12 直播继续三倍做空半导体
+   水位线 2026-11-12；今日 11 个新条目，2 个观点入库，9 条丢弃：
+   Kova Substack（最新仍为 11/05）无新内容；
+   阳光财经（"英伟达千亿大换手，特斯拉盘中急升"为事件描述，无明确倾向/期限）；
+   视野 11/12 晚（多话题标题清单，无单一明确倾向；"黄仁勋辞职"说法未核实，不作依据）；
+   NaNa（"一切尘埃落定"为情绪标题，无标的/倾向/期限）；
+   Selina 11/12 10:02（"AMD 暴跌 17% 背后"为设问标题，简介只说下跌是获利了结与重估，未给出明确倾向）；
+   投资TALK君 1519 期（"出轨案"对 AI 行业影响，无明确标的/倾向）；
+   Money or Life（预测市场 Kalshi/Polymarket 解析，无可跟踪上市标的）；
+   老王 3 条（"Nvidia 利空出盡？"为设问、余为台股内容，无明确美股标的倾向）。 */
+const BATCH_2026_11_13: SymbolViewGroup[] = [
+  {
+    symbol: 'SPX',
+    label: '大盘',
+    views: [
+      {
+        id: 'spx-selina-1',
+        blogger: 'Selina聊美股',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '美股明天还会跌，别抄底',
+        reason:
+          '她在 11 月 12 日晚直播标题里断言美股明天还会跌、劝别抄底，并说有三个理由支撑这个判断。',
+        caveat:
+          '仅凭标题提炼：三个理由的具体内容与她的反转条件看正片；"明天还会跌"是直播当晚的短期判断。',
+        source: 'Selina聊美股',
+        published: '11/12（美东 11/12 晚直播）',
+        note: '原片：https://www.youtube.com/watch?v=i_mGtHsfw1I',
+      },
+    ],
+  },
+  {
+    symbol: 'SOX',
+    label: '费城半导体',
+    views: [
+      {
+        id: 'sox-kova-5',
+        blogger: 'Kova动量交易',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '继续三倍做空半导体',
+        reason:
+          '他在 11 月 12 日直播标题里写明三倍做空半导体，与他 10 月下旬以来披露的 3 倍做空半导体持仓方向一致。',
+        caveat:
+          '仅凭标题提炼：三倍做空的具体标的、仓位与止损看正片；标题另提"黄仁勋卸任英伟达"，该说法未核实、不作为本条依据。',
+        source: 'Kova动量交易',
+        published: '11/12（美东 11/12 直播）',
+        note: '原片：https://www.youtube.com/watch?v=Zki7OfXcWUk',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-11-13', groups: BATCH_2026_11_13 },
   { date: '2026-11-12', groups: BATCH_2026_11_12 },
   { date: '2026-11-11', groups: BATCH_2026_11_11 },
   { date: '2026-11-08', groups: BATCH_2026_11_08 },
