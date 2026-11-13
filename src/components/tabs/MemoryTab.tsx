@@ -276,6 +276,16 @@ function BackfillImport({ onChanged }: { onChanged: () => void }) {
     onChanged();
   };
 
+  /** 不导入文件，直接把现有全部流水全量重放一遍（导入后想重跑、或只修对账时用） */
+  const handleReplayOnly = () => {
+    const result = rebuildPositionsFromOperations();
+    setRebuildResult(result);
+    setSummary(readBackfillSummary());
+    setBackupExists(hasRebuildBackup());
+    setRestoreMsg('');
+    onChanged();
+  };
+
   const money = (n: number) => `${n < 0 ? '-' : ''}$${Math.abs(n).toFixed(2)}`;
 
   return (
@@ -303,6 +313,13 @@ function BackfillImport({ onChanged }: { onChanged: () => void }) {
         className="w-full bg-violet-600 hover:bg-violet-500 text-white text-xs py-2 rounded-lg font-medium flex items-center justify-center gap-1 transition-colors"
       >
         <Upload className="w-3.5 h-3.5" /> {tx(lang, 'Pick a JSON file', '选择 JSON 文件')}
+      </button>
+
+      <button
+        onClick={handleReplayOnly}
+        className="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs py-2 rounded-lg font-medium flex items-center justify-center gap-1 transition-colors"
+      >
+        {tx(lang, 'Replay all records (no file)', '全量重放对账（不导入文件）')}
       </button>
 
       {error && <p className="text-[11px] text-amber-300 leading-relaxed">⚠️ {error}</p>}

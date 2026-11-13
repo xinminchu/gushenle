@@ -70,34 +70,55 @@ export function rebuildPositionsFromOperations(): RebuildResult {
     // ignore
   }
 
-  // 3) 全部操作记录按操作日升序、同日按记录时间升序，逐条重放
+  // 3) 全部操作记录按操作日升序、同日按记录时间升序，逐条重放。
+  // 卖出失败（多半是这条记录的日期比对应买入早了几天——截图识别/按结算日记的旧账常见）
+  // 先挂起，主轮跑完再回头补：只要这只股票的买入总量够，补轮里就能对上。
+  // 一整轮补录毫无进展才算真失败（流水本身缺买入）。
   const ops = [...loadOperations()].sort(
     (a, b) => (a.date || '').localeCompare(b.date || '') || a.createdAt - b.createdAt,
   );
   let applied = 0;
   let skippedNoQty = 0;
-  const failed: RebuildResult['failed'] = [];
+  const tryApply = (op: (typeof ops)[number]): string | null => {
+    const r = applyOperationToPositions({
+      symbol: op.symbol,
+      action: op.action,
+      price: op.price,
+      qty: op.qty as number,
+      date: op.date,
+    });
+    if (r.ok) {
+      markSynced(op.id);
+      applied++;
+      return null;
+    }
+    return r.msg;
+  };
+  let pending: Array<{ op: (typeof ops)[number]; msg: string }> = [];
   for (const op of ops) {
     const qty = op.qty;
     if (!qty || !(qty > 0)) {
       skippedNoQty++;
       continue;
     }
-    const r = applyOperationToPositions({
-      symbol: op.symbol,
-      action: op.action,
-      price: op.price,
-      qty,
-      date: op.date,
-    });
-    if (r.ok) {
-      markSynced(op.id);
-      applied++;
-    } else {
-      failed.push({ opId: op.id, msg: r.msg });
-    }
+    const err = tryApply(op);
+    if (err) pending.push({ op, msg: err });
   }
-  return { applied, skippedNoQty, failed };
+  while (pending.length > 0) {
+    const before = applied;
+    const next: Array<{ op: (typeof ops)[number]; msg: string }> = [];
+    for (const item of pending) {
+      const err = tryApply(item.op);
+      if (err) next.push({ op: item.op, msg: err });
+    }
+    pending = next;
+    if (applied === before) break; // 一整轮没补上一笔：剩下的流水真有缺口
+  }
+  return {
+    applied,
+    skippedNoQty,
+    failed: pending.map((p) => ({ opId: p.op.id, msg: p.msg })),
+  };
 }
 
 /** 把最近一份重放前快照写回（持仓 + 账户）。没有快照返回 false。 */
