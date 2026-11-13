@@ -3,10 +3,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Mic, Square, Sparkles, CheckCircle2, XCircle, Send, Trash2, History,
+  Mic, Square, Sparkles, CheckCircle2, XCircle, Send, Trash2, History, Upload,
 } from 'lucide-react';
 import {
   loadOperations,
+  saveOperation,
   deleteOperation,
   updateOperation,
   normalizeAction,
@@ -17,7 +18,14 @@ import {
   type OpAction,
 } from '@/lib/operations';
 import { applyOperationToPositions } from '@/lib/positions';
-import { loadPositions } from '@/lib/positions';
+import { loadPositions, type Position } from '@/lib/positions';
+import { loadAccount } from '@/lib/account';
+import {
+  rebuildPositionsFromOperations,
+  restoreRebuildBackup,
+  hasRebuildBackup,
+  type RebuildResult,
+} from '@/lib/rebuild';
 import { trackFunnelEvent } from '@/lib/funnel';
 import { lastSyncAt, markSynced, SYNC_DUP_WINDOW_MS, saveOperationAndSync, undoSaveAndSync, type SaveAndSyncResult } from '@/lib/positions';
 import { loadWatchlist } from '@/lib/watchlist';
@@ -77,6 +85,341 @@ interface SingleAdvice {
   side: 'buy' | 'sell';
   verdict: string;
   blurb?: string | null;
+}
+
+/* ---------------- 补录导入：JSON 交易清单 -> 去重记入流水 -> 全量重放对账 ---------------- */
+
+interface BackfillRow {
+  date: string;
+  symbol: string;
+  action: 'buy' | 'sell';
+  qty: number;
+  price: number;
+}
+
+/** 多重集去重键：价格四舍五入到分，避免 696.39 与 696.3900001 对不上 */
+const backfillKey = (o: { symbol: string; date: string; action: string; qty: number; price: number }) =>
+  `${o.symbol.toUpperCase()}|${o.date}|${o.action}|${o.qty}|${(Math.round(o.price * 100) / 100).toFixed(2)}`;
+
+/** 校验一行补录数据，合法返回规整后的行，不合法返回 null（计坏行） */
+function parseBackfillRow(v: unknown): BackfillRow | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const date = typeof o.date === 'string' ? o.date.trim() : '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) return null;
+  const symbol = typeof o.symbol === 'string' ? o.symbol.trim().toUpperCase() : '';
+  if (!symbol) return null;
+  if (o.action !== 'buy' && o.action !== 'sell') return null;
+  const num = (x: unknown): number =>
+    typeof x === 'number' ? x : typeof x === 'string' && x.trim() !== '' ? Number(x) : NaN;
+  const qty = num(o.qty);
+  if (!Number.isFinite(qty) || qty <= 0) return null;
+  const price = num(o.price);
+  if (!Number.isFinite(price) || price < 0) return null;
+  return { date, symbol, action: o.action, qty, price };
+}
+
+const OPS_STORAGE_KEY = 'gushenle_operations_v1';
+
+interface BackfillSummary {
+  positions: Position[];
+  realized: number;
+  /** 未设置账户时为 null */
+  cash: number | null;
+}
+
+function readBackfillSummary(): BackfillSummary {
+  const positions = loadPositions();
+  const account = loadAccount();
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const cost = positions.reduce((s, p) => s + p.shares * p.avgCost, 0);
+  const realized = account?.realized ?? 0;
+  return {
+    positions,
+    realized: r2(realized),
+    cash: account ? r2(account.capital - cost + realized) : null,
+  };
+}
+
+/**
+ * 补录导入卡片：选一份 JSON 数组文件（{date, symbol, action, qty, price}），
+ * 与现有操作记录做多重集去重（同日同价的合法重复成交按笔数逐笔抵扣，不误杀），
+ * 新增的记入流水，再把全部流水从旧到新全量重放，重建持仓与已实现盈亏。
+ * 重放前 rebuild 会自动备份当前持仓+账户，卡片底部可一键恢复。
+ */
+function BackfillImport({ onChanged }: { onChanged: () => void }) {
+  const { lang } = useLanguage();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<{ fresh: BackfillRow[]; dup: number; bad: number } | null>(null);
+  const [error, setError] = useState('');
+  const [rebuildResult, setRebuildResult] = useState<RebuildResult | null>(null);
+  const [summary, setSummary] = useState<BackfillSummary | null>(null);
+  const [restoreMsg, setRestoreMsg] = useState('');
+  const [backupExists, setBackupExists] = useState(false);
+  useEffect(() => {
+    setBackupExists(hasRebuildBackup());
+  }, []);
+
+  const handleFile = async (file: File | null) => {
+    if (!file) return;
+    setError('');
+    setPreview(null);
+    setRebuildResult(null);
+    setRestoreMsg('');
+    try {
+      const text = await file.text();
+      const parsed: unknown = JSON.parse(text);
+      if (!Array.isArray(parsed)) {
+        throw new Error(tx(lang, 'The file is not a JSON array', '文件内容不是 JSON 数组'));
+      }
+      const valid: BackfillRow[] = [];
+      let bad = 0;
+      for (const item of parsed) {
+        const row = parseBackfillRow(item);
+        if (row) valid.push(row);
+        else bad++;
+      }
+      // 多重集去重（两遍）：
+      // 第一遍精确键逐笔抵扣——同一天同价买了两笔，文件里也有两笔，就一笔都不算新增
+      // （不是见到一条就全杀）；第二遍近似抵扣：代码/方向/股数全同、价差 ≤$0.03、
+      // 日期差 ≤4 天也算已存在——券商截图按结算日记的旧记录（成交日差 1~2 天）不重复进账。
+      const remaining = loadOperations().map((op) => ({
+        symbol: op.symbol.toUpperCase(),
+        date: op.date,
+        action: op.action,
+        qty: op.qty ?? 0,
+        price: op.price,
+      }));
+      let dup = 0;
+      const afterExact: BackfillRow[] = [];
+      for (const row of valid) {
+        const idx = remaining.findIndex((op) => backfillKey(op) === backfillKey(row));
+        if (idx >= 0) {
+          remaining.splice(idx, 1);
+          dup++;
+        } else {
+          afterExact.push(row);
+        }
+      }
+      const fresh: BackfillRow[] = [];
+      for (const row of afterExact) {
+        const idx = remaining.findIndex(
+          (op) =>
+            op.symbol === row.symbol &&
+            op.action === row.action &&
+            op.qty === row.qty &&
+            Math.abs(op.price - row.price) <= 0.03 &&
+            Math.abs(Date.parse(op.date) - Date.parse(row.date)) <= 4 * 86400000,
+        );
+        if (idx >= 0) {
+          remaining.splice(idx, 1);
+          dup++;
+        } else {
+          fresh.push(row);
+        }
+      }
+      setPreview({ fresh, dup, bad });
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : tx(lang, 'Could not read the file', '文件读取失败'),
+      );
+    }
+  };
+
+  const handleImport = () => {
+    if (!preview || preview.fresh.length === 0) return;
+    // 逐条记入流水（按文件顺序）。saveOperation 自行生成 id/createdAt，
+    // 记完再把这批的 createdAt 改写为 Date.parse(date)+文件序号，
+    // 保证全量重放时同日记录严格按文件顺序走（序号即毫秒偏移，不跨日）。
+    const saved: Array<{ id: string; date: string; seq: number }> = [];
+    preview.fresh.forEach((row, i) => {
+      const rec = saveOperation({
+        symbol: row.symbol,
+        action: row.action,
+        price: row.price,
+        qty: row.qty,
+        date: row.date,
+        source: 'import',
+        thesis: tx(lang, 'Backfilled from brokerage history', '补录导入（券商历史记录）'),
+      });
+      saved.push({ id: rec.id, date: row.date, seq: i });
+    });
+    try {
+      const raw = window.localStorage.getItem(OPS_STORAGE_KEY);
+      const list = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(list)) {
+        const byId = new Map(saved.map((s) => [s.id, s]));
+        for (const r of list as Array<{ id?: unknown; createdAt?: number }>) {
+          const s = r && typeof r.id === 'string' ? byId.get(r.id) : undefined;
+          if (s) r.createdAt = Date.parse(s.date) + s.seq;
+        }
+        window.localStorage.setItem(OPS_STORAGE_KEY, JSON.stringify(list));
+      }
+    } catch {
+      // 改写失败也不影响导入本身，只是同日排序退化为记入时刻
+    }
+    const result = rebuildPositionsFromOperations();
+    setRebuildResult(result);
+    setSummary(readBackfillSummary());
+    setBackupExists(hasRebuildBackup());
+    setPreview(null);
+    onChanged();
+  };
+
+  const handleRestore = () => {
+    if (!restoreRebuildBackup()) return;
+    setRebuildResult(null);
+    setSummary(readBackfillSummary());
+    setRestoreMsg(tx(lang, 'Restored to the pre-import holdings and account ✓', '已恢复到导入前的持仓与账户 ✓'));
+    onChanged();
+  };
+
+  const money = (n: number) => `${n < 0 ? '-' : ''}$${Math.abs(n).toFixed(2)}`;
+
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Upload className="w-4 h-4 text-violet-400" />
+        <span className="text-sm font-semibold text-slate-100">
+          {tx(lang, 'Backfill import', '补录导入')}
+        </span>
+        <span className="text-[10px] text-slate-500">
+          {tx(lang, 'JSON list + full replay', 'JSON 清单 + 全量重放对账')}
+        </span>
+      </div>
+
+      <p className="text-[11px] text-slate-400 leading-relaxed">
+        {tx(
+          lang,
+          'Pick a JSON file (an array of {date, symbol, action, qty, price}). Trades already in your log are skipped one-for-one; new ones are logged, then the whole log is replayed oldest-first to rebuild holdings and realized P&L. Current holdings are backed up first — one tap restores them.',
+          '选一份 JSON 文件（数组，每条 {date, symbol, action, qty, price}）。已在操作记录里的按笔数逐条跳过；新增的记入流水，然后把全部流水从旧到新重放一遍，重建持仓和已实现盈亏。重放前会自动备份当前持仓，底部按钮可一键恢复。',
+        )}
+      </p>
+
+      <button
+        onClick={() => fileRef.current?.click()}
+        className="w-full bg-violet-600 hover:bg-violet-500 text-white text-xs py-2 rounded-lg font-medium flex items-center justify-center gap-1 transition-colors"
+      >
+        <Upload className="w-3.5 h-3.5" /> {tx(lang, 'Pick a JSON file', '选择 JSON 文件')}
+      </button>
+
+      {error && <p className="text-[11px] text-amber-300 leading-relaxed">⚠️ {error}</p>}
+
+      {preview && (
+        <div className="bg-slate-800/60 border border-slate-800 rounded-lg p-3 space-y-2">
+          <p className="text-xs text-slate-200">
+            {tx(lang, `New ${preview.fresh.length}`, `新增 ${preview.fresh.length} 笔`)}
+            <span className="text-slate-500">
+              {' '}
+              · {tx(lang, `already logged ${preview.dup}`, `已存在 ${preview.dup} 笔`)} ·{' '}
+              {tx(lang, `invalid rows ${preview.bad}`, `坏行 ${preview.bad} 笔`)}
+            </span>
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPreview(null)}
+              className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs py-2 rounded-lg font-medium flex items-center justify-center gap-1"
+            >
+              <XCircle className="w-3.5 h-3.5" /> {tx(lang, 'Cancel', '取消')}
+            </button>
+            <button
+              onClick={handleImport}
+              disabled={preview.fresh.length === 0}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs py-2 rounded-lg font-medium flex items-center justify-center gap-1"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />{' '}
+              {tx(lang, 'Import & replay', '导入并重放对账')}
+            </button>
+          </div>
+          {preview.fresh.length === 0 && (
+            <p className="text-[11px] text-slate-500">
+              {tx(lang, 'Nothing new in this file — everything is already in your log.', '这个文件里没有新交易，都已经记过了。')}
+            </p>
+          )}
+        </div>
+      )}
+
+      {rebuildResult && summary && (
+        <div className="bg-slate-800/60 border border-slate-800 rounded-lg p-3 space-y-2 text-xs text-slate-200">
+          <p>
+            {tx(lang, 'Replay done', '重放完成')}：
+            {tx(lang, `${rebuildResult.applied} applied`, `成功 ${rebuildResult.applied} 笔`)} ·{' '}
+            {tx(lang, `${rebuildResult.skippedNoQty} skipped (no qty)`, `无股数跳过 ${rebuildResult.skippedNoQty} 笔`)} ·{' '}
+            {tx(lang, `${rebuildResult.failed.length} failed`, `失败 ${rebuildResult.failed.length} 笔`)}
+          </p>
+          {rebuildResult.failed.length > 0 && (
+            <div className="text-amber-300 leading-relaxed space-y-0.5">
+              {rebuildResult.failed.slice(0, 5).map((f, i) => (
+                <p key={i}>⚠️ {f.msg}</p>
+              ))}
+              {rebuildResult.failed.length > 5 && (
+                <p className="text-slate-500">
+                  {tx(lang, `…and ${rebuildResult.failed.length - 5} more`, `…还有 ${rebuildResult.failed.length - 5} 笔`)}
+                </p>
+              )}
+            </div>
+          )}
+          <div className="border-t border-slate-700/60 pt-2 space-y-1">
+            <p className="text-slate-400">
+              {tx(lang, `Holdings now (${summary.positions.length})`, `当前持仓（${summary.positions.length} 只）`)}
+            </p>
+            {summary.positions.length === 0 && (
+              <p className="text-slate-500">{tx(lang, 'Empty', '空仓')}</p>
+            )}
+            {summary.positions.map((p) => (
+              <p key={p.symbol} className="flex justify-between tabular-nums">
+                <span className="font-semibold text-slate-100">{p.symbol}</span>
+                <span className="text-slate-300">
+                  {p.shares}
+                  {tx(lang, ' sh', '股')} · {tx(lang, 'cost', '成本')} ${p.avgCost.toFixed(2)}
+                </span>
+              </p>
+            ))}
+            <p className="border-t border-slate-700/60 pt-2 flex justify-between tabular-nums">
+              <span className="text-slate-400">{tx(lang, 'Realized P&L total', '已实现盈亏合计')}</span>
+              <span className={summary.realized < 0 ? 'text-rose-300' : 'text-emerald-300'}>
+                {money(summary.realized)}
+              </span>
+            </p>
+            <p className="flex justify-between tabular-nums">
+              <span className="text-slate-400">{tx(lang, 'Cash (from capital)', '现金（按本金推算）')}</span>
+              <span className="text-slate-100">
+                {summary.cash == null
+                  ? tx(lang, 'no account set', '未设置账户')
+                  : money(summary.cash)}
+              </span>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {restoreMsg && (
+        <p className="text-[11px] text-emerald-300 leading-relaxed">{restoreMsg}</p>
+      )}
+
+      {backupExists && (
+        <button
+          onClick={handleRestore}
+          className="w-full text-[11px] text-amber-300/90 hover:text-amber-200 border border-amber-500/30 hover:border-amber-500/50 rounded-lg px-2.5 py-1.5 transition-colors"
+        >
+          {tx(lang, 'Restore pre-import backup', '恢复导入前备份')}
+        </button>
+      )}
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        onChange={(e) => {
+          handleFile(e.target.files?.[0] ?? null);
+          e.target.value = '';
+        }}
+      />
+    </div>
+  );
 }
 
 export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | null }) {
@@ -869,6 +1212,9 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
 
       {/* 券商截图批量导入：选 History 截图 -> 识别 -> 预览勾选 -> 记入 */}
       <ScreenshotImport onImported={() => setOps(loadOperations())} />
+
+      {/* 补录导入：JSON 交易清单 -> 多重集去重记入流水 -> 全量重放对账重建持仓 */}
+      <BackfillImport onChanged={() => setOps(loadOperations())} />
 
       {/* 整理结果区：整理中 / 确认卡 / 已记入提示都在这一个位置切换，不再两次弹出 */}
       {(loading || parsedResult || justSaved) && (
