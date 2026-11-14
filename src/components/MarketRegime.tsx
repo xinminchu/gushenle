@@ -75,19 +75,26 @@ export default function MarketRegime() {
       : info.regime === 'bear'
         ? 'text-rose-400'
         : 'text-amber-300';
+  // 短线一句要对得上现价与 50 日线的关系：结构是牛市、但现价已跌破 50 日线时，
+  // 短线就是在回调，不能说"短线也在往上"（2026-11-13 上线首验即遇到：QQQ 在 50 日线下 11 天）。
+  const above50 = info.last >= info.ma50;
   const verdict =
     info.regime === 'bull'
-      ? tx(lang, 'Long and short trends both point up.', '长线短线都在往上。')
+      ? above50
+        ? tx(lang, 'Long and short trends both point up.', '长线短线都在往上。')
+        : tx(lang, 'Long trend up; short term pulling back below the 50-day line.', '长线向上，短线跌到 50 日线下方，在回调。')
       : info.regime === 'bear'
-        ? tx(lang, 'Long and short trends both point down.', '长线短线都在往下。')
+        ? above50
+          ? tx(lang, 'Long trend down; short term bouncing above the 50-day line, not a reversal yet.', '长线向下，短线反弹站上 50 日线，还没翻身。')
+          : tx(lang, 'Long and short trends both point down.', '长线短线都在往下。')
         : info.regime === 'sidewaysStrong'
           ? tx(lang, 'The long trend is intact; the short term is chopping.', '长线还没坏，短线在拉锯。')
           : tx(lang, 'The long trend has cracked; the short term is still fighting.', '长线已经转弱，短线还在挣扎。');
   const pct = ((info.last - info.ma200) / info.ma200) * 100;
   const basis = tx(
     lang,
-    `QQQ closed at ${info.last.toFixed(2)}, ${pct >= 0 ? 'above' : 'below'} its 200-day line (${info.ma200.toFixed(2)}) by ${Math.abs(pct).toFixed(1)}%; the 50-day line (${info.ma50.toFixed(2)}) sits ${info.ma50 >= info.ma200 ? 'above' : 'below'} the 200-day line. QQQ rhythm read: ${info.status} (${info.score}).`,
-    `看纳指 QQQ：收 ${info.last.toFixed(2)}，在 200 日线（${info.ma200.toFixed(2)}）${pct >= 0 ? '上' : '下'}方 ${Math.abs(pct).toFixed(1)}%；50 日线（${info.ma50.toFixed(2)}）在 200 日线${info.ma50 >= info.ma200 ? '上' : '下'}方。QQQ 律动判断：${info.status}（${info.score} 分）。`,
+    `QQQ closed at ${info.last.toFixed(2)}, ${above50 ? 'above' : 'below'} its 50-day line (${info.ma50.toFixed(2)}) and ${pct >= 0 ? 'above' : 'below'} its 200-day line (${info.ma200.toFixed(2)}) by ${Math.abs(pct).toFixed(1)}%; the 50-day line sits ${info.ma50 >= info.ma200 ? 'above' : 'below'} the 200-day line. QQQ rhythm read: ${info.status} (${info.score}).`,
+    `看纳指 QQQ：收 ${info.last.toFixed(2)}，在 50 日线（${info.ma50.toFixed(2)}）${above50 ? '上' : '下'}方、200 日线（${info.ma200.toFixed(2)}）${pct >= 0 ? '上' : '下'}方 ${Math.abs(pct).toFixed(1)}%；50 日线在 200 日线${info.ma50 >= info.ma200 ? '上' : '下'}方。QQQ 律动判断：${info.status}（${info.score} 分）。`,
   );
 
   return (
