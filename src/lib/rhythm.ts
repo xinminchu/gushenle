@@ -551,6 +551,44 @@ export function buildJudgment(closes: number[], lang: Lang = 'zh'): Judgment {
   };
 }
 
+/**
+ * 图上信号记号（2026-11-13）：把历史上出现过的两个极端状态回头标在走势图上——
+ * 涨太猛了 = 见顶信号（top），跌过头了 = 见底信号（bottom）。
+ * 与复盘（lib/accuracy）同一算法、同一口径：逐日只用当日及之前的数据（无未来函数），
+ * 阈值按当日 trailing 波动率档位。同类信号至少间隔 10 个交易日才再标，
+ * 避免一段抛物线/一轮恐慌底连标一片。只标这两个极端状态：回测里它们才有
+ * 明确语义与命中率，中间状态（横盘/加速/跌不动了）不标，不制造假信号。
+ */
+export interface ChartSignal {
+  /** YYYY-MM-DD */
+  date: string;
+  kind: 'top' | 'bottom';
+  statusKey: 'overheated' | 'oversoldBottom';
+}
+
+const SIGNAL_MIN_GAP = 10; // 同类信号最小间隔（交易日）
+
+export function chartSignalsFor(points: RhythmPoint[]): ChartSignal[] {
+  const closes = points.map((p) => p.close);
+  const out: ChartSignal[] = [];
+  let lastTop = -Infinity;
+  let lastBottom = -Infinity;
+  for (let t = 0; t < closes.length; t++) {
+    const s = scoreAt(closes, t);
+    if (!s) continue;
+    const th = thresholdsFor(volatilityAt(closes, t));
+    const j = judgeFromScore(s.score, s.trend, s.vel, th, 'zh', accelAt(closes, t));
+    if (j.statusKey === 'overheated' && t - lastTop >= SIGNAL_MIN_GAP) {
+      out.push({ date: points[t].date, kind: 'top', statusKey: 'overheated' });
+      lastTop = t;
+    } else if (j.statusKey === 'oversoldBottom' && t - lastBottom >= SIGNAL_MIN_GAP) {
+      out.push({ date: points[t].date, kind: 'bottom', statusKey: 'oversoldBottom' });
+      lastBottom = t;
+    }
+  }
+  return out;
+}
+
 export interface RhythmResponse {
   symbol: string;
   range: string;
@@ -573,6 +611,8 @@ export interface RhythmResponse {
   /** 现价在所选区间分位中的位置 0-100；点数不足为 null */
   slicePos: number | null;
   series: RhythmPoint[];
+  /** 所选区间内的历史信号记号（见顶/见底），画在走势图上；算法见 chartSignalsFor */
+  signals: ChartSignal[];
   /** 全量数据点数（用于判断各区间是否可显示） */
   fullPoints: number;
   availableRanges: string[];

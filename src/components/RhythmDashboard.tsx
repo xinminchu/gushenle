@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { Flame, ShieldAlert, TrendingUp, RefreshCw, ChevronRight } from 'lucide-react';
-import RhythmChart, { type ChartType, type ChartEventMarker } from './RhythmChart';
+import RhythmChart, { type ChartType, type ChartEventMarker, type ChartSignalMarker } from './RhythmChart';
 import AccuracyPanel from './AccuracyPanel';
 import ScoreSparkline from './ScoreSparkline';
 import ChipPanel from './ChipPanel';
@@ -427,6 +427,13 @@ export default function RhythmDashboard({
     }
     return out.length > 0 ? out : null;
   }, [data, earnReact, symbol]);
+
+  /** 图上信号记号：API 按全量历史回算的见顶/见底（无未来函数），只取当前区间的 */
+  const signalMarkers = useMemo<ChartSignalMarker[] | null>(() => {
+    const sigs = data?.signals;
+    if (!sigs || sigs.length === 0) return null;
+    return sigs.map((s) => ({ time: s.date, kind: s.kind }));
+  }, [data]);
 
   // 若当前区间对该标的不可用（如上市不足），切回主判断区间
   useEffect(() => {
@@ -882,8 +889,28 @@ export default function RhythmDashboard({
               showKeyLevels={showKeyLevels}
               eventMarkers={eventMarkers}
               onEventMarkerClick={setEventSheet}
+              signalMarkers={signalMarkers}
               lang={lang}
             />
+            {/* 信号记号说明：直白说清记号是什么、这段时间出过几次、最近一次哪天。
+                记号是历史回头标，不是买卖指令，最后一句把界限说清。 */}
+            {data.signals && data.signals.length > 0 && (() => {
+              const tops = data.signals.filter((s) => s.kind === 'top');
+              const bots = data.signals.filter((s) => s.kind === 'bottom');
+              const last = data.signals[data.signals.length - 1];
+              const lastDate = lang === 'en'
+                ? last.date.slice(5)
+                : `${last.date.slice(5).replace('-', '月')}日`;
+              return (
+                <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+                  {tx(
+                    lang,
+                    `Markers are drawn looking back at history: red ▼ Top = that day was running too hot, green ▲ Bottom = that day was oversold. This view has ${tops.length} top / ${bots.length} bottom; the latest was a ${last.kind === 'top' ? 'top' : 'bottom'} on ${lastDate}. History, not a forecast — buying and selling is your call.`,
+                    `图上的记号是回头看历史标的：红▼「顶」是那天涨太猛了，绿▲「底」是那天跌过头了。这段时间出过 ${tops.length} 次见顶、${bots.length} 次见底，最近一次是 ${lastDate} 的${last.kind === 'top' ? '见顶' : '见底'}。标的是历史，不是预言，买卖自己定。`,
+                  )}
+                </p>
+              );
+            })()}
             {/* 黄金分割说明：组合的具体文字放图下方 */}
             {showFib && fibRangeOk && (
               <div className="mt-3 bg-slate-800/40 border border-slate-700/50 rounded-xl p-3">

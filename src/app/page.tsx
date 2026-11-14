@@ -13,6 +13,7 @@ import FunTab from '../components/tabs/FunTab';
 // 导入谷峰律动看板组件
 import RhythmDashboard from '@/components/RhythmDashboard';
 import TradingSayings from '@/components/TradingSayings';
+import MarketRegime from '@/components/MarketRegime';
 import AppHeader from '@/components/AppHeader';
 import { WatchlistProvider, useWatchlist } from '@/components/WatchlistContext';
 import { AuthProvider } from '@/context/AuthContext';
@@ -83,6 +84,9 @@ function HomeInner() {
       <div className="w-full">
         {activeTab === 'today' && (
           <section className="p-4 max-w-md mx-auto">
+            <div className="mb-4">
+              <MarketRegime />
+            </div>
             <RhythmDashboard onGoPortfolio={() => setActiveTab('portfolio')} onGoCalendar={goCalendar} />
             <div className="mt-4">
               <TradingSayings />

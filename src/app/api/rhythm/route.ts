@@ -6,6 +6,7 @@ import {
   ANCHOR_RANGE_ID,
   percentile,
   buildJudgment,
+  chartSignalsFor,
   type RhythmPoint,
   type RhythmResponse,
 } from '@/lib/rhythm';
@@ -63,6 +64,10 @@ function buildResponse(
     lang,
   );
 
+  // 图上信号记号：全量历史逐日回算（无未来函数），只保留所选区间内的
+  const inSlice = new Set(series.map((p) => p.date));
+  const signals = chartSignalsFor(full).filter((s) => inSlice.has(s.date));
+
   const availableRanges = RANGE_DEFS.filter((d) => full.length >= d.minPoints).map(
     (d) => d.id,
   );
@@ -93,6 +98,7 @@ function buildResponse(
     high: Number(high.toFixed(2)),
     slicePos,
     series,
+    signals,
     fullPoints: full.length,
     availableRanges,
     judgment,

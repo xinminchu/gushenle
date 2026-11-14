@@ -44,9 +44,17 @@ interface RhythmChartProps {
   showKeyLevels?: boolean;
   /** 事件标记：财报 / 宏观事件（议息/CPI/非农）在图上的小圆点，点圆点看事件详情 */
   eventMarkers?: ChartEventMarker[] | null;
+  /** 信号记号：历史上出现过的见顶（红▼「顶」）/见底（绿▲「底」），与事件圆点同走 markers 插件 */
+  signalMarkers?: ChartSignalMarker[] | null;
   /** 点中事件圆点时的回调（轻量图表库的圆点本身不可点，用整图 click 按时间匹配） */
   onEventMarkerClick?: (m: ChartEventMarker) => void;
   lang?: Lang;
+}
+
+/** 图上信号记号：见顶 = 当时「涨太猛了」，见底 = 当时「跌过头了」（算法见 lib/rhythm chartSignalsFor） */
+export interface ChartSignalMarker {
+  time: string;
+  kind: 'top' | 'bottom';
 }
 
 /** 图上事件圆点：财报 / 宏观事件（议息/CPI/非农），点圆点看事件详情 */
@@ -89,6 +97,7 @@ export default function RhythmChart({
   showKeyLevels = false,
   eventMarkers,
   onEventMarkerClick,
+  signalMarkers,
   lang = 'zh',
 }: RhythmChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -121,6 +130,7 @@ export default function RhythmChart({
   // 区间高低点数值：画在左上角 HTML 图例里，避免压住右侧价格轴
   const [hl, setHl] = useState<{ hi: number; lo: number } | null>(null);
   const hasMarkers = !!eventMarkers && eventMarkers.length > 0;
+  const hasSignals = !!signalMarkers && signalMarkers.length > 0;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -205,25 +215,54 @@ export default function RhythmChart({
       }
     };
 
-    /** 事件标记：小圆点落在对应 bar 上方（v5 走 series-markers 插件）。
+    /** 图上记号（v5 走 series-markers 插件，一个 series 只能挂一份，事件与信号合并）：
+     * 事件 = 小圆点落在 bar 上方；信号 = 见顶红▼（bar 上方）/见底绿▲（bar 下方），带「顶/底」字。
      * 圆点本身不可点：整图订阅 click，按时间匹配到圆点后走 onEventMarkerClick。
      * 时间必须精确命中一根 bar，否则标记画不出来，所以先过滤。 */
-    const applyEventMarkers = <T extends SeriesType>(s: ISeriesApi<T, Time>) => {
-      if (!eventMarkers || eventMarkers.length === 0) return;
+    const applyMarkers = <T extends SeriesType>(s: ISeriesApi<T, Time>) => {
       const inRange = new Set(series.map((p) => p.date));
       const ms: SeriesMarker<Time>[] = [];
-      for (const m of eventMarkers) {
-        if (!inRange.has(m.time)) continue;
-        const isEarn = m.kind === 'earnings';
-        ms.push({
-          time: m.time,
-          position: 'aboveBar',
-          shape: 'circle',
-          color: isEarn ? 'rgba(167, 139, 250, 0.95)' : 'rgba(245, 158, 11, 0.95)',
-          size: 2.2,
-        });
+      if (signalMarkers) {
+        for (const m of signalMarkers) {
+          if (!inRange.has(m.time)) continue;
+          ms.push(
+            m.kind === 'top'
+              ? {
+                  time: m.time,
+                  position: 'aboveBar',
+                  shape: 'arrowDown',
+                  color: '#f87171',
+                  size: 1.4,
+                  text: tx(lang, 'Top', '顶'),
+                }
+              : {
+                  time: m.time,
+                  position: 'belowBar',
+                  shape: 'arrowUp',
+                  color: '#4ade80',
+                  size: 1.4,
+                  text: tx(lang, 'Bottom', '底'),
+                },
+          );
+        }
       }
-      if (ms.length > 0) createSeriesMarkers(s, ms);
+      if (eventMarkers) {
+        for (const m of eventMarkers) {
+          if (!inRange.has(m.time)) continue;
+          const isEarn = m.kind === 'earnings';
+          ms.push({
+            time: m.time,
+            position: 'aboveBar',
+            shape: 'circle',
+            color: isEarn ? 'rgba(167, 139, 250, 0.95)' : 'rgba(245, 158, 11, 0.95)',
+            size: 2.2,
+          });
+        }
+      }
+      if (ms.length > 0) {
+        ms.sort((a, b) => (String(a.time) < String(b.time) ? -1 : 1));
+        createSeriesMarkers(s, ms);
+      }
     };
 
     if (chartType === 'candle') {
@@ -272,7 +311,7 @@ export default function RhythmChart({
       drawFibLines(candles);
       drawPrevCloseLine(candles);
       drawKeyLevels(candles);
-      applyEventMarkers(candles);
+      applyMarkers(candles);
     } else if (chartType === 'ohlc') {
       // 四线：开/高/低/收。极值线本身已展示区间上下沿，不再画虚线。
       const mk = (key: 'open' | 'high' | 'low' | 'close', color: string, width: 1 | 2) => {
@@ -291,7 +330,7 @@ export default function RhythmChart({
       mk('open', OHLC_COLORS.open, 1);
       const closeSeries = mk('close', OHLC_COLORS.close, 2);
       drawPrevCloseLine(closeSeries);
-      applyEventMarkers(closeSeries);
+      applyMarkers(closeSeries);
       setHl(null);
     } else {
       // 收盘线颜色跟随区间净涨跌 + 当前配色方案
@@ -333,7 +372,7 @@ export default function RhythmChart({
       drawFibLines(area);
       drawPrevCloseLine(area);
       drawKeyLevels(area);
-      applyEventMarkers(area);
+      applyMarkers(area);
     }
     // 黄金分割线画出可视范围时，把价格轴缩放到能看见它们。
     // lightweight-charts 的 priceLine 不参与自动缩放，所以用一条全透明的线
@@ -411,7 +450,7 @@ export default function RhythmChart({
       chartApiRef.current = null;
       chart.remove();
     };
-  }, [series, height, chartType, showRangeHL, fibLevels, fibScaleLevels, scheme, UP, DOWN, prevCloseLabel, keyLevels, showKeyLevels, eventMarkers, onEventMarkerClick, lang]);
+  }, [series, height, chartType, showRangeHL, fibLevels, fibScaleLevels, scheme, UP, DOWN, prevCloseLabel, keyLevels, showKeyLevels, eventMarkers, onEventMarkerClick, signalMarkers, lang]);
 
   /** 一键回到初始全量视图：时间轴全显 + 价格轴自动缩放 */
   const resetZoom = () => {
@@ -451,6 +490,7 @@ export default function RhythmChart({
         (fibLevels && fibLevels.length > 0) ||
         prevCloseLabel ||
         hasMarkers ||
+        hasSignals ||
         (showKeyLevels && keyLevels && keyLevels.length > 0)) &&
         chartType !== 'ohlc' && (
         <div className={`absolute ${legendAtBottom ? 'bottom-7' : 'top-1'} left-1 right-20 flex flex-wrap items-center gap-x-2 gap-y-0.5 chart-legend text-[10px] text-slate-500 bg-slate-900/70 rounded px-1.5 py-0.5 pointer-events-none`}>
@@ -517,6 +557,14 @@ export default function RhythmChart({
               {tx(lang, 'Earnings', '财报')}
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-600/80 mr-1 ml-2" />
               {tx(lang, 'Macro', '宏观事件')}
+            </span>
+          )}
+          {hasSignals && (
+            <span>
+              <span className="text-red-400 mr-0.5">▼</span>
+              {tx(lang, 'Top signal', '见顶信号')}
+              <span className="text-green-400 mr-0.5 ml-2">▲</span>
+              {tx(lang, 'Bottom signal', '见底信号')}
             </span>
           )}
         </div>
