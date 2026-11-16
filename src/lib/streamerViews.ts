@@ -1692,6 +1692,59 @@ const BATCH_2026_11_12: SymbolViewGroup[] = [
    投资TALK君 1519 期（"出轨案"对 AI 行业影响，无明确标的/倾向）；
    Money or Life（预测市场 Kalshi/Polymarket 解析，无可跟踪上市标的）；
    老王 3 条（"Nvidia 利空出盡？"为设问、余为台股内容，无明确美股标的倾向）。 */
+/* ---------------- 11/14 批：黄仁勋卸任后的 NVDA 护城河 + 闪迪腰斩拆解 ----------------
+   水位线 2026-11-13；今日 7 个新条目（Kova Substack 全文 + 6 个 YT 新视频），
+   2 个观点入库，5 条丢弃：NaNa Burry 期（简介全是推广、无标的无倾向）、
+   视野环球财经半导体期（标题多标的口号合集、简介全是会员推广，无单一标的
+   明确倾向与期限）、阳光财经 NVDA 期（标题疑问句、简介无实质内容）、
+   Selina 赚钱 7 步骤直播（教学内容、无标的）、老王国安基金 Shorts
+   （台股、无美股标的）。另：Kova 文中 AMD/AVGO/CRWV 仅为反应日涨跌观察，
+   作者明确不作因果判断，不成观点。 */
+const BATCH_2026_11_14: SymbolViewGroup[] = [
+  {
+    symbol: 'NVDA',
+    label: '英伟达',
+    views: [
+      {
+        id: 'nvda-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'cautious',
+        horizon: 'long',
+        kind: 'view',
+        headline: '护城河还在变宽，但守城代价涨得更快',
+        reason:
+          '他逐份读了 8-K、委托书与季报后认为，CUDA 开发者生态与 2028 年前的产品路线图已写进代码和合同、日常由工程运营团队推动，仍属公司能力；但供应承诺一季从 1190 亿涨到 2790 亿，股权投资与担保敞口合计逾千亿，下一轮大客户合同、生态投资与 2029 年后的架构押注仍系于黄仁勋本人。',
+        caveat:
+          '11 月 17 日财报与正式 CEO 人选是验证点；若新任 CEO 稳住大客户与生态投资节奏，谨慎看法失效；市场一周给卸任定的价约 11% 是偏宽上限，还混着行业因素。',
+        source: 'Kova动量交易',
+        published: '11/14',
+        note: '原文：https://kovainvest.substack.com/p/6ef（后半估值节在付费墙后，本条只依据可见全文）',
+      },
+    ],
+  },
+  {
+    symbol: 'SNDK',
+    label: '闪迪',
+    views: [
+      {
+        id: 'sndk-selina-1',
+        blogger: 'Selina聊美股',
+        stance: 'cautious',
+        horizon: 'long',
+        kind: 'view',
+        headline: '腰斩之后基本盘还在，但周期顶部预期已打进价格',
+        reason:
+          '她拆财报后认为，业绩本身超预期却大跌，核心是涨价斜率放缓；但 8 家大客户最长 15 年长约、保底收入 889 亿美元，能承受现货价跌近三成仍不亏，叠加零有息债务与低市盈率，基本盘未垮。',
+        caveat:
+          '最大变量是 SK 海力士 2027 年扩产信号与供需缺口何时缓解；若长约执行不及预期或对手扩产超预期，谨慎看法转偏空。仅凭简介提炼：抄底还是跑路的结论看正片。',
+        source: 'Selina聊美股',
+        published: '11/13',
+        note: '原片：https://www.youtube.com/watch?v=azZgKt54Hfc',
+      },
+    ],
+  },
+];
+
 const BATCH_2026_11_13: SymbolViewGroup[] = [
   {
     symbol: 'SPX',
@@ -1737,7 +1790,42 @@ const BATCH_2026_11_13: SymbolViewGroup[] = [
   },
 ];
 
+/* ---------------- 11/15 批：Selina 亚马逊财报拆解（AWS 是核心锚） ----------------
+   水位线 2026-11-14；今日 3 个新条目（过去约 24 小时，11/14 13:17 UTC 之后发布），
+   1 个观点入库，2 条丢弃：老王 Shorts（"空頭行情可以搶反彈嗎？"为提问句，
+   台股方法论、无具体标的/倾向/期限，简介只有播客推广）；Money or Life
+   （"黑天鹅来了，怎么办？"为提问标题、无标的，简介只有频道介绍与会员推广）。
+   其余 6 源无新内容：Kova Substack（最新仍为 11/14 NVDA 文，已入库）、
+   阳光财经、视野环球财经、NaNa、投资TALK君、Kova YouTube 均无新条目。
+   11/14 白天已由 11/14 批裁定过的 5 条（视野半导体期、阳光 NVDA 期、
+   Selina 7 步骤直播、老王国安基金 Shorts、NaNa Burry 期）不再重复裁定。 */
+const BATCH_2026_11_15: SymbolViewGroup[] = [
+  {
+    symbol: 'AMZN',
+    label: '亚马逊',
+    views: [
+      {
+        id: 'amzn-selina-2',
+        blogger: 'Selina聊美股',
+        stance: 'bullish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '盘后暴跌 12% 次日几乎全收回来，AWS 增长是核心锚',
+        reason:
+          '她拆财报后认为，亚马逊盘后一度暴跌 12%、次日收盘只微跌 1.4%，几乎收回全部跌幅；AWS 单季营收 460 亿美元、同比增 39%，积压订单 5780 亿美元，管理层指引 2027—2028 年仍能保持 40% 以上增长，是市场愿意宽容的底气。',
+        caveat:
+          '自由现金流过去 12 个月为负 424 亿美元、长期债务从 656 亿升至 1731 亿，表外机房租约另有约 1649 亿；估值逻辑已切换为 AI 算力核心资产，AWS 增长指引能否持续兑现是决定方向的关键。仅凭简介提炼：标题以问号收尾，"抄底机会"的明确结论看正片。',
+        source: 'Selina聊美股',
+        published: '11/14（美东 11/14 晚视频）',
+        note: '原片：https://www.youtube.com/watch?v=YfeAFwTiCEc',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-11-15', groups: BATCH_2026_11_15 },
+  { date: '2026-11-14', groups: BATCH_2026_11_14 },
   { date: '2026-11-13', groups: BATCH_2026_11_13 },
   { date: '2026-11-12', groups: BATCH_2026_11_12 },
   { date: '2026-11-11', groups: BATCH_2026_11_11 },
