@@ -48,6 +48,8 @@ interface RhythmChartProps {
   signalMarkers?: ChartSignalMarker[] | null;
   /** 点中事件圆点时的回调（轻量图表库的圆点本身不可点，用整图 click 按时间匹配） */
   onEventMarkerClick?: (m: ChartEventMarker) => void;
+  /** 箱体边线：琥珀色虚线（顶/底），数值在箱体面板里，轴上不标免得挤占 K线 */
+  boxLines?: { top: number; bottom: number } | null;
   lang?: Lang;
 }
 
@@ -98,6 +100,7 @@ export default function RhythmChart({
   eventMarkers,
   onEventMarkerClick,
   signalMarkers,
+  boxLines,
   lang = 'zh',
 }: RhythmChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -215,6 +218,22 @@ export default function RhythmChart({
       }
     };
 
+    /** 箱体边线：琥珀虚线，轴上不标（同黄金分割的教训）；箱高/位置在面板里看 */
+    const drawBoxLines = (s: {
+      createPriceLine: (opts: CreatePriceLineOptions) => unknown;
+    }) => {
+      if (!boxLines) return;
+      for (const price of [boxLines.top, boxLines.bottom]) {
+        s.createPriceLine({
+          price,
+          color: 'rgba(245, 158, 11, 0.8)',
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: false,
+        });
+      }
+    };
+
     /** 图上记号（v5 走 series-markers 插件，一个 series 只能挂一份，事件与信号合并）：
      * 事件 = 小圆点落在 bar 上方；信号 = 见顶红▼（bar 上方）/见底绿▲（bar 下方），带「顶/底」字。
      * 圆点本身不可点：整图订阅 click，按时间匹配到圆点后走 onEventMarkerClick。
@@ -311,6 +330,7 @@ export default function RhythmChart({
       drawFibLines(candles);
       drawPrevCloseLine(candles);
       drawKeyLevels(candles);
+      drawBoxLines(candles);
       applyMarkers(candles);
     } else if (chartType === 'ohlc') {
       // 四线：开/高/低/收。极值线本身已展示区间上下沿，不再画虚线。
@@ -330,6 +350,7 @@ export default function RhythmChart({
       mk('open', OHLC_COLORS.open, 1);
       const closeSeries = mk('close', OHLC_COLORS.close, 2);
       drawPrevCloseLine(closeSeries);
+      drawBoxLines(closeSeries);
       applyMarkers(closeSeries);
       setHl(null);
     } else {
@@ -372,6 +393,7 @@ export default function RhythmChart({
       drawFibLines(area);
       drawPrevCloseLine(area);
       drawKeyLevels(area);
+      drawBoxLines(area);
       applyMarkers(area);
     }
     // 黄金分割线画出可视范围时，把价格轴缩放到能看见它们。

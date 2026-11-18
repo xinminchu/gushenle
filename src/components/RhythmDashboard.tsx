@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { Flame, ShieldAlert, TrendingUp, RefreshCw, ChevronRight } from 'lucide-react';
 import RhythmChart, { type ChartType, type ChartEventMarker, type ChartSignalMarker } from './RhythmChart';
+import BoxPanel from './BoxPanel';
 import AccuracyPanel from './AccuracyPanel';
 import ScoreSparkline from './ScoreSparkline';
 import ChipPanel from './ChipPanel';
@@ -185,6 +186,7 @@ export default function RhythmDashboard({
     return 'AAPL';
   });
   /** 选标的：顺手落盘，下次切回首页接着看这只 */
+  const [chartBox, setChartBox] = useState<{ top: number; bottom: number } | null>(null);
   const setSymbol = (s: string) => {
     setSymbolState(s);
     try { localStorage.setItem('gsl.chartSymbol', s); } catch {}
@@ -890,6 +892,7 @@ export default function RhythmDashboard({
               eventMarkers={eventMarkers}
               onEventMarkerClick={setEventSheet}
               signalMarkers={signalMarkers}
+              boxLines={chartBox}
               lang={lang}
             />
             {/* 信号记号说明：直白说清记号是什么、这段时间出过几次、最近一次哪天。
@@ -911,6 +914,7 @@ export default function RhythmDashboard({
                 </p>
               );
             })()}
+            <BoxPanel symbol={symbol} price={data?.price ?? null} onActiveBoxChange={setChartBox} />
             {/* 黄金分割说明：组合的具体文字放图下方 */}
             {showFib && fibRangeOk && (
               <div className="mt-3 bg-slate-800/40 border border-slate-700/50 rounded-xl p-3">
