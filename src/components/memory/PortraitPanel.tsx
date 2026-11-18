@@ -5,6 +5,7 @@
 import React, { useMemo } from 'react';
 import { computePortrait, portraitSummary, PORTRAIT_MIN_SAMPLE, type PortraitSide } from '@/lib/portrait';
 import { computePortrait2, fingerprintAxes, type Portrait2 } from '@/lib/portrait2';
+import TradeChart from './TradeChart';
 import { tx } from '@/lib/hant';
 import { useLanguage } from '@/context/LanguageContext';
 import type { OperationRecord } from '@/lib/operations';
@@ -328,6 +329,7 @@ export default function PortraitPanel({
           <Attribution p2={p2} />
           <Patience p2={p2} />
           <ChasePanic p2={p2} />
+          <TradeChart ops={ops} />
           <div className="text-[10px] text-slate-600 mt-1.5">
             {tx(lang, 'Method: price move 20 days after each sell/buy (5 days when fewer than 20 have passed); realized P&L matched FIFO; chasing/panic use the 3 trading days before each trade. Facts only — no judgment on you.', '口径：卖出/买入后 20 天（不足 20 天用 5 天）涨跌；已实现盈亏按先进先出配对；追涨/杀跌看操作日前 3 个交易日涨跌。只陈述事实，不下人格判断。')}
           </div>
