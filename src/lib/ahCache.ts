@@ -11,7 +11,7 @@ export interface AHPrint {
   etDate: string;
 }
 
-const KEY = 'gushenle-ah-last-v2'; // v2: v1 存的是 Nasdaq 假盘后价（实为常规收盘），已作废
+const KEY = 'gushenle-ah-last-v3'; // v3: v2 可能存进 2026-11-18 服务端陈旧盘后价（GOOGL 11-13 的旧笔等），整表作废
 const MAX_SYMBOLS = 60;
 
 /** 美东日历日期 YYYY-MM-DD（en-CA 格式天然就是 YYYY-MM-DD） */

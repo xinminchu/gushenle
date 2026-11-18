@@ -627,7 +627,9 @@ async function getYahooExtendedPrice(
     )}?includePrePost=true&interval=1m&range=1d`;
     const res = await fetch(url, {
       headers: { 'User-Agent': UA, Accept: 'application/json' },
-      next: { revalidate: 30 },
+      // no-store：Next 数据缓存在上游失败时会无限期回放旧响应，
+      // 2026-11-18 实测 GOOGL 盘后价被冻结在 11-13 的最后一笔。
+      cache: 'no-store',
     });
     if (!res.ok) return null;
     const json = await res.json();
@@ -635,10 +637,19 @@ async function getYahooExtendedPrice(
     if (!result) return null;
     const timestamps: number[] = result.timestamp ?? [];
     const closes: (number | null)[] = result.indicators?.quote?.[0]?.close ?? [];
+    const todayET = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+    }).format(new Date());
     for (let i = closes.length - 1; i >= 0; i--) {
       const c = closes[i];
       if (c != null && Number.isFinite(c) && c > 0 && timestamps[i]) {
         const dt = new Date(timestamps[i] * 1000);
+        // 陈旧防护：最后一笔不是今日（美东）的，整条不用——上游异常时 Yahoo 会
+        // 回放旧交易日的分钟线，旧价冒充盘后价比退回常规收盘价更误导。
+        const printDateET = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'America/New_York',
+        }).format(dt);
+        if (printDateET !== todayET) return null;
         // 美东时间串，供 quoteDateISO 解析（格式 "Oct 19, 2026 4:34 AM ET"）
         const et = new Intl.DateTimeFormat('en-US', {
           timeZone: 'America/New_York',
@@ -677,7 +688,7 @@ export async function getLiveQuote(symbol: string): Promise<LiveQuote | null> {
           Accept: 'application/json',
           'Accept-Language': 'en-US,en;q=0.9',
         },
-        next: { revalidate: 30 },
+        cache: 'no-store',
       });
       if (!res.ok) return null;
       return (await res.json()) as {

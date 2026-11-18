@@ -49,6 +49,15 @@ function buildResponse(
   );
   const priceSession: RhythmResponse['priceSession'] = session;
 
+  // 昨收基准（供 dayChangePct）：按最后一根日线的日期决定取哪一根
+  const todayET = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+  }).format(new Date());
+  const baseClose =
+    dailyLastDate === todayET && closes.length >= 2
+      ? closes[closes.length - 2]
+      : lastClose;
+
   // 所选区间的分位低点/高点（5%/95% 分位数，抗离群点）
   const sorted = [...closes].sort((a, b) => a - b);
   const low = percentile(sorted, 5);
@@ -79,19 +88,14 @@ function buildResponse(
     priceLive: priceSession !== 'close',
     priceSession,
     priceTime: priceSession !== 'close' ? live!.time || null : null,
-    // 盘中/盘前/收盘后报价：报价接口自带的当日涨跌（相对昨收）；
-    // 盘后：相对昨日收盘（即"今日至今"的真涨跌，含盘后波动；日线最后一根是今日收盘，
-    // 用倒数第二根做基准）。报价没用上时为 null，前端只显示"收盘价"。
-    dayChangePct: priceSession === 'close'
-      ? null
-      : priceSession === 'after-hours' && closes.length >= 2
-        ? Number(
-            (
-              ((live!.price - closes[closes.length - 2]) / closes[closes.length - 2]) *
-              100
-            ).toFixed(2),
-          )
-        : live!.dayChangePct,
+    // 当日涨跌（相对昨收）一律用日线自算，不用报价接口自带的百分比（其基准会滞后一天）。
+    // 基准判定看日期：日线最后一根已是今日（美东）收盘时，昨收是倒数第二根；
+    // 否则（盘中/盘后早段，今日 bar 未发布）最后一根就是昨收。
+    // 此前写死倒数第二根，IREN 2026-11-18 实测把 -3.4% 算成 -6.83%（错拿前天收盘）。
+    dayChangePct:
+      priceSession === 'close' || !(baseClose > 0)
+        ? null
+        : Number((((displayPrice - baseClose) / baseClose) * 100).toFixed(2)),
     prevClose: Number(lastClose.toFixed(2)),
     changePct: Number((((displayPrice - first) / first) * 100).toFixed(2)),
     low: Number(low.toFixed(2)),
