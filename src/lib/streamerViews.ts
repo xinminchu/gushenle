@@ -1823,8 +1823,182 @@ const BATCH_2026_11_15: SymbolViewGroup[] = [
   },
 ];
 
+/* ---------------- 11/17 批：Kova 苹果避风港拆解 + 三倍做空延续 + 视野继续看好台积电 ----------------
+   水位线 2026-11-15（11/16 未出批，本批覆盖 11/15 13:17 UTC 之后发布的全部新条目，
+   含 11/16 全天与 11/17 盘前）；今日 13 个新条目，4 个观点入库，10 条丢弃：
+   老王 5 条全是台股（11/17 主节目台积电/鸿海/国巨/台玻、两期浦男搜股、高盛看空台股
+   Shorts、臻鼎 Shorts），无美股标的；投资TALK君 2 条（1521 期多话题合集、无单一标的
+   明确倾向；1520 期"出轨案"对 AI 行业影响分析、无单一标的）；Money or Life
+   （Anthropic 未上市、无可交易标的，简介只有频道介绍）；NaNa（标题含糊"又开始搞事儿了"、
+   简介全是会员推广，无标的无倾向）；阳光财经（标题感慨本周开局大跌、简介全是推广，
+   无单一标的与明确倾向/期限）。Selina 无新内容。视野同期 NVDA 财报风险与大盘年底波动
+   只作话题、未给出方向，不另立观点。 */
+const BATCH_2026_11_17: SymbolViewGroup[] = [
+  {
+    symbol: 'AAPL',
+    label: '苹果',
+    views: [
+      {
+        id: 'aapl-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'cautious',
+        horizon: 'short',
+        kind: 'view',
+        headline: '避风港的溢价太贵，近端利润撑不起新高',
+        reason:
+          '他拆了苹果 2026 财年 10-K 与电话会后认为，苹果在 AI 抛售中逆势创新高，按 2027 年预期市盈率 37 倍、相对标普约两倍、均为历史最高，但下一年每股收益预期只增 4.9%、分析师均价还低于现价；按公司 12 月季度指引推算，营业利润同比在 -4.8% 到 +2.9% 之间，存储与 AI 成本把利润压进平台期。',
+        caveat:
+          '护城河本身未变窄（25 亿台设备、服务毛利率 76%），指引也可能偏保守；后半篇估值与情景节在付费墙后，本条只依据可见全文；若存储成本出现拐点或服务增速回升，谨慎看法失效。',
+        source: 'Kova动量交易',
+        published: '11/16',
+        note: '原文：https://kovainvest.substack.com/p/ai（后半估值节在付费墙后，本条只依据可见全文）',
+      },
+    ],
+  },
+  {
+    symbol: 'SOX',
+    label: '费城半导体',
+    views: [
+      {
+        id: 'sox-kova-6',
+        blogger: 'Kova动量交易',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '继续三倍做空半导体',
+        reason:
+          '他在 11 月 16 日直播标题里重申继续三倍做空半导体，与 10 月下旬以来披露的做空方向一致。',
+        caveat:
+          '仅凭标题提炼：三倍做空的具体标的、仓位与止损看正片；这是直播标题给出的短期判断。',
+        source: 'Kova动量交易',
+        published: '11/16（美东 11/16 直播）',
+        note: '原片：https://www.youtube.com/watch?v=q2w0fCzuLGg',
+      },
+    ],
+  },
+  {
+    symbol: 'SPX',
+    label: '大盘',
+    views: [
+      {
+        id: 'spx-kova-3',
+        blogger: 'Kova动量交易',
+        stance: 'bearish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '继续三倍做空大盘',
+        reason:
+          '他在同一场 11 月 16 日直播标题里重申继续三倍做空大盘，空头立场未变。',
+        caveat:
+          '仅凭标题提炼：做空期限与反转条件看正片；这是直播标题给出的短期判断。',
+        source: 'Kova动量交易',
+        published: '11/16（美东 11/16 直播）',
+        note: '原片：https://www.youtube.com/watch?v=q2w0fCzuLGg',
+      },
+    ],
+  },
+  {
+    symbol: 'TSM',
+    label: '台积电',
+    views: [
+      {
+        id: 'tsm-shiye-1',
+        blogger: '视野环球财经',
+        stance: 'bullish',
+        horizon: 'long',
+        kind: 'view',
+        headline: '继续看好台积电',
+        reason:
+          '他在 11 月 17 日节目标题里重申继续看好台积电，并把英伟达财报风险与大盘年底波动列为同期的关注点。',
+        caveat:
+          '仅凭标题提炼：看好的具体理由与证伪条件看正片；"大盘年底前波动"与"NVDA 财报风险"只是话题、未给出方向，不作为本条依据。',
+        source: '视野环球财经',
+        published: '11/17',
+        note: '原片：https://www.youtube.com/watch?v=cifo3KBc3FY',
+      },
+    ],
+  },
+];
+
+/* ---------------- 11/18 批：水位线 2026-11-17（07:17 CST 运行后）；今日 11 个新条目，3 条入库（2 个观点 + 1 个持仓），8 条丢弃 ----------------
+   入库：Kova Substack TTWO 长文（11/17 08:31 CST 发布，漏网）、Selina NVDA 深度拆解（11/17）、Selina 直播披露买入 SPCX（11/17）。
+   8 条丢弃：阳光财经（"浑水做空英伟达"只转述他人做空消息与财报事件，未给博主自己的倾向/期限，简介只有会员推广）；
+   视野环球财经（多话题标题清单：NVDA 采购/存储/NeoCloud/SPY 防守位，简介只有会员推广，无单一标的的明确倾向与期限）；
+   NaNa（"老乡快回来"为口号标题，无标的/方向/期限）；
+   Selina 11/17 17:46 直播（"英伟达风暴被低估了"为问号标题，简介只有标签列表，倾向无法确定；同日深度视频已给出结构化 NVDA 观点）；
+   投资TALK君 1522 期（只转述黄仁勋想回归遭董事会拒绝的消息，未给倾向/期限，简介只有推广链接）；
+   老王 2 条（"後黃仁勳時代？"为问号标题；"鴻海、廣達遭下修"只转述外资下修消息，未给博主自己的倾向/期限）。
+   注：SPCX 经 SEC 招募书核实为 SpaceX 上市股票（Nasdaq: SPCX），10/21 批的「半导体前瞻」标签有误，历史 batch 不改，此处按实标注。
+   Kova YT、Money or Life 均无新内容。 */
+const BATCH_2026_11_18: SymbolViewGroup[] = [
+  {
+    symbol: 'TTWO',
+    label: '游戏',
+    views: [
+      {
+        id: 'ttwo-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'cautious',
+        horizon: 'short',
+        kind: 'view',
+        headline: 'GTA VI 大卖几无悬念，但眼下追 TTWO 仍可能亏钱',
+        reason:
+          '他拆了 Take-Two 的季报与指引：发售季度每多 1 美元收入只有约 43 美分留成毛利、约 32 美分变成税前利润；全年经常性消费支出预计与上年持平，豪华版多收的 20 美元附加内容不是 GTA Online 式持续收钱的模式；发售后首个完整季度的净预订额与去年同期相近；股价两周已涨约 20%，大卖对应的价值大多不在本季也不在本财年。',
+        caveat:
+          '他明确说这三点不等于 GTA VI 会失败；若豪华版附加内容或 GTA Online 的经常性消费超预期、成本结构改善，判断需修正；RSS 全文末段截断，本条只依据可见全文。',
+        source: 'Kova动量交易 Substack《所有人都知道 GTA VI 会大卖，为什么买 TTWO 仍可能亏钱？》',
+        published: '11/17（美东 11/17 上午文章）',
+        note: '文章链接：https://kovainvest.substack.com/p/gta-vi-ttwo',
+      },
+    ],
+  },
+  {
+    symbol: 'NVDA',
+    label: '英伟达',
+    views: [
+      {
+        id: 'nvda-selina-2',
+        blogger: 'Selina聊美股',
+        stance: 'bullish',
+        horizon: 'long',
+        kind: 'view',
+        headline: '暴跌杀的是情绪不是价值，分批布局、等财报验证',
+        reason:
+          '她认为本轮抛售全停留在情绪面，没有实锤证明公司经营、业务数据或 AI 需求出问题；市场真正定价的是黄仁勋会不会离开 CEO 位置，职位不受影响就只是情绪性砸盘；暴跌后明年前瞻市盈率约 18 倍、2028 年约 10 倍，营收增速约大盘 7 倍，估值已进入风险折价区间；中性偏保守的 DCF 约 280 美元。',
+        caveat:
+          '若调查导致黄仁勋真的离任、或下周财报证实基本面受损，判断即需修正；估值便宜不等于马上上涨，修复要看不确定性落地与业绩验证。',
+        source: 'Selina聊美股',
+        published: '11/17',
+        clip: '01:34 风险在 CEO 会不会离任；05:59 估值拆解；11:25 分批建仓',
+        note: '原片：https://www.youtube.com/watch?v=-PXj3EUdbDE',
+      },
+    ],
+  },
+  {
+    symbol: 'SPCX',
+    label: 'SpaceX',
+    views: [
+      {
+        id: 'spcx-selina-pos',
+        blogger: 'Selina聊美股',
+        stance: 'neutral',
+        horizon: 'short',
+        kind: 'position',
+        headline: '已披露：大跌中买入 SPCX',
+        reason: '',
+        caveat:
+          '标题只披露买入，未说明买入规模、价位与持有期限；"大跌行情中的最优解"是节目提问，未下结论；SPCX 为 SpaceX 上市股票（Nasdaq: SPCX）。',
+        source: 'Selina聊美股（美股直播 11.17）',
+        published: '11/17',
+        note: '原片：https://www.youtube.com/watch?v=KDqXMEnyiq4',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
-  { date: '2026-11-15', groups: BATCH_2026_11_15 },
+  { date: '2026-11-18', groups: BATCH_2026_11_18 },
+  { date: '2026-11-17', groups: BATCH_2026_11_17 },
   { date: '2026-11-14', groups: BATCH_2026_11_14 },
   { date: '2026-11-13', groups: BATCH_2026_11_13 },
   { date: '2026-11-12', groups: BATCH_2026_11_12 },
