@@ -30,6 +30,13 @@ export async function GET(req: NextRequest) {
     if (idx + j >= series.length || base <= 0) return null;
     return ((series[j + idx].close - base) / base) * 100;
   };
+  // 操作日前 3 个交易日的涨跌（画像「追涨/杀跌痕迹」用：买入前刚大涨、卖出前刚大跌）
+  const back = (j: number): number | null => {
+    if (idx - j < 0) return null;
+    const prev = series[idx - j].close;
+    if (prev <= 0 || base <= 0) return null;
+    return ((base - prev) / prev) * 100;
+  };
 
   return NextResponse.json({
     symbol,
@@ -37,6 +44,7 @@ export async function GET(req: NextRequest) {
     priceAt: Math.round(base * 100) / 100,
     r5: pct(5) == null ? null : Math.round(pct(5)! * 10) / 10,
     r20: pct(20) == null ? null : Math.round(pct(20)! * 10) / 10,
+    b3: back(3) == null ? null : Math.round(back(3)! * 10) / 10,
     tradingDaysAfter: series.length - 1 - idx,
   });
 }

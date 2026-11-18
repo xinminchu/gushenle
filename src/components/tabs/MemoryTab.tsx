@@ -58,7 +58,7 @@ function loadSharedOpIds(): Set<string> {
   }
 }
 
-interface Review { r5: number | null; r20: number | null }
+interface Review { r5: number | null; r20: number | null; b3?: number | null }
 
 interface AdviceCandidate {
   symbol: string;
@@ -680,7 +680,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       fetch(`/api/forward-return?symbol=${encodeURIComponent(op.symbol)}&date=${op.date}`)
         .then((r) => r.json())
         .then((j) => {
-          setReviews((prev) => ({ ...prev, [op.id]: { r5: j.r5 ?? null, r20: j.r20 ?? null } }));
+          setReviews((prev) => ({ ...prev, [op.id]: { r5: j.r5 ?? null, r20: j.r20 ?? null, b3: j.b3 ?? null } }));
         })
         .catch(() => {});
     });
@@ -1032,7 +1032,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       // 新记录立刻拉复盘
       fetch(`/api/forward-return?symbol=${encodeURIComponent(rec.symbol)}&date=${rec.date}`)
         .then((r) => r.json())
-        .then((j) => setReviews((prev) => ({ ...prev, [rec.id]: { r5: j.r5 ?? null, r20: j.r20 ?? null } })))
+        .then((j) => setReviews((prev) => ({ ...prev, [rec.id]: { r5: j.r5 ?? null, r20: j.r20 ?? null, b3: j.b3 ?? null } })))
         .catch(() => {});
     };
     // 卖出冷静：浮亏深 + 跌不动了/跌过头了 → 先看三眼再决定（仍可卖出）
@@ -1158,7 +1158,7 @@ export default function MemoryTab({ prefillSymbol }: { prefillSymbol?: string | 
       fetch(`/api/forward-return?symbol=${encodeURIComponent(target.symbol)}&date=${newDate}`)
         .then((r) => r.json())
         .then((j) =>
-          setReviews((prev) => ({ ...prev, [target.id]: { r5: j.r5 ?? null, r20: j.r20 ?? null } })),
+          setReviews((prev) => ({ ...prev, [target.id]: { r5: j.r5 ?? null, r20: j.r20 ?? null, b3: j.b3 ?? null } })),
         )
         .catch(() => {});
     }
