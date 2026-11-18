@@ -29,6 +29,8 @@ const WheelGame = dynamic(() => import('../games/WheelGame'), { ssr: false });
 const DiceGame = dynamic(() => import('../games/DiceGame'), { ssr: false });
 const DrunkardGame = dynamic(() => import('../games/DrunkardGame'), { ssr: false });
 const ChartQuizGame = dynamic(() => import('../games/ChartQuizGame'), { ssr: false });
+const ReplayGame = dynamic(() => import('../games/ReplayGame'), { ssr: false });
+const StreamerCheckGame = dynamic(() => import('../games/StreamerCheckGame'), { ssr: false });
 
 export default function FunTab() {
   const { lang } = useLanguage();
@@ -80,6 +82,20 @@ export default function FunTab() {
     hot?: boolean;
     credit?: string;
   }[] = [
+    {
+      id: 'replay',
+      name: '历史重演局',
+      icon: GAME_ICONS.replay,
+      level: '🟢 极低',
+      hot: true,
+    },
+    {
+      id: 'streamcheck',
+      name: '主播验真',
+      icon: GAME_ICONS.streamcheck,
+      level: '🟢 极低',
+      hot: true,
+    },
     {
       id: 'clipper',
       name: '韭菜咯咯乐',
@@ -298,7 +314,7 @@ export default function FunTab() {
       {/* 敬请期待 */}
       <div className="border border-dashed border-slate-700 rounded-xl py-4 px-3 text-center">
         <p className="text-xs text-slate-400">{tx(lang, '🌊 A wave of stock-themed games is on its way…', '🌊 一大波精彩股票主题游戏正在赶来……')}</p>
-        <p className="text-[10px] text-slate-600 mt-1">{tx(lang, "Can't wait? Suggest one in the wish pool below — we build those first", '等不及？去下面的许愿池点一个，我们优先开发')}</p>
+        <p className="text-[10px] text-slate-600 mt-1">{tx(lang, 'Got a quiz question or a concept you want explained? Drop it below — picked ones go into the question bank with your name on them', '等不及？去下面出道题、点个想学的概念——入选进题库会署你的名')}</p>
       </div>
 
       {/* 游戏许愿池 */}
@@ -345,6 +361,8 @@ export default function FunTab() {
               {activeGame === 'dice' && <DiceGame />}
               {activeGame === 'drunk' && <DrunkardGame />}
               {activeGame === 'chartquiz' && <ChartQuizGame />}
+              {activeGame === 'replay' && <ReplayGame />}
+              {activeGame === 'streamcheck' && <StreamerCheckGame />}
             </div>
           </div>
         </div>

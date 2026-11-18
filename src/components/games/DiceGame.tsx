@@ -133,6 +133,39 @@ export default function DiceGame() {
     };
   }, []);
 
+  // 真实复盘一幕：揭晓后补一行「这只股过去一年真实涨幅 vs QQQ」，运气游戏也留个真认知
+  const [yearFact, setYearFact] = useState<{ sym: number; qqq: number } | null>(null);
+  const yearFactKeyRef = useRef('');
+  useEffect(() => {
+    if (phase !== 'reveal' || !pick) return;
+    const key = `${pick.symbol}|${dayLabel}`;
+    if (yearFactKeyRef.current === key) return;
+    yearFactKeyRef.current = key;
+    let cancelled = false;
+    (async () => {
+      const load = async (sym: string) => {
+        try {
+          const r = await fetch(`/api/box?symbol=${encodeURIComponent(sym)}`);
+          if (!r.ok) return null;
+          const j = await r.json();
+          const pts: { close: number }[] = j.points ?? [];
+          if (pts.length < 30) return null;
+          const back = Math.min(252, pts.length - 1);
+          const a = pts[pts.length - 1 - back].close;
+          const b = pts[pts.length - 1].close;
+          return a > 0 ? ((b - a) / a) * 100 : null;
+        } catch {
+          return null;
+        }
+      };
+      const [sym, qqq] = await Promise.all([load(pick.symbol), load('QQQ')]);
+      if (!cancelled && sym != null && qqq != null) setYearFact({ sym, qqq });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, pick, dayLabel]);
+
   const changeCount = (c: 1 | 2) => {
     setDiceCount(c);
     setCandidates(fillPicks(c === 2 ? 12 : 6));
@@ -469,6 +502,15 @@ export default function DiceGame() {
             </p>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed px-1">{tip}</p>
+          {yearFact && pick && (
+            <div className="bg-sky-500/10 border border-sky-500/30 rounded-xl p-3 text-[11px] text-sky-100/90 leading-relaxed">
+              {zh2hant(lang, `📚 真实复盘：${pick.symbol} 过去一年实际 `)}
+              {fmtPct(yearFact.sym)}
+              {zh2hant(lang, '，同期大盘 QQQ ')}
+              {fmtPct(yearFact.qqq)}
+              {zh2hant(lang, '。骰子选股图一乐；真要拿钱买一只股，先看的是这种数。')}
+            </div>
+          )}
           <div className="flex gap-2">
             <button
               onClick={reshuffle}

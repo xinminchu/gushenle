@@ -28,7 +28,9 @@ export type GameId =
   | 'stockbox'
   | 'dice'
   | 'drunk'
-  | 'chartquiz';
+  | 'chartquiz'
+  | 'replay'
+  | 'streamcheck';
 
 export interface GameStat {
   plays: number;
@@ -57,6 +59,8 @@ export const GAME_NAMES: Record<GameId, string> = {
   dice: '掷骰子买股',
   drunk: '酒鬼走位买股',
   chartquiz: '股民必备手册',
+  replay: '历史重演局',
+  streamcheck: '主播验真',
 };
 
 /**
@@ -81,6 +85,8 @@ export const GAME_ICONS: Record<GameId, string> = {
   dice: '🎲',
   drunk: '🥴',
   chartquiz: '🖼️',
+  replay: '🎞️',
+  streamcheck: '🔍',
 };
 
 const emptyStat = (): GameStat => ({ plays: 0, totalScore: 0, best: 0, banked: 0 });
@@ -104,6 +110,8 @@ function blank(): Record<GameId, GameStat> {
     dice: emptyStat(),
     drunk: emptyStat(),
     chartquiz: emptyStat(),
+    replay: emptyStat(),
+    streamcheck: emptyStat(),
   };
 }
 
