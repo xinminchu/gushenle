@@ -12,6 +12,7 @@ import {
   boxPosition,
   boxState,
   touchStats,
+  touchPoints,
   boxAgeDays,
   type BoxDef,
   type SeriesPoint,
@@ -35,6 +36,70 @@ function fmtPct(v: number): string {
 function fmtDateShort(d: string, lang: string): string {
   if (lang === 'en') return d.slice(2);
   return `${d.slice(2).replace('-', '年').replace('-', '月')}日`;
+}
+
+
+/** 箱体图：矩形就是箱子（形成段起、延伸到今天），价格线穿过它，触边点打在边上。 */
+function BoxChart({ points, box }: { points: SeriesPoint[]; box: BoxDef }) {
+  const W = 340;
+  const H = 190;
+  const PAD_R = 46;
+  const PAD_B = 14;
+  const startIdx = points.findIndex((p) => p.date >= box.startDate);
+  if (startIdx < 0) return null;
+  const from = Math.max(0, startIdx - 10);
+  const slice = points.slice(from);
+  if (slice.length < 5) return null;
+  const closes = slice.map((p) => p.close);
+  const lo = Math.min(box.bottom, ...closes);
+  const hi = Math.max(box.top, ...closes);
+  const padY = (hi - lo) * 0.06 || 1;
+  const x = (gi: number) => ((gi - from) / (slice.length - 1)) * (W - PAD_R - 4) + 2;
+  const y = (v: number) => H - PAD_B - 4 - ((v - (lo - padY)) / (hi - lo + 2 * padY)) * (H - PAD_B - 10);
+  const line = slice.map((p, i) => `${x(from + i)},${y(p.close)}`).join(' ');
+  const touches = touchPoints(points, box).filter((t) => t.index >= from);
+  const lastClose = closes[closes.length - 1];
+  const fmt = (v: number) => `$${v.toFixed(2)}`;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full block mt-2">
+      {/* 箱体矩形：形成段起始 → 今天 */}
+      <rect
+        x={x(startIdx)}
+        y={y(box.top)}
+        width={x(points.length - 1) - x(startIdx)}
+        height={Math.max(2, y(box.bottom) - y(box.top))}
+        fill="rgba(245, 158, 11, 0.13)"
+      />
+      <line x1={x(startIdx)} y1={y(box.top)} x2={x(points.length - 1)} y2={y(box.top)} stroke="#d97706" strokeWidth="1.4" />
+      <line x1={x(startIdx)} y1={y(box.bottom)} x2={x(points.length - 1)} y2={y(box.bottom)} stroke="#d97706" strokeWidth="1.4" />
+      <line x1={x(startIdx)} y1={y(box.top)} x2={x(startIdx)} y2={y(box.bottom)} stroke="#d97706" strokeWidth="1" strokeDasharray="3 3" />
+      {/* 价格线 */}
+      <polyline points={line} fill="none" stroke="#0284c7" strokeWidth="1.6" />
+      {/* 触边点 */}
+      {touches.map((t, i) => (
+        <circle
+          key={i}
+          cx={x(t.index)}
+          cy={y(points[t.index].close)}
+          r="3"
+          fill={t.edge === 'top' ? '#d97706' : '#0284c7'}
+          stroke="#fff"
+          strokeWidth="0.8"
+        />
+      ))}
+      {/* 现价虚线 + 末点 */}
+      <line x1={2} y1={y(lastClose)} x2={x(points.length - 1)} y2={y(lastClose)} stroke="#94a3b8" strokeWidth="0.8" strokeDasharray="2 3" />
+      <circle cx={x(points.length - 1)} cy={y(lastClose)} r="3.2" fill="#0f172a" stroke="#fff" strokeWidth="1" />
+      {/* 右侧价签 */}
+      <text x={W - PAD_R + 4} y={y(box.top) + 3} fontSize="8.5" fill="#d97706">{fmt(box.top)}</text>
+      <text x={W - PAD_R + 4} y={Math.max(y(box.bottom), y(box.top) + 11) + 3} fontSize="8.5" fill="#d97706">{fmt(box.bottom)}</text>
+      {Math.abs(y(lastClose) - y(box.top)) > 9 && Math.abs(y(lastClose) - y(box.bottom)) > 9 && (
+        <text x={W - PAD_R + 4} y={y(lastClose) + 3} fontSize="8.5" fill="#475569">{fmt(lastClose)}</text>
+      )}
+      <text x={x(startIdx)} y={H - 2} fontSize="8" fill="#94a3b8">{box.startDate}</text>
+      <text x={x(points.length - 1)} y={H - 2} fontSize="8" fill="#94a3b8" textAnchor="end">{points[points.length - 1].date}</text>
+    </svg>
+  );
 }
 
 export default function BoxPanel({
@@ -197,7 +262,7 @@ export default function BoxPanel({
         <>
           {active ? (
             <div className="bg-slate-900/60 border border-amber-600/30 rounded-lg p-3">
-              <div className="text-[13px] font-semibold text-amber-100">{stateText()}</div>
+              <div className="text-[13px] font-semibold text-amber-600">{stateText()}</div>
               {/* 位置条：0=箱底 100=箱顶 */}
               {pos != null && (
                 <div className="relative h-2.5 bg-slate-700/50 rounded-full mt-2.5 mb-1">
@@ -211,6 +276,7 @@ export default function BoxPanel({
                 <span>{tx(lang, 'Bottom', '箱底')} {fmtP(active.bottom)}</span>
                 <span>{tx(lang, 'Top', '箱顶')} {fmtP(active.top)}</span>
               </div>
+              <BoxChart points={data.points} box={active} />
               <div className="text-[10px] text-slate-500 mt-1.5 leading-relaxed">
                 {tx(
                   lang,

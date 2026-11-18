@@ -141,29 +141,45 @@ function summarize(vals: number[]): { median: number | null; worst: number | nul
   };
 }
 
+/** 触边点（供画图）：箱形成段开始至今，每次触边的下标与边。口径与 touchStats 一致。 */
+export function touchPoints(
+  points: SeriesPoint[],
+  box: BoxDef,
+): { index: number; edge: 'top' | 'bottom' }[] {
+  const closes = points.map((p) => p.close);
+  const startIdx = points.findIndex((p) => p.date >= box.startDate);
+  if (startIdx < 0) return [];
+  const out: { index: number; edge: 'top' | 'bottom' }[] = [];
+  let lastTop = -Infinity;
+  let lastBottom = -Infinity;
+  for (let k = startIdx; k < closes.length; k++) {
+    if (closes[k] >= box.top * (1 - TOUCH_BAND) && k - lastTop >= TOUCH_GAP) {
+      out.push({ index: k, edge: 'top' });
+      lastTop = k;
+    }
+    if (closes[k] <= box.bottom * (1 + TOUCH_BAND) && k - lastBottom >= TOUCH_GAP) {
+      out.push({ index: k, edge: 'bottom' });
+      lastBottom = k;
+    }
+  }
+  return out;
+}
+
 /** 触边史：箱形成段开始至今，每条边被触碰的次数 + 触碰后 20 日实际涨跌分布。 */
 export function touchStats(points: SeriesPoint[], box: BoxDef): BoxTouchStats {
   const closes = points.map((p) => p.close);
-  const startIdx = points.findIndex((p) => p.date >= box.startDate);
-  const mk = (isTop: boolean): TouchStat => {
-    const edge = isTop ? box.top : box.bottom;
-    let count = 0;
-    let lastTouch = -Infinity;
+  const pts = touchPoints(points, box);
+  const mk = (edge: 'top' | 'bottom'): TouchStat => {
+    const mine = pts.filter((t) => t.edge === edge);
     const fwds: number[] = [];
-    if (startIdx < 0) return { count: 0, medianFwd20: null, worstFwd20: null, bestFwd20: null };
-    for (let k = startIdx; k < closes.length; k++) {
-      const near = isTop ? closes[k] >= edge * (1 - TOUCH_BAND) : closes[k] <= edge * (1 + TOUCH_BAND);
-      if (near && k - lastTouch >= TOUCH_GAP) {
-        count += 1;
-        lastTouch = k;
-        const f = fwdReturns(closes, k);
-        if (f != null) fwds.push(f);
-      }
+    for (const t of mine) {
+      const f = fwdReturns(closes, t.index);
+      if (f != null) fwds.push(f);
     }
     const s = summarize(fwds);
-    return { count, medianFwd20: s.median, worstFwd20: s.worst, bestFwd20: s.best };
+    return { count: mine.length, medianFwd20: s.median, worstFwd20: s.worst, bestFwd20: s.best };
   };
-  return { top: mk(true), bottom: mk(false) };
+  return { top: mk('top'), bottom: mk('bottom') };
 }
 
 export interface BreakoutHistory {
