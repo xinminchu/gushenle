@@ -1338,8 +1338,8 @@ const BATCH_2026_11_19: MorningBriefing = {
       source: '站内 /api/rhythm（盘前价，Yahoo/Nasdaq 管线）',
     },
     {
-      text: 'IREN 盘前约 15.93 美元；站内 IREN 日线数据异常（显示约 352 美元，与实价不符），涨跌幅暂不列，正在排查。',
-      source: '站内 /api/rhythm（核查记录）',
+      text: 'IREN 盘前约 15.90 美元（+4.33%，08:38 ET，站内盘前价，以 11 月 18 日收盘 15.24 美元为基准）。',
+      source: '站内 /api/rhythm（盘前价，Yahoo/Nasdaq 管线）',
     },
   ],
   calendar: [
