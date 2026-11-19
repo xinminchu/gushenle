@@ -22,6 +22,120 @@ export interface PiisWeek {
 
 export const PIIS_WEEKS: PiisWeek[] = [
   {
+    id: '2026-11-16',
+    rangeZh: '11/09–11/16',
+    rangeEn: '11/09–11/16',
+    formulaZh: '被财报证实的 AI 需求兑现速度 ＞ 通胀重新定价后的资本成本 + 融资风险 + 估值要求',
+    formulaEn: 'AI demand payoff, verified by earnings, outrunning its repriced cost of capital + financing risk + valuation demands',
+    points: [
+      {
+        tag: '宏观',
+        tagEn: 'Macro',
+        zh: '10 月 CPI 环比 +0.4%（预期 +0.3%）、核心 +0.3%（连续第三个月），且因 2025 年停摆缺基数、无官方同比；10 月 PPI 环比 +0.3%、同比 +6.5% 为 2022 年 11 月以来最高；申领失业金 200K，连续第九周不高于 20 万——通胀黏、就业紧，两份报告都指向加息而非降息。',
+        en: 'October CPI rose 0.4% on the month (0.3% expected) with core up 0.3% for a third straight month, and no official YoY figure exists because the 2025 shutdown left no base; October PPI rose 0.3% MoM and 6.5% YoY, the highest since November 2022; jobless claims held at 200K, a ninth straight week at or below that mark — sticky inflation and a tight labor market, with both reports pointing to hikes, not cuts.',
+      },
+      {
+        tag: '利率',
+        tagEn: 'Rates',
+        zh: '10 年期收 5.15%（一周前 4.86%，+29bp，19 个月来最大单周涨幅），盘中高点约 5.17%；2 年期 +37bp 至 4.88%、30 年期 +21bp 至 5.47%；12 月加息 25bp 的概率由 76.3% 升至约 88.5%（11/14 CME 口径），「维持不变」的概率被清零，+50bp 的尾部以 11.5% 进入定价。',
+        en: 'The 10-year closed at 5.15% (4.86% a week earlier, +29bp, its biggest weekly jump in 19 months) with an intraday high near 5.17%; the 2-year rose 37bp to 4.88% and the 30-year 21bp to 5.47%; odds of a 25bp December hike climbed from 76.3% to about 88.5% (CME, Nov 14), the "no change" outcome was priced to zero, and a 50bp tail entered at 11.5%.',
+      },
+      {
+        tag: '大盘',
+        tagEn: 'Market',
+        zh: '标普 +2.51%、纳指 +2.27%、道指 +2.07%、罗素 +1.32%，均为 8 月以来最佳单周、五周来首次上涨；但周五标普 −0.40%、纳指 −0.91%，只有道指独涨——周一的大反弹、周四的换帅、周五的芯片回吐，涨的是反弹，不是趋势确认。',
+        en: 'The S&P gained 2.51%, the Nasdaq 2.27%, the Dow 2.07% and the Russell 2000 1.32% — the best week since August and the first gain in five weeks; yet on Friday the S&P fell 0.40% and the Nasdaq 0.91% with only the Dow up — Monday\'s surge, Thursday\'s CEO shock and Friday\'s chip give-back add up to a rebound, not a confirmed trend.',
+      },
+      {
+        tag: '轮动',
+        tagEn: 'Rotation',
+        zh: '11 只板块基金全周全涨，能源 XLE +5.4% 领涨；LSEG Lipper 口径：全球股票基金净流入 $509.9 亿（9 月 23 日以来最大），欧洲股票基金 +$351.3 亿（2021 年 6 月以来最大），科技基金 +$26.2 亿；债券基金转为净流出、货币市场基金 −$374.8 亿——钱正从债与现金回流股票；VIX 周五收 19.30（FRED/Cboe 序列），较上周五 25.64 大幅回落。',
+        en: 'All eleven sector funds rose, with energy (XLE) leading at +5.4%; LSEG Lipper counted $50.99B into global equity funds, the most since September 23, with European equity funds taking $35.13B (most since June 2021) and tech funds $2.62B; bond funds flipped to outflows and money-market funds shed $37.48B — money is rotating out of bonds and cash back into equities, and the VIX closed Friday at 19.30 (FRED/Cboe series), well down from 25.64 a week earlier.',
+      },
+      {
+        tag: 'AI 硬件',
+        tagEn: 'AI HW',
+        zh: '费半全周 +8.05%（周三摸高 10,564 点、周五回落到 10,146 点，Nasdaq 官方序列）；应用材料营收 +53%、非 GAAP 每股收益 +92%，并首判 2027 年晶圆厂设备增长超 30%，思科把超大规模 AI 基础设施收入目标上调到 $90 亿；但 NVDA 全周 −12.75%——硬件需求被证实，龙头的领导力风险被单独定价。',
+        en: 'The SOX rose 8.05% (touching 10,564 on Wednesday before easing to 10,146 on Friday, Nasdaq official series); Applied Materials grew revenue 53% with non-GAAP EPS up 92% and called for wafer-fab equipment growth above 30% in 2027, while Cisco raised its hyperscaler AI infrastructure revenue target to $9B; Nvidia still lost 12.75% on the week — hardware demand was verified, and the leader\'s leadership risk was priced separately.',
+      },
+      {
+        tag: 'AI 金融',
+        tagEn: 'AI Finance',
+        zh: 'CoreWeave 营收 +168% 至 $36.6 亿、在手订单 $1,325 亿，但净亏 $7.09 亿、净利息支出 $8.46 亿、资本开支指引 $370–390 亿；Nebius 营收 +571% 至 $9.81 亿，却把 2026 年营收指引落到区间低端、资本开支上调到约 $270 亿，股价当日 −16.8%——10 年期 5.15% 之下，市场开始向 AI 云要合同兑现与融资可持续性。',
+        en: 'CoreWeave grew revenue 168% to $3.66B with a $132.5B backlog, but lost $709M with $846M of net interest expense and a $37–39B capex guide; Nebius grew revenue 571% to $980.8M yet guided 2026 revenue to the low end and capex up to about $27B, and the stock fell 16.8% that day — with the 10-year at 5.15%, the market has started asking AI clouds for contract delivery and financing durability, not just growth.',
+      },
+      {
+        tag: '消费',
+        tagEn: 'Consumer',
+        zh: '本周无零售销售数据（10 月零售销售 11/17 才公布），消费侧只有间接信号：油价连续第二周下跌给钱包让出空间，但 CPI 环比 +0.4% 与 PPI 同比 6.5% 说明压力在物价端，不在就业端。',
+        en: 'There was no retail-sales print this week (October\'s arrives Nov 17), so the consumer read is indirect: a second straight weekly drop in oil freed up some wallet room, but CPI at +0.4% on the month and PPI at +6.5% YoY say the pressure sits in prices, not in jobs.',
+      },
+      {
+        tag: '能源',
+        tagEn: 'Energy',
+        zh: 'WTI 收 $88.56（全周 −2.50%）、布伦特 1 月合约 $95.84（−2.52%），连续第二周下跌，驱动是美–伊和平提案进展与 IEA 警告四季度重回供应过剩（供应高出需求约 170 万桶/日）；能源股却全周领涨——油价跌、能源股涨，分化本身就是本周轮动的注脚。',
+        en: 'WTI settled at $88.56 (−2.50%) and January Brent at $95.84 (−2.52%), a second straight weekly decline, driven by progress on a Qatar-mediated US–Iran proposal and an IEA warning that Q4 flips back to oversupply (supply about 1.7M barrels/day above demand); energy stocks led the week anyway — oil down, energy shares up, and that split is the week\'s rotation in miniature.',
+      },
+    ],
+  },
+  {
+    id: '2026-11-09',
+    rangeZh: '11/02–11/09',
+    rangeEn: '11/02–11/09',
+    formulaZh: 'AI 需求兑现的速度与广度 ＞ 被大选与油价重塑的资本成本 + 融资风险 + 估值要求',
+    formulaEn: 'Verified speed and breadth of AI demand payoff > cost of capital (reshaped by the election and the oil crash) + financing risk + valuation demands',
+    points: [
+      {
+        tag: '宏观',
+        tagEn: 'Macro',
+        zh: '10 月非农 +165K（约为预期的三倍），失业率 4.1%，平均时薪环比 +0.4%、同比 +3.1%；申领失业金 189K 追平 57 年低位，Q3 劳动生产率 +3.6%——增长强、就业紧，而 ISM 服务业价格指数 73.0 显示通胀仍黏。',
+        en: 'October payrolls added 165K (about triple the consensus) with unemployment at 4.1% and average hourly pay +0.4% on the month, +3.1% on the year; jobless claims matched a 57-year low at 189K and Q3 productivity rose 3.6% — strong growth and a tight labor market, while the ISM services prices index at 73.0 said inflation is still sticky.',
+      },
+      {
+        tag: '利率',
+        tagEn: 'Rates',
+        zh: '10 年期收 4.86%（一周前 4.94%），周内高点在大选日 4.95%、低点周四 4.84%（9 月 9 日以来最低）；12 月加息 25bp 的押注在非农后升到 76.8%；英央行同周加息 25bp 至 4.00%，为 2023 年 8 月以来首次。',
+        en: 'The 10-year closed at 4.86% (4.94% a week earlier), peaking at 4.95% on Election Day and dipping to 4.84% on Thursday, its lowest since September 9; odds of a 25bp December hike rose to 76.8% after payrolls, and the Bank of England hiked 25bp to 4.00% the same week, its first increase since August 2023.',
+      },
+      {
+        tag: '大盘',
+        tagEn: 'Market',
+        zh: '标普 −2.68%、纳指 −3.37%（连续第四周下跌、6 月以来最差单周）、道指 −0.94%、罗素 2000 −2.05%；周四标普 −4.36%、纳指 −5.52% 均为 4 月以来最差单日，一日抹去约 $3 万亿市值；纳指较 10 月纪录高点低 10.9%，进入修正区间。',
+        en: 'The S&P 500 fell 2.68% and the Nasdaq 3.37% (a fourth straight weekly loss and the worst week since June), the Dow 0.94% and the Russell 2000 2.05%; Thursday\'s −4.36% and −5.52% drops were the worst single days since April and erased roughly $3 trillion of market value, leaving the Nasdaq 10.9% below its October record — in correction territory.',
+      },
+      {
+        tag: '轮动',
+        tagEn: 'Rotation',
+        zh: '能源 XLE 约 −11% 为最差板块、科技约 −7%，金融 +1.15% 领涨；LSEG Lipper 口径：全球股票基金净流入 $386.3 亿（连续第七周），但科技基金仅 +$6.24 亿、为三周低点，货币市场基金 +$1,727 亿为 2020 年 4 月以来最大——钱在进场，但不在追 AI。',
+        en: 'Energy (XLE) was the worst sector at about −11% and tech fell about 7% while financials led at +1.15%; LSEG Lipper counted $38.63B into global equity funds (a seventh straight week of inflows) but only $623.6M into tech funds, a three-week low, while money-market funds took in $172.7B, the most since April 2020 — money is coming in, just not chasing AI.',
+      },
+      {
+        tag: 'AI 硬件',
+        tagEn: 'AI HW',
+        zh: '费半全周 −12.15%，周四 −12.25% 为 2020 年 3 月以来最差单日；驱动是政治不是需求——民主党横扫中期选举后，市场开始给数据中心建设定监管天花板（高盛估计约 45% 的规划美国算力可能受新当选州长限制）；AMD 财报大超预期（数据中心 +97%、Q4 指引约 $170 亿）本周仍跌约 17%。',
+        en: 'The SOX lost 12.15% on the week, with Thursday\'s −12.25% its worst day since March 2020; the driver was politics, not demand — after the Democratic midterm sweep, markets began pricing a regulatory ceiling on data-center builds (Goldman Sachs estimates about 45% of planned US compute capacity could face limits from newly elected governors), and AMD fell about 17% on the week despite a big earnings beat (data-center revenue +97%, Q4 guide about $17B).',
+      },
+      {
+        tag: 'AI 金融',
+        tagEn: 'AI Finance',
+        zh: '内存涨价开始吃利润：苹果把 12 月季度毛利率指引给到 45%–46% 并归因于内存成本，高通手机芯片收入 −26%、股价周四 −9%；Palantir 收入 +96%，但新签合同总额仅 +6%、剩余履约义务持平，股价照跌——市场开始向 AI 要合同，不只看收入增速。',
+        en: 'Memory inflation started eating margins: Apple guided December-quarter gross margin to 45%–46% and blamed memory costs, Qualcomm\'s handset chip revenue fell 26% and the stock dropped 9% on Thursday; Palantir grew revenue 96% but total contract value rose only 6% with remaining performance obligations flat, and the stock still fell — the market has started asking AI for signed contracts, not just growth rates.',
+      },
+      {
+        tag: '消费',
+        tagEn: 'Consumer',
+        zh: 'iPhone 收入创纪录 $575.8 亿（+17.5%），与高通手机芯片 −26% 形成对照——消费电子的需求还在，但利润正被成本与供应链重新分配；油价全周跌约 13% 给钱包让出空间，时薪同比 +3.1% 与服务价格指数 73.0 仍在拉锯。',
+        en: 'iPhone revenue hit a record $57.58B (+17.5%) against Qualcomm\'s 26% drop in handset chips — consumer electronics demand is intact, but costs and the supply chain are re-slicing the profit; oil\'s roughly 13% weekly drop freed up wallet room, even as 3.1% YoY pay growth and a services prices index of 73.0 kept pulling the other way.',
+      },
+      {
+        tag: '能源',
+        tagEn: 'Energy',
+        zh: 'WTI 收 $90.83（全周 −12.76%）、布伦特 1 月合约 $98.32（−13.32%），为 2020 年 4 月以来最大单周跌幅；驱动是选举结果打开美–伊谈判窗口、战争溢价出清——油价本应松动通胀预期，本周却被 AI 监管担忧与加息押注回升盖过；VIX 周五收 25.64（FRED/Cboe 序列）。',
+        en: 'WTI settled at $90.83 (−12.76% on the week) and January Brent at $98.32 (−13.32%), the biggest weekly drop since April 2020, as the election result opened a US–Iran negotiating window and the war premium drained out; cheaper oil should have eased inflation expectations, but this week AI-regulation fears and reviving hike odds drowned it out, and the VIX closed Friday at 25.64 (FRED/Cboe series).',
+      },
+    ],
+  },
+  {
     id: '2026-11-02',
     rangeZh: '10/26–11/02',
     rangeEn: '10/26–11/02',
