@@ -9,8 +9,15 @@
 // - 多券商：Schwab / Fidelity / Robinhood / Webull / IBKR / moomoo / 老虎等，版式各异，按通用模式提取。
 // - 防御性解析 Gemini 返回（空回包、markdown 代码围栏、多余文字）。
 // - 永不向客户端泄露原生错误文本。
+//
+// v3 (2026-11-20, 账户真相)：新增 kind "balance"——Schwab Account Summary /
+// Balances 余额页截图，提取 Margin Balance、Cash & Sweep Vehicle、Cash Balance、
+// Long Stock Value、Margin Equity、Maintenance Requirement、Available Funds For
+// Trading，存为带日期的账户快照，供持仓页事实线与导入时账实核对用。
+// 只陈述券商数字，不给买卖建议。
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import { sanitizeSnapshot, type AccountSnapshot } from '@/lib/accountSnapshot';
 
 export const maxDuration = 60;
 
@@ -36,7 +43,10 @@ interface ScanImage {
   mimeType: string;
 }
 
-const KINDS = new Set(['history', 'positions', 'order', 'other']);
+const KINDS = new Set(['history', 'positions', 'order', 'balance', 'other']);
+
+/** 余额快照（服务端清洗后的形态，去掉 id/createdAt/source，前端保存时补） */
+type SnapshotOut = Omit<AccountSnapshot, 'id' | 'createdAt' | 'source'>;
 
 function extractJson(text: string): any | null {
   const t = (text || '').trim();
@@ -93,7 +103,14 @@ const GENERIC_GUIDANCE =
 async function scanImage(
   ai: GoogleGenAI,
   img: ScanImage,
-): Promise<{ kind: string; broker: string; guidance: string; ops: Op[]; model: string }> {
+): Promise<{
+  kind: string;
+  broker: string;
+  guidance: string;
+  ops: Op[];
+  snapshot: SnapshotOut | null;
+  model: string;
+}> {
   let lastErr = '';
   for (const model of MODELS) {
     for (let attempt = 1; attempt <= 2; attempt++) {
@@ -117,7 +134,9 @@ async function scanImage(
         const broker = String(j.broker || '').slice(0, 40);
         const guidance = String(j.guidance || '').slice(0, 500) || (kind === 'history' ? '' : GENERIC_GUIDANCE);
         const ops = kind === 'history' ? sanitizeOps(j.operations) : [];
-        return { kind, broker, guidance, ops, model };
+        // 余额页：清洗成快照；认不出有效数字时 snapshot 为 null（前端按指引处理）
+        const snapshot = kind === 'balance' ? sanitizeSnapshot(j.snapshot ?? j) : null;
+        return { kind, broker, guidance, ops, snapshot, model };
       } catch (e) {
         lastErr = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : String(e).slice(0, 200);
         if (/404/.test(lastErr)) break; // 模型名不存在，换下一个
@@ -135,12 +154,13 @@ const PROMPT = `You are extracting stock trade history from a brokerage app scre
 
 STEP 1 — CLASSIFY the screenshot. Look at the whole screen:
 - kind "history": a trade/transaction history list — date section headers (e.g. "September 29, 2026") followed by rows with ticker + Buy/Sell + Qty + Price.
+- kind "balance": an account summary / balances page — labeled fields with dollar amounts such as Margin Balance, Cash & Sweep Vehicle, Cash Balance, Long Stock Value, Margin Equity, Maintenance Requirement, Available Funds For Trading (Schwab "Account Summary" / "Balances" page). No Buy/Sell rows.
 - kind "positions": an account holdings page (current shares, market value, day gain/loss — no Buy/Sell rows).
 - kind "order": an order ticket / trading screen (buy/sell buttons, quantity input, order type selector, bid/ask prices).
 - kind "other": anything else (charts, news, home screen, login...).
 Also note the broker name if recognizable (Schwab, Fidelity, Vanguard, Robinhood, Webull, IBKR, E*TRADE, moomoo, Tiger Brokers...).
 
-STEP 2 — If kind is NOT "history", output ONLY this JSON (guidance in the screenshot's language, telling the user exactly where to tap to find the trade history):
+STEP 2 — If kind is NOT "history" and NOT "balance", output ONLY this JSON (guidance in the screenshot's language, telling the user exactly where to tap to find the trade history):
 {"kind":"<kind>","broker":"<name or empty>","guidance":"<1-2 sentences>","operations":[]}
 Guidance examples — adapt to the detected broker:
 - Schwab: "Open the Schwab app → Accounts → History tab, screenshot the transaction list, then import. / 打开 Schwab App → Accounts → History，截取交易列表后再导入。"
@@ -151,6 +171,18 @@ Guidance examples — adapt to the detected broker:
 - moomoo: "moomoo → 账户 → 历史订单/交割单，截图后导入。"
 - Tiger: "老虎证券 → 订单 → 历史订单，截图后导入。"
 - Unknown: "${GENERIC_GUIDANCE}"
+
+STEP 2b — If kind IS "balance", extract the account figures. Amounts keep their sign:
+a negative Margin Balance means money borrowed from the broker (e.g. -$2,191.64).
+Parenthesized amounts like ($2,191.64) are also negative. A field you cannot see is null, never 0.
+- date: the as-of date shown on the screen, as YYYY-MM-DD ("as of Nov 19, 2026" → "2026-11-19"); null if no date is visible.
+- marginBalance, cashSweep ("Cash & Sweep Vehicle"), cashBalance ("Cash Balance"),
+  longStockValue ("Long Stock Value"), marginEquity ("Margin Equity"),
+  maintenanceRequirement ("Maintenance Requirement"),
+  availableFunds ("Available Funds For Trading"): numbers, null if not visible.
+Output JSON only, no other text:
+{"kind":"balance","broker":"Schwab","date":"2026-11-19","snapshot":{"marginBalance":-2191.64,"cashSweep":0,"cashBalance":0,"longStockValue":4794.7,"marginEquity":2603.06,"maintenanceRequirement":2605.77,"availableFunds":-20.41}}
+If the balances page shows no readable figures: {"kind":"balance","broker":"...","date":null,"snapshot":null}.
 
 STEP 3 — If kind IS "history", extract EVERY Buy/Sell transaction row. Layouts differ by broker — adapt, but every row has the same ingredients:
 - date: the section header date above the row, as YYYY-MM-DD ("September 29, 2026" → "2026-09-29")
@@ -195,14 +227,24 @@ export async function POST(req: NextRequest) {
 
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   const operations: Op[] = [];
+  const snapshots: SnapshotOut[] = [];
   const notices: string[] = [];
   const failed: number[] = [];
 
   for (let i = 0; i < images.length; i++) {
     const img = images[i];
     try {
-      const { kind, broker, guidance, ops } = await scanImage(ai, img);
-      if (kind !== 'history') {
+      const { kind, broker, guidance, ops, snapshot } = await scanImage(ai, img);
+      if (kind === 'balance') {
+        if (snapshot) {
+          snapshots.push(snapshot);
+        } else {
+          const who = broker ? `（${broker}）` : '';
+          notices.push(
+            `第 ${i + 1} 张${who}：余额页没认出数字，请截取带 Margin Balance / Margin Equity 等字段的 Account Summary 或 Balances 页，数字清晰后再导入。`,
+          );
+        }
+      } else if (kind !== 'history') {
         const who = broker ? `（${broker}）` : '';
         notices.push(`第 ${i + 1} 张${who}：${guidance}`);
       }
@@ -216,6 +258,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     operations,
+    snapshots,
     notices,
     failed,
   });

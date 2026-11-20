@@ -12,6 +12,16 @@ import { Camera, CheckCircle2, Loader2, XCircle, Upload } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { tx } from '@/lib/hant';
 import { loadOperations } from '@/lib/operations';
+import { loadAccount, adjustmentsTotal, todayStr } from '@/lib/account';
+import { loadPositions } from '@/lib/positions';
+import {
+  saveSnapshot,
+  latestSnapshot,
+  reconcileBookVsSnapshot,
+  fmtUsd,
+  type AccountSnapshot,
+  type ReconLine,
+} from '@/lib/accountSnapshot';
 import { saveOperationAndSync, applyOperationToPositions, lastSyncAt, markSynced } from '@/lib/positions';
 
 interface ScannedOp {
@@ -28,7 +38,42 @@ interface ScannedOp {
   dupOpId?: string;
 }
 
-type Phase = 'idle' | 'working' | 'preview' | 'done';
+type Phase = 'idle' | 'working' | 'preview' | 'snapshot-preview' | 'done';
+
+/** 余额快照（服务端已清洗）：日期可改，保存后才落盘 */
+interface ScannedSnapshot {
+  date: string;
+  broker: string;
+  marginBalance: number | null;
+  cashSweep: number | null;
+  cashBalance: number | null;
+  longStockValue: number | null;
+  marginEquity: number | null;
+  maintenanceRequirement: number | null;
+  availableFunds: number | null;
+  saved: boolean;
+}
+
+const SNAPSHOT_FIELDS: { key: keyof Omit<ScannedSnapshot, 'date' | 'broker' | 'saved'>; en: string; zh: string }[] = [
+  { key: 'marginBalance', en: 'Margin Balance', zh: '保证金余额' },
+  { key: 'cashSweep', en: 'Cash & Sweep Vehicle', zh: '现金及归集' },
+  { key: 'cashBalance', en: 'Cash Balance', zh: '现金余额' },
+  { key: 'longStockValue', en: 'Long Stock Value', zh: '持仓市值' },
+  { key: 'marginEquity', en: 'Margin Equity', zh: '净值' },
+  { key: 'maintenanceRequirement', en: 'Maintenance Requirement', zh: '维持要求' },
+  { key: 'availableFunds', en: 'Available Funds For Trading', zh: '可用资金' },
+];
+
+/**
+ * 账面现金 = 投入本金 − 持仓总成本 + 已实现盈亏 + 非交易现金项
+ * （与持仓页 cashValue 同口径；只随买卖与现金项变，不随涨跌变）
+ */
+function bookCashNow(): number | null {
+  const a = loadAccount();
+  if (!a) return null;
+  const cost = loadPositions().reduce((s, p) => s + p.shares * p.avgCost, 0);
+  return Math.round((a.capital - cost + (a.realized ?? 0) + adjustmentsTotal(a)) * 100) / 100;
+}
 
 const CHUNK = 4;
 const REQUEST_TIMEOUT_MS = 55000;
@@ -112,12 +157,59 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
   const [error, setError] = useState('');
   const [notices, setNotices] = useState<string[]>([]);
   const [result, setResult] = useState('');
+  // 余额快照：同一批里可能既有 History 又有余额页，交易预览先攒着
+  const [snaps, setSnaps] = useState<ScannedSnapshot[]>([]);
+  const [pendingOps, setPendingOps] = useState<ScannedOp[]>([]);
+  // 账实核对结果（保存快照 / 导入交易后算）：差额必须亮出来，不许静默通过
+  const [reconLines, setReconLines] = useState<ReconLine[]>([]);
+  const [reconDate, setReconDate] = useState('');
 
   const startPick = () => {
     setError('');
     setNotices([]);
     setResult('');
+    setReconLines([]);
+    setReconDate('');
     fileRef.current?.click();
+  };
+
+  /**
+   * 去重：跟已有操作记录比。注意"记录已存在"不等于"已同步到持仓"——
+   * 流水和持仓是两本账，一条记录可能只进了流水、从未动过持仓。
+   * 这种记录单独标出，可勾选只补同步（不重复记账）。
+   */
+  const enterTradePreview = (list: ScannedOp[]) => {
+    const existingOps: (TradeFields & { id: string })[] = loadOperations().map((r) => ({
+      id: r.id,
+      symbol: r.symbol,
+      date: r.date,
+      action: r.action,
+      qty: r.qty ?? 0,
+      price: r.price,
+    }));
+    const seenOps: TradeFields[] = [];
+    const seenBefore = (o: TradeFields) =>
+      seenOps.some((s) => dupKey(s) === dupKey(o) || sameTradeNear(s, o));
+    for (const o of list) {
+      const ex = existingOps.find((r) => dupKey(r) === dupKey(o) || sameTradeNear(r, o));
+      if (ex) {
+        o.dup = true;
+        o.checked = false;
+        o.dupOpId = ex.id;
+        // 只有第一次出现才可补同步；同一批里重复出现的是纯重复。
+        // lastSyncAt 为空也可能是同步日志被裁剪（只留最近 200 条）的老记录，
+        // 所以补同步默认不勾选，由用户逐笔确认。
+        if (!seenBefore(o) && lastSyncAt(ex.id) === null) o.dupUnsynced = true;
+      } else if (seenBefore(o)) {
+        o.dup = true;
+        o.checked = false;
+      }
+      seenOps.push(o);
+    }
+    // 按日期倒序
+    list.sort((a, b) => b.date.localeCompare(a.date));
+    setOps(list);
+    setPhase('preview');
   };
 
   const handleFiles = async (files: FileList | null) => {
@@ -126,6 +218,10 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
     setError('');
     setNotices([]);
     setOps([]);
+    setSnaps([]);
+    setPendingOps([]);
+    setReconLines([]);
+    setReconDate('');
     try {
       const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
       if (list.length === 0) throw new Error(tx(lang, 'No images selected', '没有选中图片'));
@@ -134,6 +230,7 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
       for (const f of list) compressed.push(await compressImage(f));
 
       const all: ScannedOp[] = [];
+      const allSnaps: ScannedSnapshot[] = [];
       const failedBatches: number[] = [];
       const allNotices: string[] = [];
       for (let i = 0; i < compressed.length; i += CHUNK) {
@@ -201,13 +298,28 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
         for (const o of j.operations || []) {
           all.push({ ...o, checked: true, dup: false });
         }
+        for (const s of j.snapshots || []) {
+          allSnaps.push({
+            date:
+              typeof s.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.date) ? s.date : todayStr(),
+            broker: typeof s.broker === 'string' && s.broker ? s.broker : 'Schwab',
+            marginBalance: s.marginBalance ?? null,
+            cashSweep: s.cashSweep ?? null,
+            cashBalance: s.cashBalance ?? null,
+            longStockValue: s.longStockValue ?? null,
+            marginEquity: s.marginEquity ?? null,
+            maintenanceRequirement: s.maintenanceRequirement ?? null,
+            availableFunds: s.availableFunds ?? null,
+            saved: false,
+          });
+        }
         for (const n of j.notices || []) {
           if (typeof n === 'string' && n && !allNotices.includes(n)) allNotices.push(n);
         }
         if (j.failed && j.failed.length > 0) failedBatches.push(i / CHUNK + 1);
       }
       setNotices(allNotices);
-      if (all.length === 0) {
+      if (all.length === 0 && allSnaps.length === 0) {
         if (allNotices.length > 0) {
           // 识别成功但无交易（截图不是 History 页）：只展示指引，不抛错
           setPhase('idle');
@@ -217,40 +329,6 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
           tx(lang, 'No trades recognized — try clearer screenshots', '没识别出交易记录，换更清晰的截图试试'),
         );
       }
-      // 去重：跟已有操作记录比。注意"记录已存在"不等于"已同步到持仓"——
-      // 流水和持仓是两本账，一条记录可能只进了流水、从未动过持仓。
-      // 这种记录单独标出，可勾选只补同步（不重复记账）。
-      const existingOps: (TradeFields & { id: string })[] = loadOperations().map((r) => ({
-        id: r.id,
-        symbol: r.symbol,
-        date: r.date,
-        action: r.action,
-        qty: r.qty ?? 0,
-        price: r.price,
-      }));
-      const seenOps: TradeFields[] = [];
-      const seenBefore = (o: TradeFields) =>
-        seenOps.some((s) => dupKey(s) === dupKey(o) || sameTradeNear(s, o));
-      for (const o of all) {
-        const ex = existingOps.find((r) => dupKey(r) === dupKey(o) || sameTradeNear(r, o));
-        if (ex) {
-          o.dup = true;
-          o.checked = false;
-          o.dupOpId = ex.id;
-          // 只有第一次出现才可补同步；同一批里重复出现的是纯重复。
-          // lastSyncAt 为空也可能是同步日志被裁剪（只留最近 200 条）的老记录，
-          // 所以补同步默认不勾选，由用户逐笔确认。
-          if (!seenBefore(o) && lastSyncAt(ex.id) === null) o.dupUnsynced = true;
-        } else if (seenBefore(o)) {
-          o.dup = true;
-          o.checked = false;
-        }
-        seenOps.push(o);
-      }
-      // 按日期倒序
-      all.sort((a, b) => b.date.localeCompare(a.date));
-      setOps(all);
-      setPhase('preview');
       if (failedBatches.length > 0) {
         setError(
           tx(
@@ -260,6 +338,14 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
           ),
         );
       }
+      if (allSnaps.length > 0) {
+        // 余额快照先预览保存；同一批里的交易攒着，点「继续」再进交易预览
+        setSnaps(allSnaps);
+        setPendingOps(all);
+        setPhase('snapshot-preview');
+        return;
+      }
+      enterTradePreview(all);
     } catch (e) {
       setError(friendlyError(e));
       setPhase('idle');
@@ -268,6 +354,51 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
 
   const toggle = (i: number) => {
     setOps((prev) => prev.map((o, idx) => (idx === i ? { ...o, checked: !o.checked } : o)));
+  };
+
+  /** 保存一张余额快照，并立刻拿它跟账面现金核对一次 */
+  const saveOneSnapshot = (i: number) => {
+    const s = snaps[i];
+    if (!s || s.saved) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s.date)) {
+      setError(tx(lang, 'Snapshot date format is off', '快照日期格式不对'));
+      return;
+    }
+    const saved: AccountSnapshot = saveSnapshot({
+      date: s.date,
+      broker: s.broker,
+      marginBalance: s.marginBalance,
+      cashSweep: s.cashSweep,
+      cashBalance: s.cashBalance,
+      longStockValue: s.longStockValue,
+      marginEquity: s.marginEquity,
+      maintenanceRequirement: s.maintenanceRequirement,
+      availableFunds: s.availableFunds,
+    });
+    setSnaps((prev) => prev.map((x, idx) => (idx === i ? { ...x, saved: true } : x)));
+    const recon = reconcileBookVsSnapshot({
+      bookCash: bookCashNow(),
+      bookLongValue: null, // 这里没有行情，持仓市值留到持仓页核对
+      snapshot: saved,
+    });
+    if (!recon.noSnapshot) {
+      setReconLines(recon.lines);
+      setReconDate(saved.date);
+    }
+  };
+
+  /** 快照预览的「继续」：有交易待导入就进交易预览，否则回待机 */
+  const continueFromSnapshots = () => {
+    if (pendingOps.length > 0) {
+      enterTradePreview(pendingOps);
+      setPendingOps([]);
+    } else {
+      setPhase('done');
+      setResult(
+        tx(lang, 'Snapshot saved ✓', '快照已保存 ✓'),
+      );
+      setSnaps([]);
+    }
   };
 
   const confirmImport = () => {
@@ -341,6 +472,17 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
         `${head}${inner ? `（${inner}）` : ''}${failLine ? ` ${failLine}` : ''}`,
       ),
     );
+    // 导入交易后账实核对：最新快照 vs 账面现金，有差额必须亮出来
+    const snap = latestSnapshot();
+    const recon = reconcileBookVsSnapshot({
+      bookCash: bookCashNow(),
+      bookLongValue: null, // 这里没有行情，持仓市值留到持仓页核对
+      snapshot: snap,
+    });
+    if (!recon.noSnapshot) {
+      setReconLines(recon.lines);
+      setReconDate(snap?.date ?? '');
+    }
     setPhase('done');
     setOps([]);
   };
@@ -348,9 +490,13 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
   const reset = () => {
     setPhase('idle');
     setOps([]);
+    setSnaps([]);
+    setPendingOps([]);
     setError('');
     setNotices([]);
     setResult('');
+    setReconLines([]);
+    setReconDate('');
     setProgress('');
   };
 
@@ -371,8 +517,8 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
           <p className="text-[11px] text-slate-400 leading-relaxed">
             {tx(
               lang,
-              'Pick your brokerage history screenshots — trades are recognized, you review, then import. Journal/transfer rows are skipped automatically.',
-              '选券商 History 截图——自动识别交易，你过目后再导入。Journal 转仓、资金划转会自动跳过。',
+              'Pick your brokerage history screenshots — trades are recognized, you review, then import. Journal/transfer rows are skipped automatically. A Balances / Account Summary screenshot saves an account-truth snapshot instead.',
+              '选券商 History 截图——自动识别交易，你过目后再导入。Journal 转仓、资金划转会自动跳过。余额截图（Account Summary / Balances 页）会存为账户真相快照。',
             )}
           </p>
           <button
@@ -389,6 +535,93 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
           <Loader2 className="w-4 h-4 text-sky-400 animate-spin" />
           <span className="text-xs text-slate-300">{progress}</span>
         </div>
+      )}
+
+      {phase === 'snapshot-preview' && (
+        <>
+          <p className="text-[11px] text-slate-400">
+            {tx(
+              lang,
+              `Recognized ${snaps.length} balance snapshot${snaps.length > 1 ? 's' : ''} — check the numbers and the date, then save:`,
+              `识别出 ${snaps.length} 张余额快照——核对数字和日期，确认后保存：`,
+            )}
+          </p>
+          {snaps.map((s, i) => (
+            <div key={i} className="rounded-lg border border-slate-800 bg-slate-800/40 p-3 space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-semibold text-slate-100">{s.broker}</span>
+                <span className="text-[11px] text-slate-400">{tx(lang, 'Snapshot date', '快照日期')}</span>
+                <input
+                  type="date"
+                  value={s.date}
+                  disabled={s.saved}
+                  onChange={(e) =>
+                    setSnaps((prev) => prev.map((x, idx) => (idx === i ? { ...x, date: e.target.value } : x)))
+                  }
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+                />
+                {s.saved && (
+                  <span className="text-[11px] text-emerald-400 font-medium">
+                    {tx(lang, 'Saved ✓', '已保存 ✓')}
+                  </span>
+                )}
+              </div>
+              <table className="w-full text-[11px]">
+                <tbody>
+                  {SNAPSHOT_FIELDS.map((f) => (
+                    <tr key={f.key} className="border-t border-slate-800/60">
+                      <td className="py-1 pr-2 text-slate-400">{tx(lang, f.en, f.zh)}</td>
+                      <td className="py-1 text-right text-slate-100 tabular-nums">
+                        {s[f.key] == null ? '—' : fmtUsd(s[f.key] as number)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!s.saved && (
+                <button
+                  onClick={() => saveOneSnapshot(i)}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs py-2 rounded-lg font-medium flex items-center justify-center gap-1"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {tx(lang, 'Save snapshot', '保存快照')}
+                </button>
+              )}
+            </div>
+          ))}
+          {reconLines.length > 0 && (
+            <div className="rounded-lg border border-slate-800 bg-slate-800/40 p-3 space-y-1">
+              <div className="text-[11px] font-medium text-slate-400">
+                {tx(lang, 'Book vs snapshot', '账实核对')}
+                {reconDate ? `（${reconDate}）` : ''}
+              </div>
+              {reconLines.map((l, i) => (
+                <p
+                  key={i}
+                  className={`text-[11px] leading-relaxed ${l.flagged ? 'text-amber-300' : 'text-emerald-300'}`}
+                >
+                  {l.flagged ? '⚠️ ' : '✓ '}
+                  {tx(lang, l.en, l.zh)}
+                </p>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={reset}
+              className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs py-2 rounded-lg font-medium flex items-center justify-center gap-1"
+            >
+              <XCircle className="w-3.5 h-3.5" /> {tx(lang, 'Cancel', '取消')}
+            </button>
+            <button
+              onClick={continueFromSnapshots}
+              className="flex-1 bg-sky-600 hover:bg-sky-500 text-white text-xs py-2 rounded-lg font-medium"
+            >
+              {pendingOps.length > 0
+                ? tx(lang, 'Continue to trades', '继续看交易')
+                : tx(lang, 'Done', '完成')}
+            </button>
+          </div>
+        </>
       )}
 
       {phase === 'preview' && (
@@ -480,12 +713,31 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
       )}
 
       {phase === 'done' && (
-        <div className="flex items-start gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-          <p className="flex-1 text-xs text-slate-200 leading-relaxed">{result}</p>
-          <button onClick={reset} className="text-[11px] text-sky-400 font-medium shrink-0">
-            {tx(lang, 'Import more', '继续导入')}
-          </button>
+        <div className="space-y-2">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <p className="flex-1 text-xs text-slate-200 leading-relaxed">{result}</p>
+            <button onClick={reset} className="text-[11px] text-sky-400 font-medium shrink-0">
+              {tx(lang, 'Import more', '继续导入')}
+            </button>
+          </div>
+          {reconLines.length > 0 && (
+            <div className="rounded-lg border border-slate-800 bg-slate-800/40 p-3 space-y-1">
+              <div className="text-[11px] font-medium text-slate-400">
+                {tx(lang, 'Book vs snapshot', '账实核对')}
+                {reconDate ? `（${reconDate}）` : ''}
+              </div>
+              {reconLines.map((l, i) => (
+                <p
+                  key={i}
+                  className={`text-[11px] leading-relaxed ${l.flagged ? 'text-amber-300' : 'text-emerald-300'}`}
+                >
+                  {l.flagged ? '⚠️ ' : '✓ '}
+                  {tx(lang, l.en, l.zh)}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

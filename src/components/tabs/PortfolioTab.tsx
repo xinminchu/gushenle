@@ -18,6 +18,16 @@ import {
   type AccountInfo,
   type CashAdjustmentKind,
 } from '@/lib/account';
+import {
+  latestSnapshot,
+  marginBuffer,
+  borrowedAmount,
+  isThinBuffer,
+  reconcileBookVsSnapshot,
+  fmtUsd,
+  SNAPSHOT_CHANGED_EVENT,
+  type AccountSnapshot,
+} from '@/lib/accountSnapshot';
 import { SYNC_EVENT } from '@/lib/userSync';
 import { getRhythm, invalidateRhythm, dayChangePct } from '@/lib/market';
 import { statusLabel, type RhythmResponse } from '@/lib/rhythm';
@@ -77,6 +87,13 @@ export default function PortfolioTab({
   const { items: watchlist, nameOf, addItem } = useWatchlist();
   const [positions, setPositions] = useState<Position[]>([]);
   const [account, setAccount] = useState<AccountInfo | null>(() => loadAccount());
+  // 账户真相：最新券商余额快照（记忆页截图导入保存；切页签会重挂载，天然刷新）
+  const [snapshot, setSnapshot] = useState<AccountSnapshot | null>(() => latestSnapshot());
+  useEffect(() => {
+    const bump = () => setSnapshot(latestSnapshot());
+    window.addEventListener(SNAPSHOT_CHANGED_EVENT, bump);
+    return () => window.removeEventListener(SNAPSHOT_CHANGED_EVENT, bump);
+  }, []);
   const [showAccount, setShowAccount] = useState(false);
   const [showPnlDetail, setShowPnlDetail] = useState(false);
   const [acctBrokerage, setAcctBrokerage] = useState('');
@@ -320,6 +337,23 @@ export default function PortfolioTab({
   const totalEquity = cashValue != null ? cashValue + totalValue : totalValue;
   // 仓位分母：设了账户就用总资产，没设回退到持仓总市值
   const weightDenom = account && account.capital > 0 ? totalEquity : totalValue;
+
+  // 账户真相：最新券商快照的事实数（只陈述，不给建议）
+  // 缓冲薄的阈值见 src/lib/accountSnapshot.ts：剩余 < $200 或 < 净值 10%
+  const snapBuffer = snapshot ? marginBuffer(snapshot) : null;
+  const snapBorrowed = snapshot ? borrowedAmount(snapshot) : 0;
+  const snapThin = snapshot ? isThinBuffer(snapshot) : false;
+  // 全部持仓都有行情时，才能拿现价市值跟快照持仓市值比
+  const snapAllQuoted =
+    snapshot != null && positions.length > 0 && positions.every((p) => quotes[p.symbol]);
+  const snapRecon =
+    snapshot != null
+      ? reconcileBookVsSnapshot({
+          bookCash: cashValue,
+          bookLongValue: snapAllQuoted ? totalValue : null,
+          snapshot,
+        })
+      : null;
 
   // 分股票盈亏明细：持仓中的（浮动+已实现）∪ 已清仓但有已实现盈亏的
   const pnlRows = useMemo(() => {
@@ -568,6 +602,82 @@ export default function PortfolioTab({
           </div>
         )}
       </div>
+
+      {/* 账户真相：最新券商余额快照的事实行——只陈述数字，不给买卖建议 */}
+      {snapshot && (
+        <div
+          className={`rounded-xl border px-4 py-3 ${
+            snapThin ? 'border-amber-500/70 bg-amber-950/40' : 'bg-slate-900 border-slate-800'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-slate-200">
+              {tx(lang, 'Account truth', '账户真相')}
+              <span className="text-slate-500 font-normal">
+                {' · '}
+                {tx(lang, 'Broker snapshot', '券商快照')} {snapshot.date}
+              </span>
+            </span>
+            {snapThin && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-medium">
+                {tx(lang, 'Thin buffer', '缓冲薄')}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+            {snapBorrowed > 0
+              ? tx(lang, `Borrowing from Schwab ${fmtUsd(snapBorrowed)}`, `现借 Schwab ${fmtUsd(snapBorrowed)}`)
+              : snapshot.marginBalance != null
+                ? tx(
+                    lang,
+                    `Margin balance ${fmtUsd(snapshot.marginBalance)}`,
+                    `保证金余额 ${fmtUsd(snapshot.marginBalance)}`,
+                  )
+                : tx(lang, 'No margin balance in snapshot', '快照里没有保证金余额')}
+            {snapshot.marginEquity != null && (
+              <>
+                {' · '}
+                {tx(lang, 'Equity', '净值')} {fmtUsd(snapshot.marginEquity)}
+              </>
+            )}
+            {snapBuffer != null && (
+              <>
+                {' · '}
+                {snapBuffer >= 0
+                  ? tx(
+                      lang,
+                      `Buffer to maintenance ${fmtUsd(snapBuffer)}`,
+                      `距维持要求剩 ${fmtUsd(snapBuffer)}`,
+                    )
+                  : tx(
+                      lang,
+                      `Below maintenance by ${fmtUsd(-snapBuffer)}`,
+                      `低于维持要求 ${fmtUsd(-snapBuffer)}`,
+                    )}
+              </>
+            )}
+          </p>
+          {snapRecon && snapRecon.lines.length > 0 && (
+            <div className="mt-1.5 space-y-0.5">
+              {snapRecon.lines.map((l, i) => (
+                <p
+                  key={i}
+                  className={`text-[11px] leading-relaxed ${l.flagged ? 'text-amber-300' : 'text-slate-400'}`}
+                >
+                  {l.flagged ? '⚠️ ' : '✓ '}
+                  {tx(lang, l.en, l.zh)}
+                </p>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={() => onGoMemory?.('')}
+            className="mt-2 text-[11px] text-sky-400 hover:text-sky-300 font-medium"
+          >
+            {tx(lang, 'Update snapshot in Memory → Screenshot import', '去记忆页更新快照 → 截图导入')}
+          </button>
+        </div>
+      )}
 
       {showAccount && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
