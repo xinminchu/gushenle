@@ -1480,8 +1480,62 @@ const BATCH_2026_11_20: MorningBriefing = {
   ],
 };
 
+const BATCH_2026_11_23: MorningBriefing = {
+  date: '2026-11-23',
+  overnight: [
+    {
+      text: '美股股指期货周一盘前反弹：纳斯达克 100 期货约涨 3.1%，标普 500 期货约涨 2.4%，道指期货约涨 1.65%，上周五标普与道指双双进入回调区间后市场出现逢低买入。',
+      source: 'WSJ / 路透（周一盘前快照）',
+      url: 'https://www.wsj.com/finance/stocks/stock-futures-rally-as-dust-settles-after-ai-driven-selloff-705ff2c4',
+    },
+    {
+      text: '英伟达盘前涨约 8.5%，特朗普周日在 Truth Social 表示希望公司董事会让黄仁勋复任 CEO；英伟达上周五跌 14.01% 至 125.53 美元。',
+      source: 'WSJ / Investopedia',
+      url: 'https://www.investopedia.com/5-things-to-know-stock-market-november-23-2026-12274106',
+    },
+    {
+      text: 'CrowdStrike 宣布以约 439 亿美元全股票收购 Zscaler；Zscaler 盘前涨约 17.8%，CrowdStrike 跌逾 8%。',
+      source: 'Investopedia / Barron’s',
+      url: 'https://www.investopedia.com/5-things-to-know-stock-market-november-23-2026-12274106',
+    },
+  ],
+  premarket: [
+    {
+      text: 'QQQ 盘前报 630.89 美元，较上周五收盘 608.45 美元涨 3.69%（08:14 ET 快照，盘前报价有延迟）。',
+      source: 'Finnhub 盘前报价',
+    },
+    {
+      text: 'AI 股盘前普遍反弹：英伟达涨约 8.5%、美光涨约 7%、Anthropic 涨近 4%，半导体 ETF（SOXX）涨逾 5%。',
+      source: 'WSJ / Investopedia（周一盘前快照）',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日宏观数据（ET）：08:30 芝加哥联储 10 月全国活动指数；09:45 S&P Global 11 月 PMI 初值（制造业/服务业/综合）；16:00 纽约联储主席 Williams 讲话。',
+      source: 'WSJ / 经济日历',
+      url: 'https://www.wsj.com/livecoverage/stock-market-today-dow-sp-500-nasdaq-11-23-2026/card/inflation-data-market-turbulence-what-to-watch-this-week-DEKUguQS9nSfULtKC8JD',
+    },
+    {
+      text: '今日盘后财报：Hewlett Packard Enterprise、Agilent、Zoom；持仓股今日无财报。本周四感恩节休市、周五提前收市。',
+      source: 'WSJ',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日（11-20）收 35.89（口径：Cboe），较 11-19 的 28.44 上涨约 26.2%，为 2025 年 4 月以来最高收盘。',
+      source: 'Cboe 官网历史数据',
+      url: 'https://ycharts.com/indicators/vix_volatility_index',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-11-20）收 608.45 美元（-5.67%）；低于 50 日线（710.96 美元）约 14.4%，低于 200 日线（683.06 美元）约 10.9%；已连续 17 个交易日低于 50 日线、连续 6 个交易日低于 200 日线。',
+      source: '站内 /api/rhythm（日线复算核对；50/200 日线经 Nasdaq 官方日线独立复算一致）',
+    },
+  ],
+};
+
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_11_23,
   BATCH_2026_11_21,
   BATCH_2026_11_20,
   BATCH_2026_11_19,
