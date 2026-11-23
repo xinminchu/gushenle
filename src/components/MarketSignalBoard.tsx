@@ -34,6 +34,58 @@ interface ScanPayload {
 }
 
 /**
+ * 探针解说（2026-11-19 撰写，双语原生；逐字照录，阈值与数字不改写）。
+ * 只覆盖四个信号探针（放量突破 / 相对强度 / 中线动量 / VCP 蓄势）；
+ * 趋势确认与超卖各有自己的回测口径，不在此解说内。
+ */
+const PROBE_EXPLAINER: {
+  key: string;
+  icon: string;
+  zhTitle: string;
+  enTitle: string;
+  zh: string;
+  en: string;
+}[] = [
+  {
+    key: 'breakout',
+    icon: '💥',
+    zhTitle: '放量突破',
+    enTitle: 'Volume breakout',
+    zh: '这个探针看两件事：今天的成交量是不是到了过去 20 天平均量的一倍半以上，股价有没有冲过近 20 天的最高点。两个都满足，它就亮。亮的意思是：今天参与的人明显变多，价格被推过了近一个月的高位。它的局限是：放量突破也可能是最后一棒，它分不清是新钱进场还是老钱出逃，只报量和价，不报意图。',
+    en: "This gauge checks two things: is today's trading volume at least one and a half times the average of the last 20 days, and did the price push above its highest point of the last 20 days? If both are true, it lights up: noticeably more money took part today, and the price cleared a one-month high. Its blind spot: a volume breakout can also be a last hurrah. It reports volume and price — not who is buying or selling, or why.",
+  },
+  {
+    key: 'relStrength',
+    icon: '🏆',
+    zhTitle: '相对强度',
+    enTitle: 'Relative strength',
+    zh: '把这只股票近 3 个月的涨幅，跟标普 500 同期的涨幅比一比，差多少。读数是正的，说明这三个月它跑赢了大盘；是负的，就是跑输了。它量的是相对强弱，不是贵不贵。局限是：跑赢大盘不等于它自己涨了——大盘跌 10%、它跌 5%，相对强度照样是正的。',
+    en: "This one compares the stock's gain over the last three months with the S&P 500's gain over the same stretch. A positive reading means it beat the market; a negative one means it lagged. It measures strength relative to the market, not whether the stock is cheap or expensive. Blind spot: beating the market is not the same as going up. If the market falls 10% and the stock falls 5%, this gauge still reads positive.",
+  },
+  {
+    key: 'momentum',
+    icon: '🌊',
+    zhTitle: '中线动量',
+    enTitle: 'Mid-term momentum',
+    zh: '看近 6 个月的涨幅，但故意跳过最近 1 个月不算，因为最近几周的涨跌噪声太大、容易骗人。它回答的是一个慢问题：抛开眼前这阵波动，这只股票中期的方向往上还是往下、力度多大。局限是：它天生迟钝，趋势刚反转的时候它还看不出来，要过一阵才转过弯。',
+    en: 'This looks at the return over the last six months, but deliberately skips the most recent month, because the last few weeks are noisy and often reverse. It answers a slower question: setting aside the recent chop, which way has the trend been leaning, and how hard? Blind spot: it is slow by design. When a trend first turns, momentum will not notice for a while.',
+  },
+  {
+    key: 'vcp',
+    icon: '🐆',
+    zhTitle: 'VCP 蓄势',
+    enTitle: 'VCP setup',
+    zh: '看波动有没有收紧：最近 20 天的平均波动不到 50 天平均的六成，成交量也在缩，同时价格还站在 50 日均线上面。三样都对上，它就亮，意思是这只股票最近安静下来了，但没跌破中期线。局限是：安静不等于要涨，它也可能继续安静很久，或者向下破位——这个探针只描述蓄势的样子，不猜方向。',
+    en: 'This watches for things getting quiet: the average swing of the last 20 days shrinks to under 60% of the 50-day average, trading volume dries up, and the price still holds above its 50-day average line. When all three line up, it lights up — the stock has gone calm without breaking its medium-term line. Blind spot: quiet does not mean "about to rise." It can stay quiet for a long time, or break down instead. This gauge describes the coiled shape, never the direction.',
+  },
+];
+
+const PROBE_EXPLAINER_INTRO_ZH =
+  '发现雷达不是算命的，它只是一块仪表盘。四个探针各量一样东西：钱有没有进来、跑得比大盘快还是慢、中期趋势往哪边、波动有没有收紧。它亮给你看的都是现在的状态，至于买不买、卖不卖，永远是你自己的事。';
+const PROBE_EXPLAINER_INTRO_EN =
+  "The discovery radar doesn't predict anything. Think of it as a dashboard: four gauges, each watching one thing — whether money is showing up, whether the stock is keeping pace with the market, which way its medium-term trend leans, and whether its swings are tightening up. Everything it shows is a current state. What you do with that is always your call.";
+
+/**
  * 首页「潜力发现」：发现雷达六探针（2026-10-12 重构，2026-10-28 加 P6 超卖）。
  * 老规则（单日上穿50）本地回测无超额已下线。新规则：
  * 🚀 趋势确认：连2天HOT + 分≥55 + 流入>0 —— 本地回测前向5日 +1.42% vs 基线 +0.49%（n=114）
@@ -65,6 +117,7 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
   }, []);
 
   const [qqqChg, setQqqChg] = useState<number | null>(null);
+  const [showProbeHelp, setShowProbeHelp] = useState(false);
   const apiQqqChg = data?.qqq?.changePct ?? null;
   useEffect(() => {
     // 大盘涨跌：优先用扫描的 qqq 行；扫描没写大盘行时客户端直取兜底
@@ -276,6 +329,34 @@ export default function MarketSignalBoard({ onPick }: { onPick: (symbol: string)
           lang,
           '📊 Single-day crosses are noise (Jegadeesh 1990) — no such signal enters this radar.',
           '📊 单日上穿是噪音（Jegadeesh 1990）——这类信号不进雷达。',
+        )}
+      </div>
+      <div className="mt-2 border-t border-slate-800 pt-2">
+        <button
+          type="button"
+          onClick={() => setShowProbeHelp(!showProbeHelp)}
+          className="text-[11px] font-semibold text-sky-300 active:text-sky-200"
+          aria-expanded={showProbeHelp}
+        >
+          {showProbeHelp ? '▾ ' : '▸ '}
+          {tx(lang, 'How to read the four probes', '四个探针怎么读')}
+        </button>
+        {showProbeHelp && (
+          <div className="mt-2 space-y-2.5">
+            <p className="text-[11px] leading-relaxed text-slate-400">
+              {tx(lang, PROBE_EXPLAINER_INTRO_EN, PROBE_EXPLAINER_INTRO_ZH)}
+            </p>
+            {PROBE_EXPLAINER.map((p) => (
+              <div key={p.key}>
+                <div className="text-[11px] font-semibold text-slate-200">
+                  {p.icon} {tx(lang, p.enTitle, p.zhTitle)}
+                </div>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
+                  {tx(lang, p.en, p.zh)}
+                </p>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
