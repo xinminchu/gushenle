@@ -22,6 +22,63 @@ export interface PiisWeek {
 
 export const PIIS_WEEKS: PiisWeek[] = [
   {
+    id: '2026-11-23',
+    rangeZh: '11/16–11/23',
+    rangeEn: '11/16–11/23',
+    formulaZh: 'AI 投入的回报证明 ＞ 资本成本 + 融资风险 + 估值要求',
+    formulaEn: 'Proof that AI spending pays > cost of capital + financing risk + valuation demands',
+    points: [
+      {
+        tag: '宏观',
+        tagEn: 'Macro',
+        zh: '标普 500 全周 −8.61% 收 6,910.39 点（4 月以来最差一周、较 10 月 6 日纪录高点低 11.6%，进入修正区间），纳指 −10.02% 收 22,617.73 点（2020 年 3 月以来最差一周、年内转负），道指 −8.02%、罗素 2000 −7.48%；标普连跌七个交易日，为 2020 年 2 月以来最长连跌。',
+        en: 'The S&P 500 fell 8.61% to 6,910.39 — its worst week since April 2025 and 11.6% below its October 6 record, in correction territory — while the Nasdaq dropped 10.02% to 22,617.73, its worst week since March 2020 and negative for 2026; the Dow lost 8.02% and the Russell 2000 7.48%, and the S&P fell for a seventh straight session, its longest losing run since February 2020.',
+      },
+      {
+        tag: '利率',
+        tagEn: 'Rates',
+        zh: '10 年期美债收益率 5.15%→4.92%（−23bp，五个交易日天天跌，4 月以来最大单周跌幅），周内高点为周一的 5.12%——周初承接 10 月 CPI 偏热的定价，随后股市抛售引发避险买盘；10 月 FOMC 纪要显示"几乎所有"官员认为进一步加息可能合适，12 月加息 25bp 的概率由 11 月 13 日的 88.5% 升至约 97%，+50bp 的尾部则由 11.5% 归零，1 月再加 25bp 的概率约 60%。',
+        en: 'The 10-year Treasury yield fell from 5.15% to 4.92% (−23bp, down all five sessions, its biggest weekly drop since April), with the week\'s high at 5.12% on Monday — opening on hot October CPI pricing, then pulled down by safe-haven buying as equities sold off; the October FOMC minutes showed "almost all" officials saw further hikes as likely appropriate, December 25bp odds rose from 88.5% (Nov 13) to about 97%, the 50bp tail fell from 11.5% to about zero, and January odds for another 25bp sit near 60%.',
+      },
+      {
+        tag: '大盘',
+        tagEn: 'Market',
+        zh: 'VIX 由 19.30 升至 35.89（+86%，盘中一度触及 40.03），为 4 月以来最高收盘；标普 500 成分股 471 只下跌、仅 31 只上涨。',
+        en: 'The VIX jumped from 19.30 to 35.89 (+86%, touching 40.03 intraday), its highest close since April 2025; 471 of the S&P 500\'s stocks fell and only 31 rose.',
+      },
+      {
+        tag: '轮动',
+        tagEn: 'Rotation',
+        zh: 'BofA/EPFR 口径：全球股票基金逆势净流入 $666 亿（美股成长型 +$91 亿、2024 年 12 月以来最大单周流入；科技基金 +$54 亿、连续第八周流入），债券基金却净流出 $74 亿（2025 年 4 月以来首次）、新兴市场债 −$75 亿；周五只有必需消费等防御板块收涨（AT&T +2.11%、联合健康 +2.84%、沃尔玛 +1.52%）。',
+        en: 'BofA/EPFR counted $66.6B into global equity funds despite the selloff (US growth +$9.1B, the biggest weekly inflow since December 2024; tech +$5.4B, an eighth straight week of inflows), while bond funds lost $7.4B — their first outflow since April 2025 — and emerging-market debt shed $7.5B; on Friday only defensive names rose (AT&T +2.11%, UnitedHealth +2.84%, Walmart +1.52%).',
+      },
+      {
+        tag: 'AI 硬件',
+        tagEn: 'AI HW',
+        zh: '费半 −17.13% 收 8,408.59 点（Nasdaq 官方序列，2001 年 9 月以来最差一周、较 6 月 22 日纪录高点低 42.5%）；英伟达全周 −22.92% 收 $125.53——三季度营收 $115.8B（+103%）、数据中心 $107.6B（+110%）、非 GAAP 每股收益 $2.68（+111%）、四季度指引 $130B 全部超预期仍被抛售，周五单日 −14.01%（路透称 SEC 正审查其会计问题），财报同时披露约 $1,180 亿财务担保。',
+        en: 'The SOX fell 17.13% to 8,408.59 (Nasdaq official series) — its worst week since September 2001 and 42.5% below its June 22 record; Nvidia lost 22.92% to $125.53 even though Q3 revenue hit $115.8B (+103%), data-center revenue $107.6B (+110%), non-GAAP EPS $2.68 (+111%) and Q4 guidance came in at $130B — Friday alone it fell 14.01% after Reuters reported the SEC is examining its accounting, and the earnings release disclosed about $118B in financial guarantees.',
+      },
+      {
+        tag: 'AI 金融',
+        tagEn: 'AI Finance',
+        zh: 'Anthropic 周四上市：发行价 $83、开盘 $111.50、收盘 $97.17（+17%），$810 亿募资规模为有记录以来最大 IPO；周五随大盘回落约 9% 至 $89 附近。',
+        en: 'Anthropic listed Thursday at $83, opened at $111.50 and closed at $97.17 (+17%) in an $81B offering, the largest listing on record; it fell about 9% on Friday to around $89.',
+      },
+      {
+        tag: '消费',
+        tagEn: 'Consumer',
+        zh: '10 月零售销售环比 +0.2% 至 $7,482 亿（人口普查局，符合预期、9 月为 +0.8%，不含汽车 +0.6%），但 10 月 CPI 环比 +0.4%，实际销售大概率下滑；沃尔玛三季度营收 $1,888 亿（+5.2%）、调整后每股收益 $0.65 并上调全年指引，Target 同店销售 +5.6%（五年多来最佳）、销售额 $271 亿（+7.1%）、每股收益 $2.65（预期 $2.07，含 $3.01 亿一次性关税退款、约 +$0.50）。',
+        en: 'October retail sales rose 0.2% to $748.2B (Census, in line with consensus after September\'s +0.8%; +0.6% ex-autos), but with October CPI up 0.4% on the month, real sales likely fell; Walmart\'s Q3 revenue grew 5.2% to $188.8B with adjusted EPS of $0.65 and a raised full-year guide, while Target\'s comparable sales rose 5.6% — its best in over five years — on $27.1B of sales (+7.1%) and EPS of $2.65 vs $2.07 expected, including a $301M one-time tariff refund worth about $0.50.',
+      },
+      {
+        tag: '能源',
+        tagEn: 'Energy',
+        zh: 'WTI 12 月合约收 $83.98（−5.17%）、布伦特 1 月合约 $92.57（−3.41%），连续第三周下跌，驱动是 IEA 的供应过剩展望与霍尔木兹原油运输恢复；周五因霍尔木兹附近油轮起火与感恩节前空头回补反弹；EIA 原油库存一周 +340 万桶至 4.178 亿桶。',
+        en: 'WTI\'s December contract settled at $83.98 (−5.17%) and January Brent at $92.57 (−3.41%), a third straight weekly decline on the IEA\'s surplus outlook and recovering Hormuz shipments; Friday bounced on a tanker fire near Hormuz and pre-Thanksgiving short-covering, and EIA crude stocks rose 3.4M barrels to 417.8M.',
+      },
+    ],
+  },
+  {
     id: '2026-11-16',
     rangeZh: '11/09–11/16',
     rangeEn: '11/09–11/16',
