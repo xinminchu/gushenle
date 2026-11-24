@@ -671,8 +671,8 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
                         className="w-3.5 h-3.5 accent-emerald-500"
                       />
                     </td>
-                    <td className="py-1.5 px-1 text-slate-300 tabular-nums">{o.date.slice(5)}</td>
-                    <td className="py-1.5 px-1 text-slate-100 font-semibold">{o.symbol}</td>
+                    <td className="py-1.5 px-1 text-slate-300 tabular-nums whitespace-nowrap">{o.date.slice(5)}</td>
+                    <td className="py-1.5 px-1 text-slate-100 font-semibold whitespace-nowrap">{o.symbol}</td>
                     <td className={`py-1.5 px-1 ${o.action === 'buy' ? 'text-rose-300' : 'text-emerald-300'}`}>
                       {o.action === 'buy' ? tx(lang, 'Buy', '买入') : tx(lang, 'Sell', '卖出')}
                       {o.dup && (
@@ -685,8 +685,8 @@ export default function ScreenshotImport({ onImported }: { onImported: () => voi
                         </span>
                       )}
                     </td>
-                    <td className="py-1.5 px-1 text-right text-slate-300 tabular-nums">{o.qty}</td>
-                    <td className="py-1.5 px-1 text-right text-slate-300 tabular-nums">${o.price}</td>
+                    <td className="py-1.5 px-1 text-right text-slate-300 tabular-nums whitespace-nowrap">{o.qty}</td>
+                    <td className="py-1.5 px-1 text-right text-slate-300 tabular-nums whitespace-nowrap">${o.price}</td>
                   </tr>
                 ))}
               </tbody>
