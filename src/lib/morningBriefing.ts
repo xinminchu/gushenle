@@ -1533,8 +1533,64 @@ const BATCH_2026_11_23: MorningBriefing = {
   ],
 };
 
+const BATCH_2026_11_24: MorningBriefing = {
+  date: '2026-11-24',
+  overnight: [
+    {
+      text: '英伟达董事会 11 月 23 日宣布黄仁勋复任 CEO、即日生效，NVDA 当日收 165.05 美元（+31.48%），创 2003 年以来最佳单日。',
+      source: '路透 / CNN / Le Monde',
+      url: 'https://www.reuters.com/business/view-nvidia-reinstates-jensen-huang-ceo-igniting-tech-surge-2026-11-23/',
+    },
+    {
+      text: '美股周一全线大涨：标普 500 涨 4.73% 至 7,237.17 点，纳指涨 6.51% 至 24,089.56 点，道指涨 3.01% 至 49,595.31 点，结束七连跌。',
+      source: 'Investopedia / TradingView',
+      url: 'https://www.tradingview.com/news/benzinga:dd91dcc50094b:0-stock-market-today-dow-s-p-500-futures-fall-after-scott-bessent-unveils-fresh-iran-sanctions-hormuz-warnings-hpe-smtc-dell-in-focus/',
+    },
+    {
+      text: '特朗普在 Truth Social 欢迎董事会复任黄仁勋的决定，称这是正确恰当的决定。',
+      source: 'CNN / 路透',
+      url: 'https://www.cnn.com/2026/11/23/tech/nvidia-reinstates-jensen-huang-ceo?cid=external-feeds_iluminar_meta',
+    },
+  ],
+  premarket: [
+    {
+      text: '盘前期货回落（美东 05:26 快照）：道指期货跌 71 点（-0.14%），标普 500 期货跌 33.5 点（-0.46%），纳指 100 期货跌 298 点（-1.11%）。',
+      source: '路透（盘前快照）',
+      url: 'https://www.reuters.com/business/wall-st-futures-dip-chip-stocks-cool-after-nvidia-fueled-rally-2026-11-24/',
+    },
+    {
+      text: '英伟达盘前跌约 3.8%，回吐周一部分涨幅；QQQ 盘前跌约 0.97% 至 644.69 美元。',
+      source: 'Morningstar / TradingView（盘前快照）',
+      url: 'https://www.morningstar.com/news/dow-jones/202611241684/nasdaq-futures-fall-as-questions-linger-over-ai-trade',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日宏观数据（ET）：09:00 9 月 Case-Shiller 房价指数与 FHFA 房价指数；10:00 11 月咨商会消费者信心指数（预期约 92.1，前值 91.7）与里士满联储制造业指数；13:00 700 亿美元 5 年期国债拍卖。',
+      source: 'TheStreet / TreasuryDirect',
+      url: 'https://pro.thestreet.com/stock-market-today/2026-11-24',
+    },
+    {
+      text: '今日财报：Analog Devices 盘前，Dell 与 Workday 盘后；持仓股今日无财报；本周四感恩节休市、周五 13:00 ET 提前收市。',
+      source: '经济日历',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日（11-23）收 26.62（口径：Cboe），较 11-20 的 35.89 下跌 25.83%，仍高于 25。',
+      source: 'Cboe / YCharts',
+      url: 'https://ycharts.com/indicators/vix_volatility_index',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-11-23）收 651.03 美元（+7.00%）；仍低于 50 日线（709.79 美元）与 200 日线（683.27 美元），已连续 18 个交易日低于 50 日线、连续 7 个交易日低于 200 日线。',
+      source: '站内 /api/rhythm（收盘价经 stockanalysis 独立复算一致）',
+    },
+  ],
+};
+
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_11_24,
   BATCH_2026_11_23,
   BATCH_2026_11_21,
   BATCH_2026_11_20,
