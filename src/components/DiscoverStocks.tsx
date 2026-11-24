@@ -162,7 +162,7 @@ export default function DiscoverStocks() {
           {/* 板块 */}
           <div>
             <div className="text-[10px] text-slate-500 mb-1">{tx(lang, 'Sector', '板块')}</div>
-            <div className="flex gap-1.5 overflow-x-auto pb-1">
+            <div className="flex flex-wrap gap-1.5 pb-1">
               <button onClick={() => setSector('')} className={chip(!sector)}>{tx(lang, 'All', '全部')}</button>
               {SECTORS.map((s) => (
                 <button key={s} onClick={() => setSector(sector === s ? '' : s)} className={chip(sector === s)}>
@@ -174,7 +174,7 @@ export default function DiscoverStocks() {
           {/* 主题 */}
           <div>
             <div className="text-[10px] text-slate-500 mb-1">{tx(lang, 'Theme', '主题')}</div>
-            <div className="flex gap-1.5 overflow-x-auto pb-1">
+            <div className="flex flex-wrap gap-1.5 pb-1">
               <button onClick={() => setTheme('')} className={chip(!theme)}>{tx(lang, 'All', '全部')}</button>
               {themes.map((t) => (
                 <button key={t} onClick={() => setTheme(theme === t ? '' : t)} className={chip(theme === t)}>
