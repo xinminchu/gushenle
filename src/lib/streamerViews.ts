@@ -2091,7 +2091,32 @@ const BATCH_2026_11_18: SymbolViewGroup[] = [
   },
 ];
 
+const BATCH_2026_11_24: SymbolViewGroup[] = [
+  {
+    symbol: 'NVDA',
+    label: '英伟达',
+    views: [
+      {
+        id: 'nvda-selina-4',
+        blogger: 'Selina聊美股',
+        stance: 'bullish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '黄仁勋复任当天 NVDA 大涨约 30%，硬件科技瞬间转牛',
+        reason:
+          '董事会 11 月 23 日宣布黄仁勋复任 CEO，11 天的 CEO 悬念落地，NVDA 当日从 126 美元涨至约 165 美元，涨幅约 30%，连带硬件科技股整体转强。',
+        caveat:
+          '标题以「买吗？」收尾，是盘中即时反应而非收盘结论；国会听证与芯片出口调查仍在前面，单日情绪修复不等于疑虑全消，追高需防回落。',
+        source: 'Selina聊美股（美股直播 11.23）',
+        published: '11/23',
+        note: '原片：https://www.youtube.com/watch?v=ghZs_uEJeWg',
+      },
+    ],
+  },
+];
+
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-11-24', groups: BATCH_2026_11_24 },
   { date: '2026-11-21', groups: BATCH_2026_11_21 },
   { date: '2026-11-20', groups: BATCH_2026_11_20 },
   { date: '2026-11-18', groups: BATCH_2026_11_18 },
