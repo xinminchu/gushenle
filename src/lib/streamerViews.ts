@@ -2091,6 +2091,150 @@ const BATCH_2026_11_18: SymbolViewGroup[] = [
   },
 ];
 
+const BATCH_2026_11_25: SymbolViewGroup[] = [
+  {
+    symbol: 'CRWD',
+    label: '网络安全',
+    views: [
+      {
+        id: 'crwd-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'cautious',
+        horizon: 'long',
+        kind: 'view',
+        headline: '护城河是真的，但 116 亿美元溢价要等协同来证明',
+        reason:
+          'Zscaler 的零信任位置黏性很强：剩余履约义务 72.87 亿美元、约为 ARR 的 1.88 倍，大客户在增加，净新增 ARR 增速已回升到 22%；按 11.3 倍 ARR 买不算贵。但 116 亿美元溢价要靠协同兑现，Zscaler 增速指引本就放缓、资本开支占比还在爬升；CRWD 原股东持股摊到约 84.1%，换来的是一项增速更慢、开支更重的资产，交割还要约一年。',
+        caveat:
+          '若 5 亿美元年化成本协同落地、8,000 家未重叠客户交叉销售跑通，溢价站得住；只看自由现金流不扣股权激励时增厚成立，扣掉股权激励后结论反转。RSS 全文在估值分析前截断，本条只依据可见全文。',
+        source:
+          'Kova动量交易 Substack《作价 439 亿美元收购 Zscaler，CrowdStrike 买的是护城河，还是昂贵的整合承诺？》',
+        published: '11/25',
+        note: '文章链接：https://kovainvest.substack.com/p/439-zscalercrowdstrike',
+      },
+    ],
+  },
+  {
+    symbol: 'PANW',
+    label: '网络安全',
+    views: [
+      {
+        id: 'panw-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'bearish',
+        horizon: 'long',
+        kind: 'view',
+        headline: '合并后要面对第二个终端加网络全覆盖平台',
+        reason:
+          '交易完成后，CRWD 加 ZS 成为第二个同时覆盖终端与网络的平台，PANW 要在多个环节正面迎战，长期竞争压力上升。',
+        caveat:
+          '短期另有看点：交割前约一年的窗口里对手有争客机会，见本批 PANW 短期条目；窗口关闭后压力回来。',
+        source:
+          'Kova动量交易 Substack《作价 439 亿美元收购 Zscaler，CrowdStrike 买的是护城河，还是昂贵的整合承诺？》',
+        published: '11/25',
+        note: '文章链接：https://kovainvest.substack.com/p/439-zscalercrowdstrike',
+      },
+      {
+        id: 'panw-kova-2',
+        blogger: 'Kova动量交易',
+        stance: 'bullish',
+        horizon: 'short',
+        kind: 'view',
+        headline: '交割前约一年窗口，争客与估值参照双重利好',
+        reason:
+          '从公告到交割约有一年，Zscaler 客户可能因产品路线与合同条款生变而流失，PANW 有争客窗口；34% 的溢价成交价也给安全资产立了新的估值参照。',
+        caveat: '长期仍要面对合并后的全覆盖平台，窗口关闭后压力回来。',
+        source:
+          'Kova动量交易 Substack《作价 439 亿美元收购 Zscaler，CrowdStrike 买的是护城河，还是昂贵的整合承诺？》',
+        published: '11/25',
+        note: '文章链接：https://kovainvest.substack.com/p/439-zscalercrowdstrike',
+      },
+    ],
+  },
+  {
+    symbol: 'OKTA',
+    label: '身份安全',
+    views: [
+      {
+        id: 'okta-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'bullish',
+        horizon: 'long',
+        kind: 'view',
+        headline: '终端与网络合并后，独立身份层更稀缺',
+        reason:
+          '终端与网络并入同一家公司手里后，独立的身份层变得更稀缺，并购想象随之上升。',
+        caveat:
+          'CRWD 已在身份领域与 Okta 直接竞争（收购 SGNL、推出 FalconID 多因素认证），稀缺不等于没有对手。',
+        source:
+          'Kova动量交易 Substack《作价 439 亿美元收购 Zscaler，CrowdStrike 买的是护城河，还是昂贵的整合承诺？》',
+        published: '11/25',
+        note: '文章链接：https://kovainvest.substack.com/p/439-zscalercrowdstrike',
+      },
+    ],
+  },
+  {
+    symbol: 'FTNT',
+    label: '网络安全',
+    views: [
+      {
+        id: 'ftnt-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'bearish',
+        horizon: 'long',
+        kind: 'view',
+        headline: '防火墙模式被点名，逻辑上偏利空',
+        reason:
+          '公告论证为守护数据中心而建的防火墙与 VPN 看不见、也拦不住直奔云端的流量，几乎是对防火墙主业模式的点名，逻辑上对 FTNT 偏利空。',
+        caveat:
+          '公告当天 FTNT 反而涨 5.3%，当日涨跌与逻辑归类方向不一致；Oppenheimer 认为交易可能迫使 FTNT 与 Check Point 加快并购。',
+        source:
+          'Kova动量交易 Substack《作价 439 亿美元收购 Zscaler，CrowdStrike 买的是护城河，还是昂贵的整合承诺？》',
+        published: '11/25',
+        note: '文章链接：https://kovainvest.substack.com/p/439-zscalercrowdstrike',
+      },
+    ],
+  },
+  {
+    symbol: 'QQQ',
+    label: '纳指',
+    views: [
+      {
+        id: 'qqq-selina-1',
+        blogger: 'Selina聊美股',
+        stance: 'cautious',
+        horizon: 'short',
+        kind: 'view',
+        headline: '投降式抛售，修复反弹在前、二次探底在后',
+        reason:
+          '纳指从 10 月高点回撤 19%，逼近 20% 的技术性熊市线；本轮是杠杆批量平仓引发的无差别抛售，AI 产业链未见基本面实质恶化，云巨头仍指引 2027 年继续加资本开支；历史上三次 19% 回撤都是先反弹、再二次探底。',
+        caveat:
+          '19% 几乎从来不是真正的底部，12 月税损收割可能带来二次探底；若云厂商资本开支指引反转或 AI 基本面被证伪，判断作废。',
+        source: 'Selina聊美股',
+        published: '11/24',
+        clip: '08:46 历史上三次 19% 回撤；17:36 三种剧本推演',
+        note: '原片：https://www.youtube.com/watch?v=gGgCTl3ltdQ',
+      },
+      {
+        id: 'qqq-selina-2',
+        blogger: 'Selina聊美股',
+        stance: 'bullish',
+        horizon: 'long',
+        kind: 'view',
+        headline: '19% 回撤不是长期牛市的终点',
+        reason:
+          '历史上三次纳指 19% 级别回撤（2018 年四季度、2022 年 4 月、2020 年 3 月）没有一次终结长期牛市；当前环境与 2018 年四季度最像：加息周期尾声、科技股先调、基本面未实质恶化；最可能的节奏是 2027 年初开启更强修复。',
+        caveat:
+          '12 月税损抛压与二次探底在前，修复要等压力释放；长期仍看 AI 算力需求曲线是否向上。',
+        source: 'Selina聊美股',
+        published: '11/24',
+        clip: '08:46 历史上三次 19% 回撤；17:36 三种剧本推演',
+        note: '原片：https://www.youtube.com/watch?v=gGgCTl3ltdQ',
+      },
+    ],
+  },
+];
+
 const BATCH_2026_11_24: SymbolViewGroup[] = [
   {
     symbol: 'NVDA',
@@ -2116,6 +2260,7 @@ const BATCH_2026_11_24: SymbolViewGroup[] = [
 ];
 
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-11-25', groups: BATCH_2026_11_25 },
   { date: '2026-11-24', groups: BATCH_2026_11_24 },
   { date: '2026-11-21', groups: BATCH_2026_11_21 },
   { date: '2026-11-20', groups: BATCH_2026_11_20 },
