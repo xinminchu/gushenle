@@ -1533,6 +1533,60 @@ const BATCH_2026_11_23: MorningBriefing = {
   ],
 };
 
+const BATCH_2026_11_25: MorningBriefing = {
+  date: '2026-11-25',
+  overnight: [
+    {
+      text: '道指周二首次收上 50,000 点（+0.85% 至 50,018.70 点），纳指跌 1.48% 至 23,733.54 点，标普 500 跌 0.50% 至 7,201.09 点。',
+      source: 'JournalArta / Zacks',
+      url: 'https://journalarta.com/en/2026/11/25/stock-market-today-dow-tops-50000-while-chip-selloff-drags-nasdaq-down-1-48/',
+    },
+    {
+      text: '英伟达周二跌 5.9%，盘前再跌约 5%；美光周二跌 11%（法巴下调评级至中性、目标价由 1,700 美元砍至 775 美元），盘前再跌约 6%。',
+      source: 'Zacks / 路透 / TradingView',
+      url: 'https://www.tradingview.com/news/stocktwits:93140fcda094b:0-mu-skhy-sndk-stocks-in-focus-after-trendforce-lowers-dram-pricing-forecast/',
+    },
+    {
+      text: '美国拟对中国、欧盟及另外 14 个经济体加征新关税的消息打压盘前情绪，亚洲芯片股隔夜大跌（韩国综合指数跌 6.2%、SK 海力士跌 11.1%）。',
+      source: '路透',
+      url: 'https://www.reuters.com/business/nasdaq-futures-slide-over-2-fresh-us-tariff-concerns-inflation-data-focus-2026-11-25/',
+    },
+  ],
+  premarket: [
+    {
+      text: '盘前期货走低（美东约 08:30 快照）：道指期货跌约 1.4%（约 675 点），标普 500 期货跌约 1.9%，纳指 100 期货跌约 2.9%；QQQ 盘前跌约 3%。',
+      source: 'IBD（盘前快照）',
+      url: 'https://www.investors.com/market-trend/stock-market-today/dow-jones-sp500-nasdaq-fed-inflation-data-nvidia-anthropic/',
+    },
+    {
+      text: '持仓股盘前全线下跌（站内 Nasdaq 管线，美东 08:34 快照）：MU 跌约 7.3% 至 584 美元，IREN 跌约 7.0% 至 12.05 美元，NBIS 跌约 6.9% 至 81.27 美元，PLTR 跌约 4.7% 至 153.54 美元，GOOGL 跌约 4.5% 至 266.50 美元，ANT 跌约 4.3% 至 78.43 美元。',
+      source: '站内 /api/rhythm（盘前快照）',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日宏观数据（ET）：08:30 10 月 PCE（预期同比 +3.8%，前值 +3.6%；核心 PCE 预期同比 +3.2%）、Q3 GDP 二次估值（预期 3.4%–3.5%）、初请失业金与耐用品订单同分钟公布；本周四感恩节休市、周五 13:00 ET 提前收市。',
+      source: 'BEA / Econoday / WSJ',
+      url: 'https://www.wsj.com/livecoverage/stock-market-today-dow-sp-500-nasdaq-11-25-2026/card/inflation-data-holiday-hours-what-to-watch-the-rest-of-the-week-OCog4wRqEWxm9EZX3X35',
+    },
+    {
+      text: '今日财报：Deere 与理想汽车盘前公布；Dell 与 Workday 昨盘后公布财报后盘前走低；持仓股今日无财报。',
+      source: '经济日历',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日（11-24）收 26.36（口径：Cboe），较 11-23 的 26.62 下跌 0.98%，仍高于 25。',
+      source: 'Cboe / YCharts',
+      url: 'https://ycharts.com/indicators/vix_volatility_index',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-11-24）收 638.10 美元（-1.99%）；仍低于 50 日线（708.47 美元）与 200 日线（683.39 美元），已连续 19 个交易日低于 50 日线、连续 8 个交易日低于 200 日线。',
+      source: '站内 /api/rhythm（盘前报价反推复核一致）',
+    },
+  ],
+};
+
 const BATCH_2026_11_24: MorningBriefing = {
   date: '2026-11-24',
   overnight: [
@@ -1590,6 +1644,7 @@ const BATCH_2026_11_24: MorningBriefing = {
 
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_11_25,
   BATCH_2026_11_24,
   BATCH_2026_11_23,
   BATCH_2026_11_21,
