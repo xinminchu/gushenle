@@ -282,7 +282,13 @@ async function fetchFred(symbol: string): Promise<RhythmPoint[]> {
 /* ---------- Cboe（VIX 官方源，免 key；FRED VIXCLS 滞后约 2 个交易日） ---------- */
 async function fetchCboeVix(): Promise<RhythmPoint[]> {
   const res = await fetch('https://cdn.cboe.com/api/global/delayed_quotes/charts/historical/_VIX.json', {
-    next: { revalidate: 3600 },
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+      Accept: 'application/json',
+      Referer: 'https://www.cboe.com/',
+    },
+    cache: 'no-store',
     signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) throw new Error(`Cboe status ${res.status}`);

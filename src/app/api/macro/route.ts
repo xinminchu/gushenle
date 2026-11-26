@@ -31,6 +31,13 @@ async function fredLatest(seriesId: string, key: string): Promise<{ date: string
  * FRED VIXCLS 滞后约 2 个交易日（2026-11-10/11 两天都给了 11-06 的过期数），故 Cboe 优先。 */
 async function cboeVixLatest(): Promise<{ date: string; value: number } | null> {
   const r = await fetch('https://cdn.cboe.com/api/global/delayed_quotes/charts/historical/_VIX.json', {
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+      Accept: 'application/json',
+      Referer: 'https://www.cboe.com/',
+    },
+    cache: 'no-store',
     signal: AbortSignal.timeout(15000),
   });
   if (!r.ok) throw new Error(`cboe vix ${r.status}`);
