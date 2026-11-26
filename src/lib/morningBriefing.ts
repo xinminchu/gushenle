@@ -1533,6 +1533,54 @@ const BATCH_2026_11_23: MorningBriefing = {
   ],
 };
 
+const BATCH_2026_11_26: MorningBriefing = {
+  date: '2026-11-26',
+  overnight: [
+    {
+      text: '道指 11 月 25 日盘中一度跌超 1100 点，收盘反涨 0.33% 至 50,182.95 点（Barron\'s：2022 年以来最大盘中低点反转）；标普 500 跌 0.25% 至 7,182.78 点，纳指跌 0.62% 至 23,585.80 点。',
+      source: "Barron's / 美联社",
+      url: 'https://thetickertribune.com/',
+    },
+    {
+      text: '10 月核心 PCE 偏热，美联储褐皮书提示通胀压力持续。',
+      source: '美联社',
+      url: 'https://stocktwits.com/news-articles/markets/equity/s-and-p-500-nasdaq-end-lower-but-dow-rebounds-as-traders-rotate-out-of-ai-nvda-spcx-panw-in-focus/cNbx21AR9mC',
+    },
+    {
+      text: 'AI 芯片股领跌：英伟达跌 3.91%（盘中一度跌近 9%），美光跌 4.53%。',
+      source: '美联社',
+      url: 'https://thetickertribune.com/',
+    },
+  ],
+  premarket: [
+    {
+      text: '今日感恩节休市，无盘前交易；周五 11 月 27 日 13:00 ET 提前收市。',
+      source: '纽交所节假日安排',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日无重要宏观数据公布（感恩节休市）；持仓股今日无财报。',
+      source: '经济日历',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日（11-25）收 28.29（口径：Cboe），较 11-24 的 26.36 上涨 7.32%。',
+      source: 'Cboe / YCharts',
+      url: 'https://ycharts.com/indicators/vix_volatility_index',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-11-25）收 633.93 美元（-0.65%）；仍低于 50 日线（707.05 美元）与 200 日线（683.50 美元），已连续 20 个交易日低于 50 日线、连续 9 个交易日低于 200 日线。',
+      source: '站内 /api/rhythm（Finnhub 复核一致）',
+    },
+    {
+      text: '恐惧贪婪指数 15，极度恐惧（11 月 26 日，站内口径）。',
+      source: '站内 /api/macro',
+    },
+  ],
+};
+
 const BATCH_2026_11_25: MorningBriefing = {
   date: '2026-11-25',
   overnight: [
@@ -1644,6 +1692,7 @@ const BATCH_2026_11_24: MorningBriefing = {
 
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_11_26,
   BATCH_2026_11_25,
   BATCH_2026_11_24,
   BATCH_2026_11_23,
