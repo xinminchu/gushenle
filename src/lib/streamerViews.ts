@@ -2091,6 +2091,53 @@ const BATCH_2026_11_18: SymbolViewGroup[] = [
   },
 ];
 
+const BATCH_2026_11_26: SymbolViewGroup[] = [
+  {
+    symbol: 'ANF',
+    label: '服装零售',
+    views: [
+      {
+        id: 'anf-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'cautious',
+        horizon: 'short',
+        kind: 'view',
+        headline: '财报超预期是真的，但单日涨两成跑得比指引快',
+        reason:
+          '三季度销售增 11%、同店增 6%，平均单价涨高个位数且少打折，品牌热度确实回来了；但 350 个基点的利润率扩张里涨价只占约 20 个基点，每股收益增 62% 扣掉关税退款和回购后只剩约三成，当天市值多约 11.5 亿美元、全年经营利润指引却只上调约 2%。',
+        caveat:
+          '四季度指引仍是销售增约 7%、单价涨中个位数且不预期促销回撤，若定价撑得住，谨慎看法作废。后三点详述在付费墙后，本条只依据可见全文。',
+        source:
+          'Kova动量交易 Substack《日涨近20%，曾经被年轻人抛弃的 A&F，为什么又卖得动了？》',
+        published: '11/26',
+        note: '文章链接：https://kovainvest.substack.com/p/20-a-and-f',
+      },
+    ],
+  },
+  {
+    symbol: 'AEO',
+    label: '服装零售',
+    views: [
+      {
+        id: 'aeo-kova-1',
+        blogger: 'Kova动量交易',
+        stance: 'bearish',
+        horizon: 'long',
+        kind: 'view',
+        headline: 'Hollister 少打折还能涨，留给 AEO 的价格空间更窄',
+        reason:
+          '青少年服装是同一笔钱包，Hollister 返校季同店增 5% 且少打折；市场却把 A&F 财报读成全行业利好，AEO 当天还涨 2.75%。这个读法只对了一半：需求在，但份额争夺里 AEO 的定价余地被压缩。',
+        caveat:
+          'AEO 将于 12 月 2 日收盘后发三季报，届时以同店与定价对照；若 AEO 同店与价格守得住，本条作废。',
+        source:
+          'Kova动量交易 Substack《日涨近20%，曾经被年轻人抛弃的 A&F，为什么又卖得动了？》',
+        published: '11/26',
+        note: '文章链接：https://kovainvest.substack.com/p/20-a-and-f',
+      },
+    ],
+  },
+];
+
 const BATCH_2026_11_25: SymbolViewGroup[] = [
   {
     symbol: 'CRWD',
@@ -2260,6 +2307,7 @@ const BATCH_2026_11_24: SymbolViewGroup[] = [
 ];
 
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-11-26', groups: BATCH_2026_11_26 },
   { date: '2026-11-25', groups: BATCH_2026_11_25 },
   { date: '2026-11-24', groups: BATCH_2026_11_24 },
   { date: '2026-11-21', groups: BATCH_2026_11_21 },
