@@ -2091,6 +2091,51 @@ const BATCH_2026_11_18: SymbolViewGroup[] = [
   },
 ];
 
+/* ---------------- 11/27 批：感恩节后半日，Selina 黄金专场 ----------------
+   水位线 2026-11-26；今日 1 条超水位线的新内容（Selina 黄金专场，11/26 08:48
+   CST 发布），2 个观点入库；其余各源最新条目均为 11-25 期（芝加哥时间 11-25
+   晚至 11-26 凌晨发布），未超水位线，不处理；3 条丢弃：老王 11-27 三条（主
+   节目台股问句无明确倾向、浦男搜股「恐慌結束了？」问句、一分钟短片「要買誰？」
+   问句，全是提问、无可确定的标的/倾向/期限）。 */
+const BATCH_2026_11_27: SymbolViewGroup[] = [
+  {
+    symbol: 'GLD',
+    label: '黄金',
+    views: [
+      {
+        id: 'gld-selina-1',
+        blogger: 'Selina聊美股',
+        stance: 'cautious',
+        horizon: 'short',
+        kind: 'view',
+        headline: '至暗时刻还没到，12 月是关键',
+        reason:
+          '金价自年初高点回落约 37%，她认为主因不是避险逻辑坏了，而是流动性踩踏：AI 板块回调逼杠杆账户抛售流动性最好的黄金回笼现金；下半年利率权重重新主导，稍有加息或通胀风声金价就跳水。短期看流动性冲击是否见底、AI 债务风险会不会扩散。',
+        caveat:
+          '若 AI 头部公司扛住高利率、美联储降息周期开启，金价企稳；若出现连锁违约、流动性再紧张，可能再走一轮先跌后涨。12 月是验证窗口。',
+        source: 'Selina聊美股',
+        published: '11/26',
+        note: '原片：https://www.youtube.com/watch?v=2THEWUGP1Jg',
+      },
+      {
+        id: 'gld-selina-2',
+        blogger: 'Selina聊美股',
+        stance: 'neutral',
+        horizon: 'long',
+        kind: 'view',
+        headline: '黄金不是赚钱主力，是组合的阻尼器',
+        reason:
+          '对普通家庭，黄金的定位是组合里的阻尼器而非盈利主力，合理配置约 5% 到 15%，靠定期再平衡管理仓位；当前做法是分批定投补仓、减掉非配置的投机仓位，不加杠杆、不用生活必需资金。',
+        caveat:
+          '长期要看黄金作为零息对冲资产的阻尼作用是否持续有效；若利率压力不解除或避险逻辑继续失效，配置价值打折。',
+        source: 'Selina聊美股',
+        published: '11/26',
+        note: '原片：https://www.youtube.com/watch?v=2THEWUGP1Jg',
+      },
+    ],
+  },
+];
+
 const BATCH_2026_11_26: SymbolViewGroup[] = [
   {
     symbol: 'ANF',
@@ -2307,6 +2352,7 @@ const BATCH_2026_11_24: SymbolViewGroup[] = [
 ];
 
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-11-27', groups: BATCH_2026_11_27 },
   { date: '2026-11-26', groups: BATCH_2026_11_26 },
   { date: '2026-11-25', groups: BATCH_2026_11_25 },
   { date: '2026-11-24', groups: BATCH_2026_11_24 },
