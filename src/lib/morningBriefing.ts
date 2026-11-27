@@ -1533,6 +1533,59 @@ const BATCH_2026_11_23: MorningBriefing = {
   ],
 };
 
+const BATCH_2026_11_27: MorningBriefing = {
+  date: '2026-11-27',
+  overnight: [
+    {
+      text: '美股期货周五盘前大涨：纳指 100 期货涨约 2.9%、标普 500 期货涨约 2.0%、道指期货涨约 1.3%，英伟达盘前涨 4.7%、AMD 涨 7%，AI 股反弹。',
+      source: '路透社（盘前快照）',
+      url: 'https://www.reuters.com/business/wall-st-futures-surge-investors-return-holiday-2026-11-27/',
+    },
+    {
+      text: '中国股市大涨：蓝筹股涨 4.2%，国务院重申支持资本市场；科创 50 涨 13.8%、恒生科技涨 6.3%，日经 225 涨 2.1%。',
+      source: '路透社',
+      url: 'https://www.lapost.com/content/shares-find-footing-after-bruising-month-dollar-set-for-third-monthly-gain',
+    },
+    {
+      text: '英伟达通知制造伙伴暂停向马来西亚、新加坡、泰国和印尼发运含其芯片的服务器，出口管制压力再起。',
+      source: 'TradingView',
+      url: 'https://www.tradingview.com/news/tradingview:19ef9749f094b:0-nq-nasdaq-futures-jump-1-as-wall-street-returns-from-thanksgiving/',
+    },
+  ],
+  premarket: [
+    {
+      text: '盘前期货走高（美东 06:42 快照）：道指期货涨 1.29%、标普 500 期货涨 1.64%、纳指 100 期货涨 2.23%。',
+      source: '路透 / Kitco（盘前快照）',
+      url: 'https://www.kitco.com/news/off-the-wire/2026-11-27/nasdaq-futures-surge-investors-pile-back-battered-ai-stocks',
+    },
+    {
+      text: 'QQQ 盘前约 647.92 美元（+2.21%，美东 08:31）；持仓股盘前全线上涨（站内 Nasdaq 管线，美东约 08:35 快照）：IREN 涨约 6.9% 至 13.74 美元，NBIS 涨约 6.8% 至 90.79 美元，BTDR 涨约 5.9% 至 3.23 美元，MU 涨约 5.8% 至 636.29 美元，ANT 涨约 3.2% 至 85.42 美元，PLTR 涨约 3.1% 至 168.70 美元，GOOGL 涨约 2.6% 至 280.17 美元。',
+      source: '站内 /api/rhythm（盘前快照）',
+    },
+  ],
+  calendar: [
+    {
+      text: '今日无重要宏观数据公布，持仓股今日无财报；美股提前收市，13:00 ET；下一次 FOMC 会议 12 月 9 日。',
+      source: 'Squawkflow 盘前板 / 站内 /api/earnings',
+    },
+  ],
+  sentiment: [
+    {
+      text: 'VIX 上一交易日（11-25）收 28.29（口径：Cboe），较 11-24 的 26.36 上涨 7.32%；周五盘前指示值约 25。',
+      source: 'Cboe / 多家行情源',
+      url: 'https://ycharts.com/indicators/vix_volatility_index',
+    },
+    {
+      text: 'QQQ 上一交易日（2026-11-25）收 633.93 美元（-0.65%）；仍低于 50 日线（707.05 美元）与 200 日线（683.50 美元），已连续 20 个交易日低于 50 日线、连续 9 个交易日低于 200 日线。',
+      source: '站内 /api/rhythm（Finnhub 复核一致）',
+    },
+    {
+      text: '恐惧贪婪指数 20.4，极度恐惧（11 月 27 日，站内口径）。',
+      source: '站内 /api/macro',
+    },
+  ],
+};
+
 const BATCH_2026_11_26: MorningBriefing = {
   date: '2026-11-26',
   overnight: [
@@ -1692,6 +1745,7 @@ const BATCH_2026_11_24: MorningBriefing = {
 
 /** 最新一期在前；往期只读回看。 */
 export const MORNING_BRIEFING_HISTORY: MorningBriefing[] = [
+  BATCH_2026_11_27,
   BATCH_2026_11_26,
   BATCH_2026_11_25,
   BATCH_2026_11_24,
