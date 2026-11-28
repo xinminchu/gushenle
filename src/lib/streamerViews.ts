@@ -2136,6 +2136,38 @@ const BATCH_2026_11_27: SymbolViewGroup[] = [
   },
 ];
 
+/* ---------------- 11/28 批：水位线 2026-11-27；今日 6 条新条目（含 Selina 直播重复上传 1 条），1 个观点入库 ----------------
+   5 条未入库：阳光财经（"洗盘是否结束了？"提问式标题，无标的/方向/期限，简介只有会员推广）；
+   Kova YouTube（"Gap up is it fake?" 纯提问，无标的/倾向）；
+   老王（11-28 短视频"0050到底要不要賣？"提问句，台股 ETF，无方向）；
+   Selina 直播重复上传 1 条（同标题，计 1 个节目）。
+   NVDA（Selina 直播标题带问号、只凭标题定不了倾向，按规则丢弃；Mas 早上审核时剔除）。
+   Kova Substack、视野环球财经、NaNa、投资TALK君、Money or Life 均无超水位线新内容。
+   老王 11-27 早三条已在 11-27 批丢弃过，不重复计。 */
+const BATCH_2026_11_28: SymbolViewGroup[] = [
+  {
+    symbol: 'DELL',
+    label: '戴尔',
+    views: [
+      {
+        id: 'dell-selina-1',
+        blogger: 'Selina聊美股',
+        stance: 'cautious',
+        horizon: 'short',
+        kind: 'view',
+        headline: '订单是真的，坑还是陷阱看利润率兑现',
+        reason:
+          '她拆解戴尔财报：单季 AI 服务器收入 220 亿美元、同比增约 291%，新拿 AI 服务器订单 602 亿美元、积压订单增至 1323 亿美元且排到 2028 年，客户至今无推迟交货；股价却随恐慌大跌，订单景气与价格走势裂开一道口子。',
+        caveat:
+          'AI 服务器本身利润率仅约 5%，17% 的经营利润率靠传统服务器与存储撑着；产业链上她把戴尔放在"三明治"位置，上下游都没有定价权；下份财报（约明年 2 月底）要看利润率是否健康回落到约 15%、积压订单兑现速度。据视频简介提炼，未看正片。',
+        source: 'Selina聊美股',
+        published: '11/27',
+        note: '原片：https://www.youtube.com/watch?v=y1TaHiVXFGk',
+      },
+    ],
+  },
+];
+
 const BATCH_2026_11_26: SymbolViewGroup[] = [
   {
     symbol: 'ANF',
@@ -2352,6 +2384,7 @@ const BATCH_2026_11_24: SymbolViewGroup[] = [
 ];
 
 export const STREAMER_VIEW_HISTORY: DailyBatch[] = [
+  { date: '2026-11-28', groups: BATCH_2026_11_28 },
   { date: '2026-11-27', groups: BATCH_2026_11_27 },
   { date: '2026-11-26', groups: BATCH_2026_11_26 },
   { date: '2026-11-25', groups: BATCH_2026_11_25 },
