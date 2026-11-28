@@ -11,7 +11,7 @@ interface FredObs {
 let cache: { at: number; payload: unknown } | null = null;
 const TTL = 6 * 60 * 60 * 1000;
 
-async function fredLatest(seriesId: string, key: string): Promise<{ date: string; value: number } | null> {
+async function fredRecent(seriesId: string, key: string): Promise<{ date: string; value: number }[]> {
   const url =
     `https://api.stlouisfed.org/fred/series/observations` +
     `?series_id=${seriesId}&api_key=${encodeURIComponent(key)}` +
@@ -20,16 +20,39 @@ async function fredLatest(seriesId: string, key: string): Promise<{ date: string
   if (!r.ok) throw new Error(`fred ${seriesId} ${r.status}`);
   const j = await r.json();
   const obs: FredObs[] = j?.observations || [];
+  const rows: { date: string; value: number }[] = [];
   for (const o of obs) {
     const v = parseFloat(o.value);
-    if (o.value !== '.' && Number.isFinite(v)) return { date: o.date, value: v };
+    if (o.value !== '.' && Number.isFinite(v)) rows.push({ date: o.date, value: v });
   }
-  return null;
+  return rows;
+}
+
+async function fredLatest(seriesId: string, key: string): Promise<{ date: string; value: number } | null> {
+  const rows = await fredRecent(seriesId, key);
+  return rows[0] ?? null;
+}
+
+/** 从最新往回找：取第一条日期落在 DGS 交易日集合里的观测。FRED 有时会发节假日
+ * 当天的行（如 2026-11-26 感恩节 VIXCLS 26.80，市场根本没开盘），那种行必须跳过。
+ * 集合为空（DGS 没取到）时退回旧行为：直接取最新一行。 */
+function pickTradingDay(
+  rows: { date: string; value: number }[],
+  dgsDates: Set<string>,
+): { date: string; value: number } | null {
+  if (dgsDates.size > 0) {
+    const hit = rows.find((r) => dgsDates.has(r.date.slice(0, 10)));
+    if (hit) return hit;
+  }
+  return rows[0] ?? null;
 }
 
 /** VIX：Cboe 官方延迟报价历史（VIX 的发布方就是 Cboe，免 key；收盘后更新）。
- * FRED VIXCLS 滞后约 2 个交易日（2026-11-10/11 两天都给了 11-06 的过期数），故 Cboe 优先。 */
-async function cboeVixLatest(): Promise<{ date: string; value: number } | null> {
+ * FRED VIXCLS 滞后约 2 个交易日（2026-11-10/11 两天都给了 11-06 的过期数），故 Cboe 优先。
+ * 传入 DGS 交易日集合时，跳过不在集合里的日期（节假日行）。 */
+async function cboeVixLatest(
+  dgsDates?: Set<string>,
+): Promise<{ date: string; value: number } | null> {
   const r = await fetch('https://cdn.cboe.com/api/global/delayed_quotes/charts/historical/_VIX.json', {
     headers: {
       'User-Agent':
@@ -44,6 +67,7 @@ async function cboeVixLatest(): Promise<{ date: string; value: number } | null> 
   const j = await r.json();
   const rows: { date: string; close: string }[] = j?.data || [];
   for (let i = rows.length - 1; i >= 0; i--) {
+    if (dgsDates && dgsDates.size > 0 && !dgsDates.has(rows[i].date.slice(0, 10))) continue;
     const v = parseFloat(rows[i].close);
     if (Number.isFinite(v)) return { date: rows[i].date, value: v };
   }
@@ -103,14 +127,18 @@ export async function GET() {
   }
   const key = process.env.FRED_API_KEY;
 
-  // 分母（需 FRED key）
+  // 分母（需 FRED key）。DGS30 的观测日期集合同时是"交易日"标尺：
+  // FRED 有时发节假日当天的行，VIX 兜底取数时只认落在集合里的日期。
   const denom: Record<string, unknown> = { ok: false };
+  let dgsDates = new Set<string>();
   if (key) {
     try {
-      const [y30, y10] = await Promise.all([
-        fredLatest('DGS30', key),
+      const [dgs30Rows, y10] = await Promise.all([
+        fredRecent('DGS30', key),
         fredLatest('DGS10', key),
       ]);
+      const y30 = dgs30Rows[0] ?? null;
+      dgsDates = new Set(dgs30Rows.map((r) => r.date.slice(0, 10)));
       if (y30) {
         Object.assign(denom, {
           ok: true,
@@ -134,14 +162,15 @@ export async function GET() {
   let vix: { date: string; value: number } | null = null;
   let vixSource: string | null = null;
   try {
-    vix = await cboeVixLatest();
+    vix = await cboeVixLatest(dgsDates);
     if (vix) vixSource = 'Cboe';
   } catch {
     vix = null;
   }
   if (!vix && key) {
     try {
-      vix = await fredLatest('VIXCLS', key);
+      const vixRows = await fredRecent('VIXCLS', key);
+      vix = pickTradingDay(vixRows, dgsDates);
       if (vix) vixSource = 'FRED VIXCLS';
     } catch {
       vix = null;
